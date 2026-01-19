@@ -110,6 +110,6 @@ export const useStockData = (watchlistId: string) => {
 
       return watchlist.tickers.map((ticker) => generateStockData(ticker, watchlist.label));
     },
-    refetchInterval: 5000, // Auto-refresh every 5s
+    refetchInterval: 1000, // Update every 1 second as requested
   });
 };
