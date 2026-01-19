@@ -58,7 +58,7 @@ export function StockCard({ stock, index }: StockCardProps) {
         </div>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 gap-4">
+      <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
         <div>
             <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol / Avg</div>
             <div className="text-sm font-mono text-foreground">
@@ -71,6 +71,14 @@ export function StockCard({ stock, index }: StockCardProps) {
                 stock.rsi > 70 ? "text-negative" : stock.rsi < 30 ? "text-positive" : "text-foreground"
             )}>
                 {stock.rsi.toFixed(1)}
+            </div>
+        </div>
+        <div>
+            <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Short Float</div>
+            <div className={cn("text-sm font-mono font-medium", 
+                stock.shortFloat > 20 ? "text-negative" : "text-foreground"
+            )}>
+                {stock.shortFloat.toFixed(1)}%
             </div>
         </div>
       </div>

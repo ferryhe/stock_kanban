@@ -11,6 +11,7 @@ export interface StockData {
   volume: number;
   avgVolume: number;
   sma20: number;
+  shortFloat: number;
   sector: string;
   tags: {
     label: string;
@@ -52,6 +53,7 @@ const generateStockData = (ticker: string, sector: string): StockData => {
   const volume = Math.floor(Math.random() * 50000000) + 1000000;
   const avgVolume = 20000000; // Simplified
   const sma20 = basePrice * (1 + (Math.random() - 0.5) * 0.1); // +/- 5% of price
+  const shortFloat = Math.random() * 30; // 0-30% range
 
   const tags: StockData["tags"] = [];
 
@@ -76,6 +78,11 @@ const generateStockData = (ticker: string, sector: string): StockData => {
     tags.push({ label: "Downtrend", type: "SELL", value: "< SMA20" });
   }
 
+  // Logic 4: Short Float
+  if (shortFloat > 20) {
+    tags.push({ label: "High Short", type: "SELL", value: `${shortFloat.toFixed(1)}%` });
+  }
+
   return {
     ticker,
     name: ticker, // Simplified for MVP
@@ -85,6 +92,7 @@ const generateStockData = (ticker: string, sector: string): StockData => {
     volume,
     avgVolume,
     sma20,
+    shortFloat,
     sector,
     tags,
   };
