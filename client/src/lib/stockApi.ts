@@ -29,6 +29,7 @@ export interface StockData {
 export interface ChartDataPoint {
   date: string;
   time?: string;
+  fullDate: string;
   price: number;
   volume: number;
 }
@@ -44,12 +45,17 @@ export interface MarketOverview {
   vix: { price: number; change: number };
 }
 
+export interface SearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+  type: string;
+}
+
 // Check if US market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
-// Uses Intl API for proper timezone handling including DST
 export function isMarketOpen(): boolean {
   const now = new Date();
   
-  // Get current time in America/New_York timezone (handles DST automatically)
   const etFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     hour: "numeric",
@@ -65,15 +71,26 @@ export function isMarketOpen(): boolean {
   
   const timeInMinutes = hour * 60 + minute;
   
-  // Market hours: 9:30 AM (570 minutes) to 4:00 PM (960 minutes)
   const isWeekday = !["Sat", "Sun"].includes(weekday);
   const isDuringHours = timeInMinutes >= 570 && timeInMinutes < 960;
 
   return isWeekday && isDuringHours;
 }
 
+// Get current ET time formatted
+export function getCurrentETTime(): string {
+  const now = new Date();
+  return now.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
+
 // Get custom watchlists from localStorage or use defaults
-const getCustomWatchlists = (): Record<string, Watchlist> => {
+export const getCustomWatchlists = (): Record<string, Watchlist> => {
   if (typeof window === "undefined") {
     return getDefaultWatchlists();
   }
@@ -96,15 +113,78 @@ const getDefaultWatchlists = (): Record<string, Watchlist> => ({
   VOLATILITY: { id: "volatility", label: "👀 High Volatility", tickers: ["UVIX", "SVIX"] },
 });
 
-export const WATCHLISTS: Record<string, Watchlist> = getCustomWatchlists();
+export let WATCHLISTS: Record<string, Watchlist> = getCustomWatchlists();
+
+export const refreshWatchlists = () => {
+  WATCHLISTS = getCustomWatchlists();
+  return WATCHLISTS;
+};
+
+// Hook to get watchlists with reactivity
+export const useWatchlists = () => {
+  return useQuery({
+    queryKey: ["watchlists"],
+    queryFn: () => getCustomWatchlists(),
+    staleTime: Infinity,
+  });
+};
+
+const saveAndRefresh = (newWatchlists: Record<string, Watchlist>) => {
+  localStorage.setItem("custom_watchlists", JSON.stringify(newWatchlists));
+  WATCHLISTS = newWatchlists;
+  window.location.reload(); // Reload to update all state
+};
 
 export const saveWatchlist = (watchlistId: string, tickers: string[]) => {
   const current = getCustomWatchlists();
   const key = Object.keys(current).find((k) => current[k].id === watchlistId);
   if (key) {
     current[key].tickers = tickers;
-    localStorage.setItem("custom_watchlists", JSON.stringify(current));
-    window.location.reload();
+    saveAndRefresh(current);
+  }
+};
+
+export const createWatchlist = (label: string, tickers: string[] = []) => {
+  const current = getCustomWatchlists();
+  const id = label.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Date.now();
+  const key = "CUSTOM_" + Date.now();
+  current[key] = { id, label, tickers };
+  saveAndRefresh(current);
+};
+
+export const deleteWatchlist = (watchlistId: string) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key && Object.keys(current).length > 1) {
+    delete current[key];
+    saveAndRefresh(current);
+  }
+};
+
+export const addTickerToWatchlist = (watchlistId: string, ticker: string) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key && !current[key].tickers.includes(ticker.toUpperCase())) {
+    current[key].tickers.push(ticker.toUpperCase());
+    saveAndRefresh(current);
+  }
+};
+
+export const removeTickerFromWatchlist = (watchlistId: string, ticker: string) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key) {
+    current[key].tickers = current[key].tickers.filter(t => t !== ticker.toUpperCase());
+    saveAndRefresh(current);
+  }
+};
+
+export const updateWatchlistLabel = (watchlistId: string, newLabel: string) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key) {
+    current[key].label = newLabel;
+    saveAndRefresh(current);
   }
 };
 
@@ -125,7 +205,7 @@ export const useStockData = (watchlistId: string) => {
       }
       return res.json();
     },
-    refetchInterval: isMarketOpen() ? 2000 : 60000, // 2s during market hours, 60s otherwise
+    refetchInterval: isMarketOpen() ? 2000 : 60000,
     staleTime: 1000,
   });
 };
@@ -158,6 +238,23 @@ export const useStockChart = (ticker: string, interval: ChartInterval, enabled: 
       return res.json();
     },
     enabled,
-    staleTime: 30000,
+    staleTime: interval === "1d" ? 5000 : 30000,
+    refetchInterval: interval === "1d" && isMarketOpen() ? 5000 : undefined,
+  });
+};
+
+export const useStockSearch = (query: string) => {
+  return useQuery<SearchResult[]>({
+    queryKey: ["search", query],
+    queryFn: async () => {
+      if (!query || query.length < 1) return [];
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) {
+        throw new Error("Failed to search stocks");
+      }
+      return res.json();
+    },
+    enabled: query.length >= 1,
+    staleTime: 60000,
   });
 };

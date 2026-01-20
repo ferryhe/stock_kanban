@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { getStockAnalysis, getMarketOverview, getStockChart } from "./stockService";
+import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks } from "./stockService";
 
 const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
   ai_chips: { label: "🔥 AI & Chips", tickers: ["NVDA", "AMD", "TSM", "PLTR"] },
@@ -80,6 +80,21 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in /api/chart:", error);
       res.status(500).json({ error: "Failed to fetch chart data" });
+    }
+  });
+
+  // Search for stocks by name or symbol
+  app.get("/api/search", async (req, res) => {
+    try {
+      const query = (req.query.q as string) || "";
+      if (!query || query.length < 1) {
+        return res.json([]);
+      }
+      const results = await searchStocks(query);
+      res.json(results);
+    } catch (error) {
+      console.error("Error in /api/search:", error);
+      res.status(500).json({ error: "Failed to search stocks" });
     }
   });
 

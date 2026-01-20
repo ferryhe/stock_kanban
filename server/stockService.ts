@@ -32,8 +32,16 @@ interface StockAnalysis {
 interface ChartDataPoint {
   date: string;
   time?: string;
+  fullDate: string;
   price: number;
   volume: number;
+}
+
+interface SearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+  type: string;
 }
 
 interface CacheEntry {
@@ -410,9 +418,39 @@ export async function getStockChart(
       interval: chartInterval,
     });
 
-    const data: ChartDataPoint[] = historical.quotes
-      .filter((q: any) => q.close !== null && q.close !== undefined)
-      .map((q: any) => {
+    // For 1D, filter to only today's data (using ET timezone)
+    let quotes = historical.quotes.filter((q: any) => q.close !== null && q.close !== undefined);
+    
+    if (period === "1d") {
+      // Get today's date in ET timezone
+      const etFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const todayET = etFormatter.format(new Date());
+      
+      quotes = quotes.filter((q: any) => {
+        const qDate = new Date(q.date);
+        const qDateET = etFormatter.format(qDate);
+        return qDateET === todayET;
+      });
+      // If no data for today (weekend/holiday), get last trading day's data
+      if (quotes.length === 0) {
+        quotes = historical.quotes.filter((q: any) => q.close !== null && q.close !== undefined);
+        // Get only the most recent day's data
+        if (quotes.length > 0) {
+          const lastDate = etFormatter.format(new Date(quotes[quotes.length - 1].date));
+          quotes = quotes.filter((q: any) => {
+            const qDateET = etFormatter.format(new Date(q.date));
+            return qDateET === lastDate;
+          });
+        }
+      }
+    }
+
+    const data: ChartDataPoint[] = quotes.map((q: any) => {
         const date = new Date(q.date);
         return {
           date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -423,6 +461,14 @@ export async function getStockChart(
                 hour12: true,
               })
             : undefined,
+          fullDate: date.toLocaleDateString("en-US", { 
+            weekday: "short",
+            month: "short", 
+            day: "numeric",
+            year: "numeric",
+            hour: isIntraday ? "2-digit" : undefined,
+            minute: isIntraday ? "2-digit" : undefined,
+          }),
           price: q.close,
           volume: q.volume || 0,
         };
@@ -432,6 +478,23 @@ export async function getStockChart(
     return data;
   } catch (error) {
     console.error(`Error fetching chart for ${ticker}:`, error);
+    return [];
+  }
+}
+
+export async function searchStocks(query: string): Promise<SearchResult[]> {
+  try {
+    const results = await yf.search(query, { quotesCount: 10 });
+    return (results.quotes || [])
+      .filter((q: any) => q.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF"))
+      .map((q: any) => ({
+        symbol: q.symbol,
+        name: q.shortname || q.longname || q.symbol,
+        exchange: q.exchange || "",
+        type: q.quoteType || "EQUITY",
+      }));
+  } catch (error) {
+    console.error("Error searching stocks:", error);
     return [];
   }
 }

@@ -26,6 +26,21 @@ const INTERVALS: { label: string; value: ChartInterval }[] = [
   { label: "1Y", value: "1y" },
 ];
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs">
+        <div className="text-gray-400 mb-1">{data.fullDate}</div>
+        <div className="text-white font-mono font-bold">
+          ${payload[0].value.toFixed(2)}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalProps) {
   const [interval, setInterval] = useState<ChartInterval>("1mo");
   const { data: chartData, isLoading } = useStockChart(stock.ticker, interval, isOpen);
@@ -34,6 +49,9 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
   const chartColor = isPositive ? "#22c55e" : "#ef4444";
 
   const formatPrice = (price: number) => `$${price.toFixed(2)}`;
+
+  // Get the display date for 1D view
+  const chartDate = chartData && chartData.length > 0 ? chartData[0].date : "";
 
   return (
     <AnimatePresence>
@@ -90,22 +108,29 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
             </div>
 
             <div className="p-4">
-              <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-                {INTERVALS.map((int) => (
-                  <button
-                    key={int.value}
-                    onClick={() => setInterval(int.value)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-mono font-medium transition-colors flex-shrink-0",
-                      interval === int.value
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground hover:text-foreground"
-                    )}
-                    data-testid={`interval-${int.value}`}
-                  >
-                    {int.label}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  {INTERVALS.map((int) => (
+                    <button
+                      key={int.value}
+                      onClick={() => setInterval(int.value)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-mono font-medium transition-colors flex-shrink-0",
+                        interval === int.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      )}
+                      data-testid={`interval-${int.value}`}
+                    >
+                      {int.label}
+                    </button>
+                  ))}
+                </div>
+                {(interval === "1d" || interval === "5d") && chartDate && (
+                  <span className="text-xs text-muted-foreground font-mono ml-2">
+                    {chartDate}
+                  </span>
+                )}
               </div>
 
               <div className="h-64 w-full">
@@ -152,16 +177,7 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                         tickFormatter={formatPrice}
                         width={60}
                       />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1f2937",
-                          border: "1px solid #374151",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                        }}
-                        labelStyle={{ color: "#9ca3af" }}
-                        formatter={(value: number) => [formatPrice(value), "Price"]}
-                      />
+                      <Tooltip content={<CustomTooltip />} />
                       <Area
                         type="monotone"
                         dataKey="price"

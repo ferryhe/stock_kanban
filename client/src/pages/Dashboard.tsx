@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useStockData, useMarketOverview, WATCHLISTS, saveWatchlist, isMarketOpen, StockData } from "@/lib/stockApi";
+import { useStockData, useMarketOverview, WATCHLISTS, isMarketOpen, getCurrentETTime, StockData } from "@/lib/stockApi";
 import { StockCard } from "@/components/StockCard";
 import { StockDetailModal } from "@/components/StockDetailModal";
+import { WatchlistManager } from "@/components/WatchlistManager";
 import { BottomNav } from "@/components/BottomNav";
 import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
-import { Loader2, Settings2, X, RefreshCw } from "lucide-react";
+import { Loader2, Settings2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -34,35 +35,24 @@ const MarketTicker = ({ symbol, label, price, change }: MarketTickerProps) => {
 };
 
 export default function Dashboard() {
-  const [activeWatchlist, setActiveWatchlist] = useState<string>(WATCHLISTS.AI_CHIPS.id);
-  const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
+  const [activeWatchlist, setActiveWatchlist] = useState<string>(WATCHLISTS.AI_CHIPS?.id || Object.values(WATCHLISTS)[0]?.id || "ai_chips");
+  const { data: stocks, isLoading, refetch, isFetching, error, dataUpdatedAt } = useStockData(activeWatchlist);
   const { data: marketData } = useMarketOverview();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [editTickers, setEditTickers] = useState("");
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
+  const [currentTime, setCurrentTime] = useState(getCurrentETTime());
 
   const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist);
 
-  useEffect(() => {
-    if (currentList) {
-      setEditTickers(currentList.tickers.join(", "));
-    }
-  }, [activeWatchlist, currentList]);
-
-  // Update market status every minute
+  // Update time every second
   useEffect(() => {
     const interval = setInterval(() => {
+      setCurrentTime(getCurrentETTime());
       setMarketOpen(isMarketOpen());
-    }, 60000);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const handleSave = () => {
-    const tickers = editTickers.split(",").map(t => t.trim().toUpperCase()).filter(t => t);
-    saveWatchlist(activeWatchlist, tickers);
-    setIsSettingsOpen(false);
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-32 relative overflow-hidden font-sans">
@@ -84,7 +74,7 @@ export default function Dashboard() {
                       isFetching ? "bg-warning animate-pulse" : marketOpen ? "bg-positive" : "bg-muted-foreground"
                     )} />
                     <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
-                      {isFetching ? "Updating" : marketOpen ? "Market Open" : "Market Closed"}
+                      {currentTime} ET
                     </span>
                 </div>
             </div>
@@ -113,7 +103,7 @@ export default function Dashboard() {
                   <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
                 </button>
                 <button 
-                  onClick={() => setIsSettingsOpen(true)}
+                  onClick={() => setIsManagerOpen(true)}
                   className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                   data-testid="settings-button"
                 >
@@ -123,51 +113,11 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border w-full max-w-sm rounded-2xl p-6 shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold">Edit Watchlist</h2>
-                <button onClick={() => setIsSettingsOpen(false)} data-testid="close-settings"><X className="w-5 h-5" /></button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
-                    {currentList?.label} Tickers (Comma separated)
-                  </label>
-                  <textarea 
-                    value={editTickers}
-                    onChange={(e) => setEditTickers(e.target.value)}
-                    className="w-full bg-secondary/50 border border-border rounded-xl p-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
-                    rows={4}
-                    placeholder="AAPL, MSFT, GOOGL..."
-                    data-testid="edit-tickers-input"
-                  />
-                </div>
-                <button 
-                  onClick={handleSave}
-                  className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity"
-                  data-testid="save-watchlist-button"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <WatchlistManager
+        isOpen={isManagerOpen}
+        onClose={() => setIsManagerOpen(false)}
+        activeWatchlist={activeWatchlist}
+      />
 
       <main className="max-w-md mx-auto px-4 py-6 relative z-10">
         <div className="space-y-4">
@@ -202,12 +152,23 @@ export default function Dashboard() {
                     <div className="grid gap-4">
                         {stocks?.map((stock, idx) => (
                             <StockCard 
-                              key={stock.ticker} 
+                              key={`${stock.ticker}-${dataUpdatedAt}`} 
                               stock={stock} 
                               index={idx} 
                               onClick={() => setSelectedStock(stock)}
                             />
                         ))}
+                        {stocks?.length === 0 && (
+                          <div className="text-center text-muted-foreground py-10">
+                            <p className="text-sm">No stocks in this watchlist</p>
+                            <button
+                              onClick={() => setIsManagerOpen(true)}
+                              className="text-primary text-sm mt-2 hover:underline"
+                            >
+                              Add stocks
+                            </button>
+                          </div>
+                        )}
                     </div>
                 )}
             </AnimatePresence>

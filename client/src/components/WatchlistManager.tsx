@@ -1,0 +1,296 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Plus, Trash2, Search, Loader2 } from "lucide-react";
+import { 
+  WATCHLISTS, 
+  Watchlist, 
+  createWatchlist, 
+  deleteWatchlist, 
+  addTickerToWatchlist, 
+  removeTickerFromWatchlist,
+  updateWatchlistLabel,
+  useStockSearch 
+} from "@/lib/stockApi";
+import { cn } from "@/lib/utils";
+
+interface WatchlistManagerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  activeWatchlist: string;
+}
+
+export function WatchlistManager({ isOpen, onClose, activeWatchlist }: WatchlistManagerProps) {
+  const [mode, setMode] = useState<"list" | "edit" | "create">("list");
+  const [selectedWatchlist, setSelectedWatchlist] = useState<Watchlist | null>(null);
+  const [newWatchlistName, setNewWatchlistName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editLabel, setEditLabel] = useState("");
+  
+  const { data: searchResults, isLoading: isSearching } = useStockSearch(searchQuery);
+  
+  const watchlistsArray = Object.values(WATCHLISTS);
+  const currentWatchlist = watchlistsArray.find(w => w.id === activeWatchlist);
+
+  const handleCreateWatchlist = () => {
+    if (newWatchlistName.trim()) {
+      createWatchlist(newWatchlistName.trim());
+    }
+  };
+
+  const handleDeleteWatchlist = (id: string) => {
+    if (watchlistsArray.length > 1) {
+      deleteWatchlist(id);
+    }
+  };
+
+  const handleAddTicker = (ticker: string) => {
+    if (selectedWatchlist) {
+      addTickerToWatchlist(selectedWatchlist.id, ticker);
+    }
+  };
+
+  const handleRemoveTicker = (ticker: string) => {
+    if (selectedWatchlist) {
+      removeTickerFromWatchlist(selectedWatchlist.id, ticker);
+    }
+  };
+
+  const handleSaveLabel = () => {
+    if (selectedWatchlist && editLabel.trim()) {
+      updateWatchlistLabel(selectedWatchlist.id, editLabel.trim());
+    }
+  };
+
+  const openEditMode = (watchlist: Watchlist) => {
+    setSelectedWatchlist(watchlist);
+    setEditLabel(watchlist.label);
+    setSearchQuery("");
+    setMode("edit");
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-card border border-border w-full max-w-md rounded-2xl shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-4 border-b border-border">
+              <h2 className="text-lg font-bold">
+                {mode === "list" && "Manage Watchlists"}
+                {mode === "edit" && selectedWatchlist?.label}
+                {mode === "create" && "Create Watchlist"}
+              </h2>
+              <div className="flex items-center gap-2">
+                {mode !== "list" && (
+                  <button
+                    onClick={() => setMode("list")}
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Back
+                  </button>
+                )}
+                <button onClick={onClose} data-testid="close-manager">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {mode === "list" && (
+                <div className="space-y-3">
+                  {watchlistsArray.map((watchlist) => (
+                    <div
+                      key={watchlist.id}
+                      className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium">{watchlist.label}</div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {watchlist.tickers.length} stocks
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditMode(watchlist)}
+                          className="px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
+                          data-testid={`edit-${watchlist.id}`}
+                        >
+                          Edit
+                        </button>
+                        {watchlistsArray.length > 1 && (
+                          <button
+                            onClick={() => handleDeleteWatchlist(watchlist.id)}
+                            className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
+                            data-testid={`delete-${watchlist.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => setMode("create")}
+                    className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border rounded-xl text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+                    data-testid="create-watchlist-btn"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create New Watchlist</span>
+                  </button>
+                </div>
+              )}
+
+              {mode === "create" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
+                      Watchlist Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newWatchlistName}
+                      onChange={(e) => setNewWatchlistName(e.target.value)}
+                      placeholder="e.g., Tech Giants"
+                      className="w-full bg-secondary/50 border border-border rounded-xl p-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      data-testid="new-watchlist-name"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreateWatchlist}
+                    disabled={!newWatchlistName.trim()}
+                    className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                    data-testid="confirm-create-watchlist"
+                  >
+                    Create Watchlist
+                  </button>
+                </div>
+              )}
+
+              {mode === "edit" && selectedWatchlist && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
+                      Watchlist Name
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className="flex-1 bg-secondary/50 border border-border rounded-xl p-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        data-testid="edit-watchlist-name"
+                      />
+                      <button
+                        onClick={handleSaveLabel}
+                        className="px-4 bg-primary text-primary-foreground rounded-xl font-medium"
+                        data-testid="save-watchlist-name"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
+                      Add Stock
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search by name or ticker..."
+                        className="w-full bg-secondary/50 border border-border rounded-xl p-3 pl-10 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        data-testid="search-stock-input"
+                      />
+                    </div>
+
+                    {searchQuery && (
+                      <div className="mt-2 max-h-48 overflow-y-auto border border-border rounded-xl">
+                        {isSearching ? (
+                          <div className="flex items-center justify-center p-4">
+                            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : searchResults && searchResults.length > 0 ? (
+                          searchResults.map((result) => (
+                            <button
+                              key={result.symbol}
+                              onClick={() => handleAddTicker(result.symbol)}
+                              disabled={selectedWatchlist.tickers.includes(result.symbol)}
+                              className={cn(
+                                "w-full flex items-center justify-between p-3 hover:bg-secondary/50 border-b border-border last:border-0 text-left",
+                                selectedWatchlist.tickers.includes(result.symbol) && "opacity-50"
+                              )}
+                              data-testid={`add-${result.symbol}`}
+                            >
+                              <div>
+                                <div className="font-mono font-bold">{result.symbol}</div>
+                                <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  {result.name}
+                                </div>
+                              </div>
+                              {selectedWatchlist.tickers.includes(result.symbol) ? (
+                                <span className="text-xs text-muted-foreground">Added</span>
+                              ) : (
+                                <Plus className="w-4 h-4 text-positive" />
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-muted-foreground text-sm">
+                            No results found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
+                      Current Stocks ({selectedWatchlist.tickers.length})
+                    </label>
+                    <div className="space-y-2">
+                      {selectedWatchlist.tickers.map((ticker) => (
+                        <div
+                          key={ticker}
+                          className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
+                        >
+                          <span className="font-mono font-bold">{ticker}</span>
+                          <button
+                            onClick={() => handleRemoveTicker(ticker)}
+                            className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
+                            data-testid={`remove-${ticker}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {selectedWatchlist.tickers.length === 0 && (
+                        <div className="text-center text-muted-foreground text-sm py-4">
+                          No stocks in this watchlist
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
