@@ -177,7 +177,8 @@ export default function Dashboard() {
 
       <BottomNav 
         currentWatchlist={activeWatchlist} 
-        onSelect={setActiveWatchlist} 
+        onSelect={setActiveWatchlist}
+        onManage={() => setIsManagerOpen(true)}
       />
 
       {selectedStock && (
