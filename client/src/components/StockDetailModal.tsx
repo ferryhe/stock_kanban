@@ -72,10 +72,10 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bg-card border border-border w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-card border border-border w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto select-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border p-4 flex justify-between items-center">
+            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border p-4 flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold font-mono">{ticker}</h2>
                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">

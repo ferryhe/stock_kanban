@@ -91,13 +91,13 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden select-none cursor-pointer"
+              className="bg-card border border-border w-full max-w-sm max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden select-none cursor-pointer flex flex-col"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsOpen(false);
               }}
             >
-              <div className="flex justify-between items-center p-4 border-b border-border bg-secondary/30">
+              <div className="flex-shrink-0 flex justify-between items-center p-4 border-b border-border bg-secondary/30">
                 <div className="flex items-center gap-2">
                   <Info className="w-5 h-5 text-primary" />
                   <h3 className="font-bold text-foreground">{explanation.title}</h3>
@@ -105,7 +105,7 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
                 <X className="w-5 h-5 text-muted-foreground" />
               </div>
               
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-4 overflow-y-auto flex-1">
                 {value !== undefined && (
                   <div className="text-center p-3 bg-secondary/50 rounded-xl">
                     <div className="text-2xl font-mono font-bold text-foreground">
