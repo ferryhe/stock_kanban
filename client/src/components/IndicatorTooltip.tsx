@@ -88,21 +88,15 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              className="bg-card border border-border w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden select-none cursor-pointer"
+              onClick={() => setIsOpen(false)}
             >
               <div className="flex justify-between items-center p-4 border-b border-border bg-secondary/30">
                 <div className="flex items-center gap-2">
                   <Info className="w-5 h-5 text-primary" />
                   <h3 className="font-bold text-foreground">{explanation.title}</h3>
                 </div>
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="p-1 hover:bg-secondary rounded-lg transition-colors"
-                  data-testid="close-tooltip"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <X className="w-5 h-5 text-muted-foreground" />
               </div>
               
               <div className="p-4 space-y-4">
