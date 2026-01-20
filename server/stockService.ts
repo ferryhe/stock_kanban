@@ -33,7 +33,7 @@ interface ChartDataPoint {
   date: string;
   time?: string;
   fullDate: string;
-  price: number;
+  price: number | null;
   volume: number;
 }
 
@@ -420,6 +420,7 @@ export async function getStockChart(
 
     // For 1D, filter to only today's data (using ET timezone)
     let quotes = historical.quotes.filter((q: any) => q.close !== null && q.close !== undefined);
+    let data: ChartDataPoint[] = [];
     
     if (period === "1d") {
       // Get today's date in ET timezone
@@ -431,48 +432,91 @@ export async function getStockChart(
       });
       const todayET = etFormatter.format(new Date());
       
-      quotes = quotes.filter((q: any) => {
+      let todayQuotes = quotes.filter((q: any) => {
         const qDate = new Date(q.date);
         const qDateET = etFormatter.format(qDate);
         return qDateET === todayET;
       });
+      
+      let targetDate = todayET;
+      
       // If no data for today (weekend/holiday), get last trading day's data
-      if (quotes.length === 0) {
-        quotes = historical.quotes.filter((q: any) => q.close !== null && q.close !== undefined);
-        // Get only the most recent day's data
-        if (quotes.length > 0) {
-          const lastDate = etFormatter.format(new Date(quotes[quotes.length - 1].date));
-          quotes = quotes.filter((q: any) => {
-            const qDateET = etFormatter.format(new Date(q.date));
-            return qDateET === lastDate;
-          });
+      if (todayQuotes.length === 0 && quotes.length > 0) {
+        const lastDate = etFormatter.format(new Date(quotes[quotes.length - 1].date));
+        targetDate = lastDate;
+        todayQuotes = quotes.filter((q: any) => {
+          const qDateET = etFormatter.format(new Date(q.date));
+          return qDateET === lastDate;
+        });
+      }
+      
+      // Create a map of existing data points by time
+      const dataMap = new Map<string, any>();
+      for (const q of todayQuotes) {
+        const date = new Date(q.date);
+        const timeKey = date.toLocaleTimeString("en-US", {
+          timeZone: "America/New_York",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+        dataMap.set(timeKey, q);
+      }
+      
+      // Generate fixed timeline from 9:30 AM to 4:00 PM ET (every 5 minutes = 79 points)
+      const fixedTimes: string[] = [];
+      for (let h = 9; h <= 16; h++) {
+        const startMin = h === 9 ? 30 : 0;
+        const endMin = h === 16 ? 0 : 55;
+        for (let m = startMin; m <= endMin; m += 5) {
+          const hour12 = h > 12 ? h - 12 : h;
+          const ampm = h >= 12 ? "PM" : "AM";
+          const timeStr = `${hour12.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${ampm}`;
+          fixedTimes.push(timeStr);
+          if (h === 16 && m === 0) break;
         }
       }
-    }
-
-    const data: ChartDataPoint[] = quotes.map((q: any) => {
+      
+      // Parse targetDate for display
+      const [month, day, year] = targetDate.split("/");
+      const displayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const dateDisplay = displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      
+      // Build data array with fixed timeline
+      data = fixedTimes.map((time) => {
+        const quote = dataMap.get(time);
+        return {
+          date: dateDisplay,
+          time,
+          fullDate: `${displayDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${time}`,
+          price: quote ? quote.close : null,
+          volume: quote ? quote.volume || 0 : 0,
+        };
+      });
+    } else {
+      data = quotes.map((q: any) => {
         const date = new Date(q.date);
         return {
           date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           time: isIntraday
             ? date.toLocaleTimeString("en-US", {
+                timeZone: "America/New_York",
                 hour: "2-digit",
                 minute: "2-digit",
                 hour12: true,
               })
-            : undefined,
+            : date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           fullDate: date.toLocaleDateString("en-US", { 
             weekday: "short",
             month: "short", 
             day: "numeric",
             year: "numeric",
-            hour: isIntraday ? "2-digit" : undefined,
-            minute: isIntraday ? "2-digit" : undefined,
-          }),
+          }) + (isIntraday ? " " + date.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: true }) : ""),
           price: q.close,
           volume: q.volume || 0,
         };
       });
+    }
 
     chartCache.set(cacheKey, { data, timestamp: Date.now() });
     return data;

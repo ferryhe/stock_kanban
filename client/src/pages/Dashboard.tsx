@@ -36,7 +36,7 @@ const MarketTicker = ({ symbol, label, price, change }: MarketTickerProps) => {
 
 export default function Dashboard() {
   const [activeWatchlist, setActiveWatchlist] = useState<string>(WATCHLISTS.AI_CHIPS?.id || Object.values(WATCHLISTS)[0]?.id || "ai_chips");
-  const { data: stocks, isLoading, refetch, isFetching, error, dataUpdatedAt } = useStockData(activeWatchlist);
+  const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
   const { data: marketData } = useMarketOverview();
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
@@ -152,7 +152,7 @@ export default function Dashboard() {
                     <div className="grid gap-4">
                         {stocks?.map((stock, idx) => (
                             <StockCard 
-                              key={`${stock.ticker}-${dataUpdatedAt}`} 
+                              key={stock.ticker} 
                               stock={stock} 
                               index={idx} 
                               onClick={() => setSelectedStock(stock)}
@@ -182,7 +182,7 @@ export default function Dashboard() {
 
       {selectedStock && (
         <StockDetailModal
-          stock={selectedStock}
+          ticker={selectedStock.ticker}
           isOpen={!!selectedStock}
           onClose={() => setSelectedStock(null)}
         />

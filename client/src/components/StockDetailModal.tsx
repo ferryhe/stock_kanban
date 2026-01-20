@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
-import { StockData, useStockChart, ChartInterval } from "@/lib/stockApi";
+import { useStockChart, ChartInterval, useSingleStock, isMarketOpen } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
 import {
   AreaChart,
@@ -10,10 +10,11 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 
 interface StockDetailModalProps {
-  stock: StockData;
+  ticker: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -27,11 +28,11 @@ const INTERVALS: { label: string; value: ChartInterval }[] = [
 ];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+  if (active && payload && payload.length && payload[0].value !== null) {
     const data = payload[0].payload;
     return (
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-2 text-xs">
-        <div className="text-gray-400 mb-1">{data.fullDate}</div>
+        <div className="text-gray-400 mb-1">{data.fullDate || data.time}</div>
         <div className="text-white font-mono font-bold">
           ${payload[0].value.toFixed(2)}
         </div>
@@ -41,16 +42,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalProps) {
+export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalProps) {
   const [interval, setInterval] = useState<ChartInterval>("1mo");
-  const { data: chartData, isLoading } = useStockChart(stock.ticker, interval, isOpen);
+  const { data: stock, isLoading: stockLoading } = useSingleStock(ticker, isOpen);
+  const { data: chartData, isLoading: chartLoading } = useStockChart(ticker, interval, isOpen);
 
-  const isPositive = stock.changePercent >= 0;
+  if (!stock && !stockLoading) return null;
+
+  const isPositive = (stock?.changePercent || 0) >= 0;
   const chartColor = isPositive ? "#22c55e" : "#ef4444";
 
   const formatPrice = (price: number) => `$${price.toFixed(2)}`;
 
-  // Get the display date for 1D view
   const chartDate = chartData && chartData.length > 0 ? chartData[0].date : "";
 
   return (
@@ -73,15 +76,15 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
           >
             <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border p-4 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold font-mono">{stock.ticker}</h2>
+                <h2 className="text-xl font-bold font-mono">{ticker}</h2>
                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {stock.name}
+                  {stock?.name || "Loading..."}
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <div className="text-lg font-bold font-mono">
-                    ${stock.price.toFixed(2)}
+                    ${stock?.price.toFixed(2) || "-"}
                   </div>
                   <div
                     className={cn(
@@ -94,7 +97,7 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                     ) : (
                       <ArrowDown className="w-3 h-3" />
                     )}
-                    {Math.abs(stock.changePercent).toFixed(2)}%
+                    {Math.abs(stock?.changePercent || 0).toFixed(2)}%
                   </div>
                 </div>
                 <button
@@ -134,7 +137,7 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
               </div>
 
               <div className="h-64 w-full">
-                {isLoading ? (
+                {chartLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                   </div>
@@ -143,7 +146,7 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient
-                          id="colorPrice"
+                          id={`colorPrice-${ticker}`}
                           x1="0"
                           y1="0"
                           x2="0"
@@ -162,12 +165,12 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                         </linearGradient>
                       </defs>
                       <XAxis
-                        dataKey={interval === "1d" || interval === "5d" ? "time" : "date"}
+                        dataKey="time"
                         tick={{ fontSize: 10, fill: "#6b7280" }}
                         axisLine={false}
                         tickLine={false}
                         interval="preserveStartEnd"
-                        minTickGap={50}
+                        minTickGap={40}
                       />
                       <YAxis
                         domain={["auto", "auto"]}
@@ -176,6 +179,7 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                         tickLine={false}
                         tickFormatter={formatPrice}
                         width={60}
+                        allowDataOverflow={false}
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Area
@@ -183,7 +187,9 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                         dataKey="price"
                         stroke={chartColor}
                         strokeWidth={2}
-                        fill="url(#colorPrice)"
+                        fill={`url(#colorPrice-${ticker})`}
+                        connectNulls={false}
+                        dot={false}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -194,108 +200,116 @@ export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalPro
                 )}
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                    52 Week High
-                  </div>
-                  <div className="text-lg font-mono font-bold">
-                    ${stock.week52High?.toFixed(2) || "-"}
-                  </div>
+              {stockLoading ? (
+                <div className="mt-6 flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                    52 Week Low
-                  </div>
-                  <div className="text-lg font-mono font-bold">
-                    ${stock.week52Low?.toFixed(2) || "-"}
-                  </div>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                    MACD
-                  </div>
-                  <div
-                    className={cn(
-                      "text-lg font-mono font-bold",
-                      (stock.macd || 0) > 0 ? "text-positive" : "text-negative"
-                    )}
-                  >
-                    {stock.macd?.toFixed(2) || "-"}
-                  </div>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                    Bollinger Bands
-                  </div>
-                  <div className="text-sm font-mono">
-                    <span className="text-positive">
-                      ${stock.bollingerUpper?.toFixed(0) || "-"}
-                    </span>
-                    <span className="text-muted-foreground"> / </span>
-                    <span className="text-negative">
-                      ${stock.bollingerLower?.toFixed(0) || "-"}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                    RSI (14)
-                  </div>
-                  <div
-                    className={cn(
-                      "text-lg font-mono font-bold",
-                      stock.rsi > 70
-                        ? "text-negative"
-                        : stock.rsi < 30
-                        ? "text-positive"
-                        : "text-foreground"
-                    )}
-                  >
-                    {stock.rsi.toFixed(1)}
-                  </div>
-                </div>
-                <div className="bg-secondary/50 rounded-xl p-4">
-                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                    Short Float
-                  </div>
-                  <div
-                    className={cn(
-                      "text-lg font-mono font-bold",
-                      stock.shortFloat > 20 ? "text-negative" : "text-foreground"
-                    )}
-                  >
-                    {stock.shortFloat.toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {stock.tags.map((tag, i) => {
-                  const colors = {
-                    BUY: "bg-positive/10 text-positive border-positive/20",
-                    SELL: "bg-negative/10 text-negative border-negative/20",
-                    WARNING: "bg-warning/10 text-warning border-warning/20",
-                    NEUTRAL: "bg-muted text-muted-foreground border-border",
-                  };
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
-                        colors[tag.type]
-                      )}
-                    >
-                      <span>{tag.label}</span>
-                      {tag.value && (
-                        <span className="opacity-70 border-l border-current pl-2">
-                          {tag.value}
-                        </span>
-                      )}
+              ) : stock && (
+                <>
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                        52 Week High
+                      </div>
+                      <div className="text-lg font-mono font-bold">
+                        ${stock.week52High?.toFixed(2) || "-"}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                        52 Week Low
+                      </div>
+                      <div className="text-lg font-mono font-bold">
+                        ${stock.week52Low?.toFixed(2) || "-"}
+                      </div>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                        MACD
+                      </div>
+                      <div
+                        className={cn(
+                          "text-lg font-mono font-bold",
+                          (stock.macd || 0) > 0 ? "text-positive" : "text-negative"
+                        )}
+                      >
+                        {stock.macd?.toFixed(2) || "-"}
+                      </div>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                        Bollinger Bands
+                      </div>
+                      <div className="text-sm font-mono">
+                        <span className="text-positive">
+                          ${stock.bollingerUpper?.toFixed(0) || "-"}
+                        </span>
+                        <span className="text-muted-foreground"> / </span>
+                        <span className="text-negative">
+                          ${stock.bollingerLower?.toFixed(0) || "-"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                        RSI (14)
+                      </div>
+                      <div
+                        className={cn(
+                          "text-lg font-mono font-bold",
+                          stock.rsi > 70
+                            ? "text-negative"
+                            : stock.rsi < 30
+                            ? "text-positive"
+                            : "text-foreground"
+                        )}
+                      >
+                        {stock.rsi.toFixed(1)}
+                      </div>
+                    </div>
+                    <div className="bg-secondary/50 rounded-xl p-4">
+                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                        Short Float
+                      </div>
+                      <div
+                        className={cn(
+                          "text-lg font-mono font-bold",
+                          stock.shortFloat > 20 ? "text-negative" : "text-foreground"
+                        )}
+                      >
+                        {stock.shortFloat.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {stock.tags.map((tag, i) => {
+                      const colors = {
+                        BUY: "bg-positive/10 text-positive border-positive/20",
+                        SELL: "bg-negative/10 text-negative border-negative/20",
+                        WARNING: "bg-warning/10 text-warning border-warning/20",
+                        NEUTRAL: "bg-muted text-muted-foreground border-border",
+                      };
+                      return (
+                        <div
+                          key={i}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
+                            colors[tag.type]
+                          )}
+                        >
+                          <span>{tag.label}</span>
+                          {tag.value && (
+                            <span className="opacity-70 border-l border-current pl-2">
+                              {tag.value}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         </motion.div>

@@ -98,5 +98,20 @@ export async function registerRoutes(
     }
   });
 
+  // Get single stock data
+  app.get("/api/stock/:ticker", async (req, res) => {
+    try {
+      const { ticker } = req.params;
+      const data = await getStockAnalysis([ticker.toUpperCase()], "Single Stock");
+      if (data.length === 0) {
+        return res.status(404).json({ error: "Stock not found" });
+      }
+      res.json(data[0]);
+    } catch (error) {
+      console.error("Error in /api/stock:", error);
+      res.status(500).json({ error: "Failed to fetch stock data" });
+    }
+  });
+
   return httpServer;
 }

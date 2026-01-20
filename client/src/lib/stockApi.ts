@@ -30,7 +30,7 @@ export interface ChartDataPoint {
   date: string;
   time?: string;
   fullDate: string;
-  price: number;
+  price: number | null;
   volume: number;
 }
 
@@ -256,5 +256,22 @@ export const useStockSearch = (query: string) => {
     },
     enabled: query.length >= 1,
     staleTime: 60000,
+  });
+};
+
+// Hook to fetch single stock data with real-time updates
+export const useSingleStock = (ticker: string, enabled: boolean = true) => {
+  return useQuery<StockData>({
+    queryKey: ["single-stock", ticker],
+    queryFn: async () => {
+      const res = await fetch(`/api/stock/${ticker}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch stock data");
+      }
+      return res.json();
+    },
+    enabled,
+    refetchInterval: isMarketOpen() ? 2000 : 60000,
+    staleTime: 1000,
   });
 };
