@@ -82,14 +82,20 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-card border border-border w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden select-none cursor-pointer"
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
             >
               <div className="flex justify-between items-center p-4 border-b border-border bg-secondary/30">
                 <div className="flex items-center gap-2">
