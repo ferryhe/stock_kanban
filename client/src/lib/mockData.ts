@@ -20,27 +20,35 @@ export interface StockData {
   }[];
 }
 
-export const WATCHLISTS = {
-  AI_CHIPS: {
-    id: "ai_chips",
-    label: "🔥 AI & Chips",
-    tickers: ["NVDA", "AMD", "TSM", "PLTR"],
-  },
-  NUCLEAR: {
-    id: "nuclear",
-    label: "⚛️ Nuclear/Energy",
-    tickers: ["OKLO", "SMR", "CCJ"],
-  },
-  INDICES: {
-    id: "indices",
-    label: "📉 Market Indices",
-    tickers: ["SPY", "QQQ", "IWM"],
-  },
-  VOLATILITY: {
-    id: "volatility",
-    label: "👀 High Volatility",
-    tickers: ["UVIX", "SVIX"],
-  },
+// Get custom watchlists from localStorage
+const getCustomWatchlists = () => {
+  if (typeof window === 'undefined') return {
+    AI_CHIPS: { id: "ai_chips", label: "🔥 AI & Chips", tickers: ["NVDA", "AMD", "TSM", "PLTR"] },
+    NUCLEAR: { id: "nuclear", label: "⚛️ Nuclear/Energy", tickers: ["OKLO", "SMR", "CCJ"] },
+    INDICES: { id: "indices", label: "📉 Market Indices", tickers: ["SPY", "QQQ", "IWM"] },
+    VOLATILITY: { id: "volatility", label: "👀 High Volatility", tickers: ["UVIX", "SVIX"] },
+  };
+  
+  const saved = localStorage.getItem("custom_watchlists");
+  if (saved) return JSON.parse(saved);
+  return {
+    AI_CHIPS: { id: "ai_chips", label: "🔥 AI & Chips", tickers: ["NVDA", "AMD", "TSM", "PLTR"] },
+    NUCLEAR: { id: "nuclear", label: "⚛️ Nuclear/Energy", tickers: ["OKLO", "SMR", "CCJ"] },
+    INDICES: { id: "indices", label: "📉 Market Indices", tickers: ["SPY", "QQQ", "IWM"] },
+    VOLATILITY: { id: "volatility", label: "👀 High Volatility", tickers: ["UVIX", "SVIX"] },
+  };
+};
+
+export const WATCHLISTS: Record<string, any> = getCustomWatchlists();
+
+export const saveWatchlist = (id: string, tickers: string[]) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find(k => current[k].id === id);
+  if (key) {
+    current[key].tickers = tickers;
+    localStorage.setItem("custom_watchlists", JSON.stringify(current));
+    window.location.reload();
+  }
 };
 
 // Helper to generate random stock data
