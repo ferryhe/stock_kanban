@@ -33,7 +33,7 @@ function DraggableWatchlistItem({
       value={watchlist}
       dragListener={false}
       dragControls={dragControls}
-      className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
+      className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl select-none"
     >
       <div className="flex items-center gap-2 flex-1">
         <div
