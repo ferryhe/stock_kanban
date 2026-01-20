@@ -2,12 +2,24 @@ import { StockData, SignalType } from "@/lib/stockApi";
 import { ArrowUp, ArrowDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { IndicatorTooltip } from "./IndicatorTooltip";
 
 interface StockCardProps {
   stock: StockData;
   index: number;
   onClick?: () => void;
 }
+
+const getIndicatorType = (label: string): string => {
+  const labelLower = label.toLowerCase();
+  if (labelLower.includes('rsi')) return 'rsi';
+  if (labelLower.includes('macd')) return 'macd';
+  if (labelLower.includes('trend')) return 'trend';
+  if (labelLower.includes('52w') || labelLower.includes('week')) return 'week52';
+  if (labelLower.includes('bollinger')) return 'bollinger';
+  if (labelLower.includes('volume')) return 'volume';
+  return 'trend';
+};
 
 const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; value?: string }) => {
   const colors = {
@@ -17,11 +29,15 @@ const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; 
     NEUTRAL: "bg-muted text-muted-foreground border-border",
   };
 
+  const indicatorType = getIndicatorType(label);
+
   return (
-    <div className={cn("flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium font-mono", colors[type])}>
-      <span>{label}</span>
-      {value && <span className="opacity-70 border-l border-current pl-2">{value}</span>}
-    </div>
+    <IndicatorTooltip indicator={indicatorType} value={value}>
+      <div className={cn("flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium font-mono", colors[type])}>
+        <span>{label}</span>
+        {value && <span className="opacity-70 border-l border-current pl-2">{value}</span>}
+      </div>
+    </IndicatorTooltip>
   );
 };
 
@@ -77,28 +93,34 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
       </div>
 
       <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
-        <div>
-            <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol / Avg</div>
-            <div className="text-sm font-mono text-foreground">
-                {(stock.volume / 1000000).toFixed(1)}M <span className="text-muted-foreground">/ {(stock.avgVolume / 1000000).toFixed(1)}M</span>
-            </div>
-        </div>
-        <div>
-            <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">RSI (14)</div>
-            <div className={cn("text-sm font-mono font-medium", 
-                stock.rsi > 70 ? "text-negative" : stock.rsi < 30 ? "text-positive" : "text-foreground"
-            )}>
-                {stock.rsi.toFixed(1)}
-            </div>
-        </div>
-        <div>
-            <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Short Float</div>
-            <div className={cn("text-sm font-mono font-medium", 
-                stock.shortFloat > 20 ? "text-negative" : "text-foreground"
-            )}>
-                {stock.shortFloat.toFixed(1)}%
-            </div>
-        </div>
+        <IndicatorTooltip indicator="volume" value={`${(stock.volume / 1000000).toFixed(1)}M / ${(stock.avgVolume / 1000000).toFixed(1)}M`}>
+          <div>
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol / Avg</div>
+              <div className="text-sm font-mono text-foreground">
+                  {(stock.volume / 1000000).toFixed(1)}M <span className="text-muted-foreground">/ {(stock.avgVolume / 1000000).toFixed(1)}M</span>
+              </div>
+          </div>
+        </IndicatorTooltip>
+        <IndicatorTooltip indicator="rsi" value={stock.rsi}>
+          <div>
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">RSI (14)</div>
+              <div className={cn("text-sm font-mono font-medium", 
+                  stock.rsi > 70 ? "text-negative" : stock.rsi < 30 ? "text-positive" : "text-foreground"
+              )}>
+                  {stock.rsi.toFixed(1)}
+              </div>
+          </div>
+        </IndicatorTooltip>
+        <IndicatorTooltip indicator="shortFloat" value={`${stock.shortFloat.toFixed(1)}%`}>
+          <div>
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Short Float</div>
+              <div className={cn("text-sm font-mono font-medium", 
+                  stock.shortFloat > 20 ? "text-negative" : "text-foreground"
+              )}>
+                  {stock.shortFloat.toFixed(1)}%
+              </div>
+          </div>
+        </IndicatorTooltip>
       </div>
     </motion.div>
   );

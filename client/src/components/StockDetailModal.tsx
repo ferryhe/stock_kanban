@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { useStockChart, ChartInterval, useSingleStock, isMarketOpen } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
+import { IndicatorTooltip } from "./IndicatorTooltip";
 import {
   AreaChart,
   Area,
@@ -207,79 +208,91 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
               ) : stock && (
                 <>
                   <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                        52 Week High
+                    <IndicatorTooltip indicator="week52" value={`High: $${stock.week52High?.toFixed(2) || "-"}`}>
+                      <div className="bg-secondary/50 rounded-xl p-4">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                          52 Week High
+                        </div>
+                        <div className="text-lg font-mono font-bold">
+                          ${stock.week52High?.toFixed(2) || "-"}
+                        </div>
                       </div>
-                      <div className="text-lg font-mono font-bold">
-                        ${stock.week52High?.toFixed(2) || "-"}
+                    </IndicatorTooltip>
+                    <IndicatorTooltip indicator="week52" value={`Low: $${stock.week52Low?.toFixed(2) || "-"}`}>
+                      <div className="bg-secondary/50 rounded-xl p-4">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                          52 Week Low
+                        </div>
+                        <div className="text-lg font-mono font-bold">
+                          ${stock.week52Low?.toFixed(2) || "-"}
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                        52 Week Low
+                    </IndicatorTooltip>
+                    <IndicatorTooltip indicator="macd" value={stock.macd}>
+                      <div className="bg-secondary/50 rounded-xl p-4">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                          MACD
+                        </div>
+                        <div
+                          className={cn(
+                            "text-lg font-mono font-bold",
+                            (stock.macd || 0) > 0 ? "text-positive" : "text-negative"
+                          )}
+                        >
+                          {stock.macd?.toFixed(2) || "-"}
+                        </div>
                       </div>
-                      <div className="text-lg font-mono font-bold">
-                        ${stock.week52Low?.toFixed(2) || "-"}
+                    </IndicatorTooltip>
+                    <IndicatorTooltip indicator="bollinger" value={`$${stock.bollingerLower?.toFixed(0) || "-"} - $${stock.bollingerUpper?.toFixed(0) || "-"}`}>
+                      <div className="bg-secondary/50 rounded-xl p-4">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                          Bollinger Bands
+                        </div>
+                        <div className="text-sm font-mono">
+                          <span className="text-positive">
+                            ${stock.bollingerUpper?.toFixed(0) || "-"}
+                          </span>
+                          <span className="text-muted-foreground"> / </span>
+                          <span className="text-negative">
+                            ${stock.bollingerLower?.toFixed(0) || "-"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                        MACD
+                    </IndicatorTooltip>
+                    <IndicatorTooltip indicator="rsi" value={stock.rsi}>
+                      <div className="bg-secondary/50 rounded-xl p-4">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                          RSI (14)
+                        </div>
+                        <div
+                          className={cn(
+                            "text-lg font-mono font-bold",
+                            stock.rsi > 70
+                              ? "text-negative"
+                              : stock.rsi < 30
+                              ? "text-positive"
+                              : "text-foreground"
+                          )}
+                        >
+                          {stock.rsi.toFixed(1)}
+                        </div>
                       </div>
-                      <div
-                        className={cn(
-                          "text-lg font-mono font-bold",
-                          (stock.macd || 0) > 0 ? "text-positive" : "text-negative"
-                        )}
-                      >
-                        {stock.macd?.toFixed(2) || "-"}
+                    </IndicatorTooltip>
+                    <IndicatorTooltip indicator="shortFloat" value={`${stock.shortFloat.toFixed(1)}%`}>
+                      <div className="bg-secondary/50 rounded-xl p-4">
+                        <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                          Short Float
+                        </div>
+                        <div
+                          className={cn(
+                            "text-lg font-mono font-bold",
+                            stock.shortFloat > 20 ? "text-negative" : "text-foreground"
+                          )}
+                        >
+                          {stock.shortFloat.toFixed(1)}%
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                        Bollinger Bands
-                      </div>
-                      <div className="text-sm font-mono">
-                        <span className="text-positive">
-                          ${stock.bollingerUpper?.toFixed(0) || "-"}
-                        </span>
-                        <span className="text-muted-foreground"> / </span>
-                        <span className="text-negative">
-                          ${stock.bollingerLower?.toFixed(0) || "-"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                        RSI (14)
-                      </div>
-                      <div
-                        className={cn(
-                          "text-lg font-mono font-bold",
-                          stock.rsi > 70
-                            ? "text-negative"
-                            : stock.rsi < 30
-                            ? "text-positive"
-                            : "text-foreground"
-                        )}
-                      >
-                        {stock.rsi.toFixed(1)}
-                      </div>
-                    </div>
-                    <div className="bg-secondary/50 rounded-xl p-4">
-                      <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                        Short Float
-                      </div>
-                      <div
-                        className={cn(
-                          "text-lg font-mono font-bold",
-                          stock.shortFloat > 20 ? "text-negative" : "text-foreground"
-                        )}
-                      >
-                        {stock.shortFloat.toFixed(1)}%
-                      </div>
-                    </div>
+                    </IndicatorTooltip>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -290,21 +303,32 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                         WARNING: "bg-warning/10 text-warning border-warning/20",
                         NEUTRAL: "bg-muted text-muted-foreground border-border",
                       };
+                      const getIndicatorType = (label: string): string => {
+                        const labelLower = label.toLowerCase();
+                        if (labelLower.includes('rsi')) return 'rsi';
+                        if (labelLower.includes('macd')) return 'macd';
+                        if (labelLower.includes('trend')) return 'trend';
+                        if (labelLower.includes('52w') || labelLower.includes('week')) return 'week52';
+                        if (labelLower.includes('bollinger')) return 'bollinger';
+                        if (labelLower.includes('volume')) return 'volume';
+                        return 'trend';
+                      };
                       return (
-                        <div
-                          key={i}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
-                            colors[tag.type]
-                          )}
-                        >
-                          <span>{tag.label}</span>
-                          {tag.value && (
-                            <span className="opacity-70 border-l border-current pl-2">
-                              {tag.value}
-                            </span>
-                          )}
-                        </div>
+                        <IndicatorTooltip key={i} indicator={getIndicatorType(tag.label)} value={tag.value}>
+                          <div
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
+                              colors[tag.type]
+                            )}
+                          >
+                            <span>{tag.label}</span>
+                            {tag.value && (
+                              <span className="opacity-70 border-l border-current pl-2">
+                                {tag.value}
+                              </span>
+                            )}
+                          </div>
+                        </IndicatorTooltip>
                       );
                     })}
                   </div>
