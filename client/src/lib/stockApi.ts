@@ -129,10 +129,22 @@ export const useWatchlists = () => {
   });
 };
 
+type WatchlistListener = () => void;
+const watchlistListeners: Set<WatchlistListener> = new Set();
+
+export const subscribeToWatchlistChanges = (listener: WatchlistListener): (() => void) => {
+  watchlistListeners.add(listener);
+  return () => { watchlistListeners.delete(listener); };
+};
+
+const notifyWatchlistChange = () => {
+  watchlistListeners.forEach(listener => listener());
+};
+
 const saveAndRefresh = (newWatchlists: Record<string, Watchlist>) => {
   localStorage.setItem("custom_watchlists", JSON.stringify(newWatchlists));
   WATCHLISTS = newWatchlists;
-  window.location.reload(); // Reload to update all state
+  notifyWatchlistChange();
 };
 
 export const saveWatchlist = (watchlistId: string, tickers: string[]) => {
@@ -144,12 +156,14 @@ export const saveWatchlist = (watchlistId: string, tickers: string[]) => {
   }
 };
 
-export const createWatchlist = (label: string, tickers: string[] = []) => {
+export const createWatchlist = (label: string, tickers: string[] = []): Watchlist => {
   const current = getCustomWatchlists();
   const id = label.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Date.now();
   const key = "CUSTOM_" + Date.now();
-  current[key] = { id, label, tickers };
+  const newWatchlist: Watchlist = { id, label, tickers };
+  current[key] = newWatchlist;
   saveAndRefresh(current);
+  return newWatchlist;
 };
 
 export const deleteWatchlist = (watchlistId: string) => {
@@ -187,6 +201,34 @@ export const updateWatchlistLabel = (watchlistId: string, newLabel: string) => {
     saveAndRefresh(current);
   }
 };
+
+export const reorderWatchlists = (orderedIds: string[]) => {
+  const current = getCustomWatchlists();
+  const entries = Object.entries(current);
+  const reordered: Record<string, Watchlist> = {};
+  
+  const orderedSet = new Set(orderedIds);
+  let index = 0;
+  
+  orderedIds.forEach((id) => {
+    const entry = entries.find(([_, w]) => w.id === id);
+    if (entry) {
+      reordered[`CUSTOM_${index}`] = entry[1];
+      index++;
+    }
+  });
+  
+  entries.forEach(([_, watchlist]) => {
+    if (!orderedSet.has(watchlist.id)) {
+      reordered[`CUSTOM_${index}`] = watchlist;
+      index++;
+    }
+  });
+  
+  saveAndRefresh(reordered);
+};
+
+export const getWatchlistsArray = () => Object.values(WATCHLISTS);
 
 export const useStockData = (watchlistId: string) => {
   const watchlist = Object.values(WATCHLISTS).find((w) => w.id === watchlistId);

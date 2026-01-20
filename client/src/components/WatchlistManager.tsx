@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Trash2, Search, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { X, Plus, Trash2, Search, Loader2, GripVertical, Check } from "lucide-react";
 import { 
   WATCHLISTS, 
   Watchlist, 
@@ -9,6 +9,8 @@ import {
   addTickerToWatchlist, 
   removeTickerFromWatchlist,
   updateWatchlistLabel,
+  reorderWatchlists,
+  subscribeToWatchlistChanges,
   useStockSearch 
 } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
@@ -25,15 +27,40 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
   const [newWatchlistName, setNewWatchlistName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [editLabel, setEditLabel] = useState("");
+  const [watchlistsArray, setWatchlistsArray] = useState<Watchlist[]>(Object.values(WATCHLISTS));
   
   const { data: searchResults, isLoading: isSearching } = useStockSearch(searchQuery);
-  
-  const watchlistsArray = Object.values(WATCHLISTS);
-  const currentWatchlist = watchlistsArray.find(w => w.id === activeWatchlist);
+
+  const refreshWatchlists = useCallback(() => {
+    const updated = Object.values(WATCHLISTS);
+    setWatchlistsArray(updated);
+    if (selectedWatchlist) {
+      const updatedSelected = updated.find(w => w.id === selectedWatchlist.id);
+      if (updatedSelected) {
+        setSelectedWatchlist(updatedSelected);
+      }
+    }
+  }, [selectedWatchlist]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToWatchlistChanges(refreshWatchlists);
+    return unsubscribe;
+  }, [refreshWatchlists]);
+
+  useEffect(() => {
+    if (isOpen) {
+      refreshWatchlists();
+      setMode("list");
+    }
+  }, [isOpen, refreshWatchlists]);
 
   const handleCreateWatchlist = () => {
     if (newWatchlistName.trim()) {
-      createWatchlist(newWatchlistName.trim());
+      const newList = createWatchlist(newWatchlistName.trim());
+      setNewWatchlistName("");
+      setSelectedWatchlist(newList);
+      setEditLabel(newList.label);
+      setMode("edit");
     }
   };
 
@@ -46,6 +73,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
   const handleAddTicker = (ticker: string) => {
     if (selectedWatchlist) {
       addTickerToWatchlist(selectedWatchlist.id, ticker);
+      setSearchQuery("");
     }
   };
 
@@ -66,6 +94,11 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
     setEditLabel(watchlist.label);
     setSearchQuery("");
     setMode("edit");
+  };
+
+  const handleReorder = (newOrder: Watchlist[]) => {
+    setWatchlistsArray(newOrder);
+    reorderWatchlists(newOrder.map(w => w.id));
   };
 
   return (
@@ -109,37 +142,51 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
             <div className="flex-1 overflow-y-auto p-4">
               {mode === "list" && (
                 <div className="space-y-3">
-                  {watchlistsArray.map((watchlist) => (
-                    <div
-                      key={watchlist.id}
-                      className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium">{watchlist.label}</div>
-                        <div className="text-xs text-muted-foreground font-mono">
-                          {watchlist.tickers.length} stocks
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Drag to reorder watchlists
+                  </p>
+                  <Reorder.Group 
+                    axis="y" 
+                    values={watchlistsArray} 
+                    onReorder={handleReorder}
+                    className="space-y-2"
+                  >
+                    {watchlistsArray.map((watchlist) => (
+                      <Reorder.Item
+                        key={watchlist.id}
+                        value={watchlist}
+                        className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl cursor-grab active:cursor-grabbing"
+                      >
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="w-4 h-4 text-muted-foreground" />
+                          <div className="flex-1">
+                            <div className="font-medium">{watchlist.label}</div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {watchlist.tickers.length} stocks
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => openEditMode(watchlist)}
-                          className="px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
-                          data-testid={`edit-${watchlist.id}`}
-                        >
-                          Edit
-                        </button>
-                        {watchlistsArray.length > 1 && (
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleDeleteWatchlist(watchlist.id)}
-                            className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
-                            data-testid={`delete-${watchlist.id}`}
+                            onClick={() => openEditMode(watchlist)}
+                            className="px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
+                            data-testid={`edit-${watchlist.id}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            Edit
                           </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                          {watchlistsArray.length > 1 && (
+                            <button
+                              onClick={() => handleDeleteWatchlist(watchlist.id)}
+                              className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
+                              data-testid={`delete-${watchlist.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </Reorder.Item>
+                    ))}
+                  </Reorder.Group>
 
                   <button
                     onClick={() => setMode("create")}
@@ -287,6 +334,17 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="p-4 border-t border-border">
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity"
+                data-testid="done-button"
+              >
+                <Check className="w-5 h-5" />
+                <span>Done</span>
+              </button>
             </div>
           </motion.div>
         </motion.div>

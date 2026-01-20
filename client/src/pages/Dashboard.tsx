@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useStockData, useMarketOverview, WATCHLISTS, isMarketOpen, getCurrentETTime, StockData } from "@/lib/stockApi";
+import { useState, useEffect, useCallback } from "react";
+import { useStockData, useMarketOverview, WATCHLISTS, isMarketOpen, getCurrentETTime, StockData, subscribeToWatchlistChanges, getWatchlistsArray } from "@/lib/stockApi";
 import { StockCard } from "@/components/StockCard";
 import { StockDetailModal } from "@/components/StockDetailModal";
 import { WatchlistManager } from "@/components/WatchlistManager";
@@ -42,8 +42,24 @@ export default function Dashboard() {
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
   const [currentTime, setCurrentTime] = useState(getCurrentETTime());
+  const [, forceUpdate] = useState(0);
 
   const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist);
+
+  const refreshWatchlists = useCallback(() => {
+    const currentWatchlists = Object.values(WATCHLISTS);
+    const activeExists = currentWatchlists.some(w => w.id === activeWatchlist);
+    if (!activeExists && currentWatchlists.length > 0) {
+      setActiveWatchlist(currentWatchlists[0].id);
+    }
+    forceUpdate(n => n + 1);
+    refetch();
+  }, [refetch, activeWatchlist]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToWatchlistChanges(refreshWatchlists);
+    return unsubscribe;
+  }, [refreshWatchlists]);
 
   // Update time every second
   useEffect(() => {
