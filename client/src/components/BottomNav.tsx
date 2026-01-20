@@ -1,4 +1,4 @@
-import { WATCHLISTS } from "@/lib/mockData";
+import { WATCHLISTS } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 

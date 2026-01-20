@@ -1,29 +1,20 @@
 import { useState, useEffect } from "react";
-import { useStockData, WATCHLISTS, saveWatchlist } from "@/lib/mockData";
+import { useStockData, useMarketOverview, WATCHLISTS, saveWatchlist } from "@/lib/stockApi";
 import { StockCard } from "@/components/StockCard";
 import { BottomNav } from "@/components/BottomNav";
 import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
-import { Loader2, Settings2, X } from "lucide-react";
+import { Loader2, Settings2, X, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface MarketTickerProps {
   symbol: string;
   label: string;
+  price: number;
+  change: number;
 }
 
-const MarketTicker = ({ symbol, label }: MarketTickerProps) => {
-  const isVix = symbol === "VIX";
-  const [price, setPrice] = useState(isVix ? 15.42 : 482.15);
-  const [change] = useState(isVix ? 2.4 : 0.85);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPrice(p => p + (Math.random() - 0.5) * 0.1);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
+const MarketTicker = ({ symbol, label, price, change }: MarketTickerProps) => {
   const isPositive = change >= 0;
 
   return (
@@ -43,11 +34,12 @@ const MarketTicker = ({ symbol, label }: MarketTickerProps) => {
 
 export default function Dashboard() {
   const [activeWatchlist, setActiveWatchlist] = useState<string>(WATCHLISTS.AI_CHIPS.id);
-  const { data: stocks, isLoading } = useStockData(activeWatchlist);
+  const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
+  const { data: marketData } = useMarketOverview();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editTickers, setEditTickers] = useState("");
 
-  const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist) as any;
+  const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist);
 
   useEffect(() => {
     if (currentList) {
@@ -57,11 +49,8 @@ export default function Dashboard() {
 
   const handleSave = () => {
     const tickers = editTickers.split(",").map(t => t.trim().toUpperCase()).filter(t => t);
-    const key = Object.keys(WATCHLISTS).find(k => (WATCHLISTS as any)[k].id === activeWatchlist);
-    if (key) {
-      saveWatchlist(activeWatchlist, tickers);
-      setIsSettingsOpen(false);
-    }
+    saveWatchlist(activeWatchlist, tickers);
+    setIsSettingsOpen(false);
   };
 
   return (
@@ -80,16 +69,35 @@ export default function Dashboard() {
             <div className="flex-shrink-0">
                 <h1 className="text-lg font-bold tracking-tight">Quant<span className="text-primary/60">Dash</span></h1>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-positive animate-pulse" />
-                    <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">Live</span>
+                    <div className={cn("w-1.5 h-1.5 rounded-full", isFetching ? "bg-warning animate-pulse" : "bg-positive")} />
+                    <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
+                      {isFetching ? "Updating" : "Live"}
+                    </span>
                 </div>
             </div>
             
             <div className="flex items-center gap-4">
                 <div className="flex gap-6 border-l border-border/50 pl-6 overflow-x-auto no-scrollbar">
-                    <MarketTicker symbol="SPY" label="S&P 500" />
-                    <MarketTicker symbol="VIX" label="Volatility" />
+                    <MarketTicker 
+                      symbol="SPY" 
+                      label="S&P 500" 
+                      price={marketData?.spy.price || 0}
+                      change={marketData?.spy.change || 0}
+                    />
+                    <MarketTicker 
+                      symbol="VIX" 
+                      label="Volatility" 
+                      price={marketData?.vix.price || 0}
+                      change={marketData?.vix.change || 0}
+                    />
                 </div>
+                <button 
+                  onClick={() => refetch()}
+                  className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                  disabled={isFetching}
+                >
+                  <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
+                </button>
                 <button 
                   onClick={() => setIsSettingsOpen(true)}
                   className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
@@ -155,7 +163,22 @@ export default function Dashboard() {
                         className="flex flex-col items-center justify-center py-20 text-muted-foreground"
                     >
                         <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                        <p className="text-sm font-mono">Fetching Signals...</p>
+                        <p className="text-sm font-mono">Fetching Real Data...</p>
+                    </motion.div>
+                ) : error ? (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="flex flex-col items-center justify-center py-20 text-negative"
+                    >
+                        <p className="text-sm font-mono mb-2">Failed to load data</p>
+                        <button 
+                          onClick={() => refetch()}
+                          className="text-xs bg-secondary px-4 py-2 rounded-lg hover:bg-secondary/80"
+                        >
+                          Retry
+                        </button>
                     </motion.div>
                 ) : (
                     <div className="grid gap-4">

@@ -1,4 +1,4 @@
-import { StockData, SignalType } from "@/lib/mockData";
+import { StockData, SignalType } from "@/lib/stockApi";
 import { ArrowUp, ArrowDown, TrendingUp, Activity, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
