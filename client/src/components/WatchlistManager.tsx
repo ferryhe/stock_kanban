@@ -34,13 +34,14 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
   const refreshWatchlists = useCallback(() => {
     const updated = Object.values(WATCHLISTS);
     setWatchlistsArray(updated);
-    if (selectedWatchlist) {
-      const updatedSelected = updated.find(w => w.id === selectedWatchlist.id);
-      if (updatedSelected) {
-        setSelectedWatchlist(updatedSelected);
+    setSelectedWatchlist(prev => {
+      if (prev) {
+        const updatedSelected = updated.find(w => w.id === prev.id);
+        return updatedSelected || prev;
       }
-    }
-  }, [selectedWatchlist]);
+      return prev;
+    });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToWatchlistChanges(refreshWatchlists);
@@ -52,7 +53,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
       refreshWatchlists();
       setMode("list");
     }
-  }, [isOpen, refreshWatchlists]);
+  }, [isOpen]);
 
   const handleCreateWatchlist = () => {
     if (newWatchlistName.trim()) {
