@@ -1,11 +1,12 @@
 import { StockData, SignalType } from "@/lib/stockApi";
-import { ArrowUp, ArrowDown, TrendingUp, Activity, AlertTriangle } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 interface StockCardProps {
   stock: StockData;
   index: number;
+  onClick?: () => void;
 }
 
 const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; value?: string }) => {
@@ -24,7 +25,7 @@ const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; 
   );
 };
 
-export function StockCard({ stock, index }: StockCardProps) {
+export function StockCard({ stock, index, onClick }: StockCardProps) {
   const isPositive = stock.changePercent >= 0;
 
   return (
@@ -32,29 +33,46 @@ export function StockCard({ stock, index }: StockCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-xl shadow-sm hover:border-primary/20 transition-colors"
+      className={cn(
+        "bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-xl shadow-sm transition-all",
+        onClick && "cursor-pointer hover:border-primary/40 hover:bg-card/70 active:scale-[0.99]"
+      )}
+      onClick={onClick}
+      data-testid={`stock-card-${stock.ticker}`}
     >
       <div className="flex justify-between items-start mb-4">
-        <div>
+        <div className="flex-1">
           <h3 className="text-xl font-bold font-mono tracking-tight text-foreground">{stock.ticker}</h3>
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Stock</p>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider truncate max-w-[150px]">
+            {stock.name}
+          </p>
         </div>
-        <div className="text-right">
-          <div className="text-lg font-bold font-mono text-foreground">
-            ${stock.price.toFixed(2)}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-lg font-bold font-mono text-foreground">
+              ${stock.price.toFixed(2)}
+            </div>
+            <div className={cn("flex items-center justify-end gap-1 text-sm font-mono font-medium", isPositive ? "text-positive" : "text-negative")}>
+              {isPositive ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+              {Math.abs(stock.changePercent).toFixed(2)}%
+            </div>
           </div>
-          <div className={cn("flex items-center justify-end gap-1 text-sm font-mono font-medium", isPositive ? "text-positive" : "text-negative")}>
-            {isPositive ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-            {Math.abs(stock.changePercent).toFixed(2)}%
-          </div>
+          {onClick && (
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          )}
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
-          {stock.tags.map((tag, i) => (
+          {stock.tags.slice(0, 4).map((tag, i) => (
             <SignalBadge key={i} type={tag.type} label={tag.label} value={tag.value} />
           ))}
+          {stock.tags.length > 4 && (
+            <div className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-mono">
+              +{stock.tags.length - 4}
+            </div>
+          )}
         </div>
       </div>
 

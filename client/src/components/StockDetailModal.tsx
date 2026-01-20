@@ -1,0 +1,289 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { StockData, useStockChart, ChartInterval } from "@/lib/stockApi";
+import { cn } from "@/lib/utils";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+interface StockDetailModalProps {
+  stock: StockData;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const INTERVALS: { label: string; value: ChartInterval }[] = [
+  { label: "1D", value: "1d" },
+  { label: "5D", value: "5d" },
+  { label: "1M", value: "1mo" },
+  { label: "3M", value: "3mo" },
+  { label: "1Y", value: "1y" },
+];
+
+export function StockDetailModal({ stock, isOpen, onClose }: StockDetailModalProps) {
+  const [interval, setInterval] = useState<ChartInterval>("1mo");
+  const { data: chartData, isLoading } = useStockChart(stock.ticker, interval, isOpen);
+
+  const isPositive = stock.changePercent >= 0;
+  const chartColor = isPositive ? "#22c55e" : "#ef4444";
+
+  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="bg-card border border-border w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border p-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold font-mono">{stock.ticker}</h2>
+                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {stock.name}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-lg font-bold font-mono">
+                    ${stock.price.toFixed(2)}
+                  </div>
+                  <div
+                    className={cn(
+                      "flex items-center justify-end gap-1 text-sm font-mono",
+                      isPositive ? "text-positive" : "text-negative"
+                    )}
+                  >
+                    {isPositive ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    )}
+                    {Math.abs(stock.changePercent).toFixed(2)}%
+                  </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-secondary rounded-lg"
+                  data-testid="close-modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4">
+              <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+                {INTERVALS.map((int) => (
+                  <button
+                    key={int.value}
+                    onClick={() => setInterval(int.value)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-mono font-medium transition-colors flex-shrink-0",
+                      interval === int.value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    )}
+                    data-testid={`interval-${int.value}`}
+                  >
+                    {int.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="h-64 w-full">
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : chartData && chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient
+                          id="colorPrice"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor={chartColor}
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor={chartColor}
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey={interval === "1d" || interval === "5d" ? "time" : "date"}
+                        tick={{ fontSize: 10, fill: "#6b7280" }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval="preserveStartEnd"
+                        minTickGap={50}
+                      />
+                      <YAxis
+                        domain={["auto", "auto"]}
+                        tick={{ fontSize: 10, fill: "#6b7280" }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={formatPrice}
+                        width={60}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                        labelStyle={{ color: "#9ca3af" }}
+                        formatter={(value: number) => [formatPrice(value), "Price"]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="price"
+                        stroke={chartColor}
+                        strokeWidth={2}
+                        fill="url(#colorPrice)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                    No chart data available
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                    52 Week High
+                  </div>
+                  <div className="text-lg font-mono font-bold">
+                    ${stock.week52High?.toFixed(2) || "-"}
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                    52 Week Low
+                  </div>
+                  <div className="text-lg font-mono font-bold">
+                    ${stock.week52Low?.toFixed(2) || "-"}
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                    MACD
+                  </div>
+                  <div
+                    className={cn(
+                      "text-lg font-mono font-bold",
+                      (stock.macd || 0) > 0 ? "text-positive" : "text-negative"
+                    )}
+                  >
+                    {stock.macd?.toFixed(2) || "-"}
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                    Bollinger Bands
+                  </div>
+                  <div className="text-sm font-mono">
+                    <span className="text-positive">
+                      ${stock.bollingerUpper?.toFixed(0) || "-"}
+                    </span>
+                    <span className="text-muted-foreground"> / </span>
+                    <span className="text-negative">
+                      ${stock.bollingerLower?.toFixed(0) || "-"}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                    RSI (14)
+                  </div>
+                  <div
+                    className={cn(
+                      "text-lg font-mono font-bold",
+                      stock.rsi > 70
+                        ? "text-negative"
+                        : stock.rsi < 30
+                        ? "text-positive"
+                        : "text-foreground"
+                    )}
+                  >
+                    {stock.rsi.toFixed(1)}
+                  </div>
+                </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                    Short Float
+                  </div>
+                  <div
+                    className={cn(
+                      "text-lg font-mono font-bold",
+                      stock.shortFloat > 20 ? "text-negative" : "text-foreground"
+                    )}
+                  >
+                    {stock.shortFloat.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {stock.tags.map((tag, i) => {
+                  const colors = {
+                    BUY: "bg-positive/10 text-positive border-positive/20",
+                    SELL: "bg-negative/10 text-negative border-negative/20",
+                    WARNING: "bg-warning/10 text-warning border-warning/20",
+                    NEUTRAL: "bg-muted text-muted-foreground border-border",
+                  };
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
+                        colors[tag.type]
+                      )}
+                    >
+                      <span>{tag.label}</span>
+                      {tag.value && (
+                        <span className="opacity-70 border-l border-current pl-2">
+                          {tag.value}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

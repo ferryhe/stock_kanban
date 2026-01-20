@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useStockData, useMarketOverview, WATCHLISTS, saveWatchlist } from "@/lib/stockApi";
+import { useStockData, useMarketOverview, WATCHLISTS, saveWatchlist, isMarketOpen, StockData } from "@/lib/stockApi";
 import { StockCard } from "@/components/StockCard";
+import { StockDetailModal } from "@/components/StockDetailModal";
 import { BottomNav } from "@/components/BottomNav";
 import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
 import { Loader2, Settings2, X, RefreshCw } from "lucide-react";
@@ -38,6 +39,8 @@ export default function Dashboard() {
   const { data: marketData } = useMarketOverview();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editTickers, setEditTickers] = useState("");
+  const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
+  const [marketOpen, setMarketOpen] = useState(isMarketOpen());
 
   const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist);
 
@@ -46,6 +49,14 @@ export default function Dashboard() {
       setEditTickers(currentList.tickers.join(", "));
     }
   }, [activeWatchlist, currentList]);
+
+  // Update market status every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMarketOpen(isMarketOpen());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSave = () => {
     const tickers = editTickers.split(",").map(t => t.trim().toUpperCase()).filter(t => t);
@@ -69,9 +80,11 @@ export default function Dashboard() {
             <div className="flex-shrink-0">
                 <h1 className="text-lg font-bold tracking-tight">Quant<span className="text-primary/60">Dash</span></h1>
                 <div className="flex items-center gap-1.5">
-                    <div className={cn("w-1.5 h-1.5 rounded-full", isFetching ? "bg-warning animate-pulse" : "bg-positive")} />
+                    <div className={cn("w-1.5 h-1.5 rounded-full", 
+                      isFetching ? "bg-warning animate-pulse" : marketOpen ? "bg-positive" : "bg-muted-foreground"
+                    )} />
                     <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
-                      {isFetching ? "Updating" : "Live"}
+                      {isFetching ? "Updating" : marketOpen ? "Market Open" : "Market Closed"}
                     </span>
                 </div>
             </div>
@@ -95,12 +108,14 @@ export default function Dashboard() {
                   onClick={() => refetch()}
                   className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                   disabled={isFetching}
+                  data-testid="refresh-button"
                 >
                   <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
                 </button>
                 <button 
                   onClick={() => setIsSettingsOpen(true)}
                   className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                  data-testid="settings-button"
                 >
                   <Settings2 className="w-5 h-5" />
                 </button>
@@ -124,7 +139,7 @@ export default function Dashboard() {
             >
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-bold">Edit Watchlist</h2>
-                <button onClick={() => setIsSettingsOpen(false)}><X className="w-5 h-5" /></button>
+                <button onClick={() => setIsSettingsOpen(false)} data-testid="close-settings"><X className="w-5 h-5" /></button>
               </div>
               
               <div className="space-y-4">
@@ -138,11 +153,13 @@ export default function Dashboard() {
                     className="w-full bg-secondary/50 border border-border rounded-xl p-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
                     rows={4}
                     placeholder="AAPL, MSFT, GOOGL..."
+                    data-testid="edit-tickers-input"
                   />
                 </div>
                 <button 
                   onClick={handleSave}
                   className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity"
+                  data-testid="save-watchlist-button"
                 >
                   Save Changes
                 </button>
@@ -176,6 +193,7 @@ export default function Dashboard() {
                         <button 
                           onClick={() => refetch()}
                           className="text-xs bg-secondary px-4 py-2 rounded-lg hover:bg-secondary/80"
+                          data-testid="retry-button"
                         >
                           Retry
                         </button>
@@ -183,7 +201,12 @@ export default function Dashboard() {
                 ) : (
                     <div className="grid gap-4">
                         {stocks?.map((stock, idx) => (
-                            <StockCard key={stock.ticker} stock={stock} index={idx} />
+                            <StockCard 
+                              key={stock.ticker} 
+                              stock={stock} 
+                              index={idx} 
+                              onClick={() => setSelectedStock(stock)}
+                            />
                         ))}
                     </div>
                 )}
@@ -195,6 +218,14 @@ export default function Dashboard() {
         currentWatchlist={activeWatchlist} 
         onSelect={setActiveWatchlist} 
       />
+
+      {selectedStock && (
+        <StockDetailModal
+          stock={selectedStock}
+          isOpen={!!selectedStock}
+          onClose={() => setSelectedStock(null)}
+        />
+      )}
     </div>
   );
 }

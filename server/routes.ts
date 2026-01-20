@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { getStockAnalysis, getMarketOverview } from "./stockService";
+import { getStockAnalysis, getMarketOverview, getStockChart } from "./stockService";
 
 const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
   ai_chips: { label: "🔥 AI & Chips", tickers: ["NVDA", "AMD", "TSM", "PLTR"] },
@@ -68,6 +68,19 @@ export async function registerRoutes(
       tickers: data.tickers,
     }));
     res.json(watchlists);
+  });
+
+  // Get historical chart data for a stock
+  app.get("/api/chart/:ticker", async (req, res) => {
+    try {
+      const { ticker } = req.params;
+      const interval = (req.query.interval as string) || "1mo";
+      const data = await getStockChart(ticker.toUpperCase(), interval);
+      res.json(data);
+    } catch (error) {
+      console.error("Error in /api/chart:", error);
+      res.status(500).json({ error: "Failed to fetch chart data" });
+    }
   });
 
   return httpServer;

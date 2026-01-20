@@ -13,11 +13,24 @@ export interface StockData {
   sma20: number;
   shortFloat: number;
   sector: string;
+  week52High?: number;
+  week52Low?: number;
+  macd?: number;
+  macdSignal?: number;
+  bollingerUpper?: number;
+  bollingerLower?: number;
   tags: {
     label: string;
     type: SignalType;
     value?: string;
   }[];
+}
+
+export interface ChartDataPoint {
+  date: string;
+  time?: string;
+  price: number;
+  volume: number;
 }
 
 export interface Watchlist {
@@ -31,12 +44,40 @@ export interface MarketOverview {
   vix: { price: number; change: number };
 }
 
+// Check if US market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
+// Uses Intl API for proper timezone handling including DST
+export function isMarketOpen(): boolean {
+  const now = new Date();
+  
+  // Get current time in America/New_York timezone (handles DST automatically)
+  const etFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+    weekday: "short",
+  });
+  
+  const parts = etFormatter.formatToParts(now);
+  const weekday = parts.find(p => p.type === "weekday")?.value || "";
+  const hour = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+  const minute = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
+  
+  const timeInMinutes = hour * 60 + minute;
+  
+  // Market hours: 9:30 AM (570 minutes) to 4:00 PM (960 minutes)
+  const isWeekday = !["Sat", "Sun"].includes(weekday);
+  const isDuringHours = timeInMinutes >= 570 && timeInMinutes < 960;
+
+  return isWeekday && isDuringHours;
+}
+
 // Get custom watchlists from localStorage or use defaults
 const getCustomWatchlists = (): Record<string, Watchlist> => {
   if (typeof window === "undefined") {
     return getDefaultWatchlists();
   }
-  
+
   const saved = localStorage.getItem("custom_watchlists");
   if (saved) {
     try {
@@ -77,15 +118,15 @@ export const useStockData = (watchlistId: string) => {
       const url = customTickers
         ? `/api/stocks/${watchlistId}?tickers=${encodeURIComponent(customTickers)}`
         : `/api/stocks/${watchlistId}`;
-      
+
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error("Failed to fetch stock data");
       }
       return res.json();
     },
-    refetchInterval: 60000, // Refresh every 60 seconds (aligned with cache)
-    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchInterval: isMarketOpen() ? 2000 : 60000, // 2s during market hours, 60s otherwise
+    staleTime: 1000,
   });
 };
 
@@ -99,7 +140,24 @@ export const useMarketOverview = () => {
       }
       return res.json();
     },
-    refetchInterval: 60000,
+    refetchInterval: isMarketOpen() ? 2000 : 60000,
+    staleTime: 1000,
+  });
+};
+
+export type ChartInterval = "1d" | "5d" | "1mo" | "3mo" | "1y";
+
+export const useStockChart = (ticker: string, interval: ChartInterval, enabled: boolean = true) => {
+  return useQuery<ChartDataPoint[]>({
+    queryKey: ["chart", ticker, interval],
+    queryFn: async () => {
+      const res = await fetch(`/api/chart/${ticker}?interval=${interval}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch chart data");
+      }
+      return res.json();
+    },
+    enabled,
     staleTime: 30000,
   });
 };
