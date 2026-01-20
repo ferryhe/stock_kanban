@@ -202,6 +202,15 @@ export const updateWatchlistLabel = (watchlistId: string, newLabel: string) => {
   }
 };
 
+export const reorderTickersInWatchlist = (watchlistId: string, orderedTickers: string[]) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key) {
+    current[key].tickers = orderedTickers;
+    saveAndRefresh(current);
+  }
+};
+
 export const reorderWatchlists = (orderedIds: string[]) => {
   const current = getCustomWatchlists();
   const entries = Object.entries(current);

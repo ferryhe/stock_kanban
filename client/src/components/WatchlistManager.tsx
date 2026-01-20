@@ -10,6 +10,7 @@ import {
   removeTickerFromWatchlist,
   updateWatchlistLabel,
   reorderWatchlists,
+  reorderTickersInWatchlist,
   subscribeToWatchlistChanges,
   useStockSearch 
 } from "@/lib/stockApi";
@@ -67,6 +68,42 @@ function DraggableWatchlistItem({
           </button>
         )}
       </div>
+    </Reorder.Item>
+  );
+}
+
+function DraggableStockItem({ 
+  ticker, 
+  onRemove 
+}: { 
+  ticker: string; 
+  onRemove: () => void; 
+}) {
+  const dragControls = useDragControls();
+  
+  return (
+    <Reorder.Item
+      value={ticker}
+      dragListener={false}
+      dragControls={dragControls}
+      className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl select-none"
+    >
+      <div className="flex items-center gap-2 flex-1">
+        <div
+          className="cursor-grab active:cursor-grabbing touch-none p-1"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <span className="font-mono font-bold">{ticker}</span>
+      </div>
+      <button
+        onClick={onRemove}
+        className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
+        data-testid={`remove-${ticker}`}
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </Reorder.Item>
   );
 }
@@ -156,6 +193,13 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
   const handleReorder = (newOrder: Watchlist[]) => {
     setWatchlistsArray(newOrder);
     reorderWatchlists(newOrder.map(w => w.id));
+  };
+
+  const handleReorderTickers = (newOrder: string[]) => {
+    if (selectedWatchlist) {
+      setSelectedWatchlist({ ...selectedWatchlist, tickers: newOrder });
+      reorderTickersInWatchlist(selectedWatchlist.id, newOrder);
+    }
   };
 
   return (
@@ -338,30 +382,27 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
 
                   <div>
                     <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
-                      Current Stocks ({selectedWatchlist.tickers.length})
+                      Current Stocks ({selectedWatchlist.tickers.length}) - Drag to reorder
                     </label>
-                    <div className="space-y-2">
+                    <Reorder.Group
+                      axis="y"
+                      values={selectedWatchlist.tickers}
+                      onReorder={handleReorderTickers}
+                      className="space-y-2"
+                    >
                       {selectedWatchlist.tickers.map((ticker) => (
-                        <div
+                        <DraggableStockItem
                           key={ticker}
-                          className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
-                        >
-                          <span className="font-mono font-bold">{ticker}</span>
-                          <button
-                            onClick={() => handleRemoveTicker(ticker)}
-                            className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
-                            data-testid={`remove-${ticker}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                          ticker={ticker}
+                          onRemove={() => handleRemoveTicker(ticker)}
+                        />
                       ))}
-                      {selectedWatchlist.tickers.length === 0 && (
-                        <div className="text-center text-muted-foreground text-sm py-4">
-                          No stocks in this watchlist
-                        </div>
-                      )}
-                    </div>
+                    </Reorder.Group>
+                    {selectedWatchlist.tickers.length === 0 && (
+                      <div className="text-center text-muted-foreground text-sm py-4">
+                        No stocks in this watchlist
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
