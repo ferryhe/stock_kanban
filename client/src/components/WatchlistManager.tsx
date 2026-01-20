@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { X, Plus, Trash2, Search, Loader2, GripVertical, Check } from "lucide-react";
 import { 
   WATCHLISTS, 
@@ -14,6 +14,62 @@ import {
   useStockSearch 
 } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
+
+function DraggableWatchlistItem({ 
+  watchlist, 
+  onEdit, 
+  onDelete, 
+  canDelete 
+}: { 
+  watchlist: Watchlist; 
+  onEdit: () => void; 
+  onDelete: () => void; 
+  canDelete: boolean;
+}) {
+  const dragControls = useDragControls();
+  
+  return (
+    <Reorder.Item
+      value={watchlist}
+      dragListener={false}
+      dragControls={dragControls}
+      className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl"
+    >
+      <div className="flex items-center gap-2 flex-1">
+        <div
+          className="cursor-grab active:cursor-grabbing touch-none p-1"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <div className="flex-1">
+          <div className="font-medium">{watchlist.label}</div>
+          <div className="text-xs text-muted-foreground font-mono">
+            {watchlist.tickers.length} stocks
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onEdit}
+          className="px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
+          data-testid={`edit-${watchlist.id}`}
+        >
+          Edit
+        </button>
+        {canDelete && (
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
+            data-testid={`delete-${watchlist.id}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </Reorder.Item>
+  );
+}
 
 interface WatchlistManagerProps {
   isOpen: boolean;
@@ -153,39 +209,13 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                     className="space-y-2"
                   >
                     {watchlistsArray.map((watchlist) => (
-                      <Reorder.Item
+                      <DraggableWatchlistItem
                         key={watchlist.id}
-                        value={watchlist}
-                        className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl cursor-grab active:cursor-grabbing"
-                      >
-                        <div className="flex items-center gap-2">
-                          <GripVertical className="w-4 h-4 text-muted-foreground" />
-                          <div className="flex-1">
-                            <div className="font-medium">{watchlist.label}</div>
-                            <div className="text-xs text-muted-foreground font-mono">
-                              {watchlist.tickers.length} stocks
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEditMode(watchlist)}
-                            className="px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
-                            data-testid={`edit-${watchlist.id}`}
-                          >
-                            Edit
-                          </button>
-                          {watchlistsArray.length > 1 && (
-                            <button
-                              onClick={() => handleDeleteWatchlist(watchlist.id)}
-                              className="p-1.5 text-negative hover:bg-negative/10 rounded-lg"
-                              data-testid={`delete-${watchlist.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </Reorder.Item>
+                        watchlist={watchlist}
+                        onEdit={() => openEditMode(watchlist)}
+                        onDelete={() => handleDeleteWatchlist(watchlist.id)}
+                        canDelete={watchlistsArray.length > 1}
+                      />
                     ))}
                   </Reorder.Group>
 
