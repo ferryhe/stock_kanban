@@ -4,6 +4,7 @@ import { X, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { useStockChart, ChartInterval, useSingleStock, isMarketOpen } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
+import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
 import {
   AreaChart,
   Area,
@@ -207,6 +208,14 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                 </div>
               ) : stock && (
                 <>
+                  {/* Quant Metrics 量化指标 */}
+                  {stock.quant && (
+                    <div className="mt-6">
+                      <QuantMetricsDisplay metrics={stock.quant} compact={true} />
+                    </div>
+                  )}
+
+                  {/* Technical Indicators 技术指标 */}
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     <IndicatorTooltip indicator="week52" value={`High: $${stock.week52High?.toFixed(2) || "-"}`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
