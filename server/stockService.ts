@@ -1,9 +1,24 @@
 import YahooFinance from "yahoo-finance2";
+import * as fs from "fs";
+import * as path from "path";
 
 // Initialize yahoo-finance2 instance with suppressed warnings
 const yf = new YahooFinance({
   suppressNotices: ["yahooSurvey"],
 });
+
+interface QuantMetrics {
+  score?: number | null;
+  rank?: number;
+  predictedReturn?: number;
+  risk?: {
+    vol60?: number;
+    maxdd252?: number;
+  };
+  status?: {
+    bucket?: "HOLD" | "LONG" | "SHORT";
+  };
+}
 
 interface StockAnalysis {
   ticker: string;
@@ -27,6 +42,7 @@ interface StockAnalysis {
     type: "BUY" | "SELL" | "WARNING" | "NEUTRAL";
     value?: string;
   }>;
+  quant?: QuantMetrics;
 }
 
 interface ChartDataPoint {
@@ -69,6 +85,54 @@ const marketCache: Map<string, MarketCacheEntry> = new Map();
 const chartCache: Map<string, ChartCacheEntry> = new Map();
 const CACHE_TTL = 2 * 1000; // 2 seconds cache during market hours
 const CHART_CACHE_TTL = 30 * 1000; // 30 seconds for chart data
+
+// Load quantitative metrics from JSON file
+let quantMetricsCache: Map<string, QuantMetrics> | null = null;
+let quantMetricsCacheTime = 0;
+const QUANT_CACHE_TTL = 60 * 60 * 1000; // 1 hour cache for quant metrics
+
+function loadQuantMetrics(): Map<string, QuantMetrics> {
+  const now = Date.now();
+  if (quantMetricsCache && now - quantMetricsCacheTime < QUANT_CACHE_TTL) {
+    return quantMetricsCache;
+  }
+
+  const metricsMap = new Map<string, QuantMetrics>();
+  
+  // Load from project local data file
+  const metricsPath = path.join(process.cwd(), "data", "quant-metrics.json");
+  
+  try {
+    if (fs.existsSync(metricsPath)) {
+      const rawData = fs.readFileSync(metricsPath, "utf-8");
+      const data = JSON.parse(rawData);
+      
+      if (Array.isArray(data)) {
+        data.forEach((item: any) => {
+          if (item.ticker) {
+            metricsMap.set(item.ticker.toUpperCase(), {
+              score: item.score,
+              rank: item.rank,
+              predictedReturn: item.predictedReturn,
+              risk: item.risk,
+              status: item.status,
+            });
+          }
+        });
+      }
+      console.log(`[Quant] Loaded metrics for ${metricsMap.size} tickers from ${metricsPath}`);
+    } else {
+      console.warn(`[Quant] Metrics file not found at ${metricsPath}`);
+    }
+  } catch (error) {
+    console.warn(`[Quant] Failed to load metrics:`, error);
+  }
+  
+  quantMetricsCache = metricsMap;
+  quantMetricsCacheTime = now;
+  
+  return metricsMap;
+}
 
 function calculateRSI(prices: number[], period: number = 14): number {
   if (prices.length < period + 1) return 50;
@@ -167,6 +231,9 @@ export async function getStockAnalysis(
   }
 
   console.log(`[API] Fetching fresh data for ${tickers.join(", ")}`);
+
+  // Load quantitative metrics
+  const quantMetrics = loadQuantMetrics();
 
   const results: StockAnalysis[] = [];
 
@@ -301,6 +368,7 @@ export async function getStockAnalysis(
         bollingerUpper,
         bollingerLower,
         tags,
+        quant: quantMetrics.get(ticker.toUpperCase()),
       });
     } catch (error) {
       console.error(`Error fetching ${ticker}:`, error);
@@ -322,6 +390,7 @@ export async function getStockAnalysis(
         bollingerUpper: 0,
         bollingerLower: 0,
         tags: [{ label: "Error", type: "WARNING", value: "Data unavailable" }],
+        quant: quantMetrics.get(ticker.toUpperCase()),
       });
     }
   }

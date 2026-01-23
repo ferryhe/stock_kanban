@@ -1,0 +1,142 @@
+[
+  {
+    "ticker": "AAPL",
+    "score": null,
+    "rank": 9.0,
+    "signal": "hold",
+    "predictedReturn": 0.02110994744633738,
+    "risk": {
+      "vol60": -0.9876702225420664,
+      "maxdd252": 0.09959975485599498
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "AMZN",
+    "score": null,
+    "rank": 5.0,
+    "signal": "hold",
+    "predictedReturn": 0.04681231172885175,
+    "risk": {
+      "vol60": 0.011370709206386453,
+      "maxdd252": 0.24294624017263425
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "FNKO",
+    "score": null,
+    "rank": 1.0,
+    "signal": "hold",
+    "predictedReturn": 0.23298690768771085,
+    "risk": {
+      "vol60": 2.165128825297398,
+      "maxdd252": -2.584684802693375
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "GOOGL",
+    "score": null,
+    "rank": 4.0,
+    "signal": "hold",
+    "predictedReturn": 0.03994042054644088,
+    "risk": {
+      "vol60": -0.17939113022055067,
+      "maxdd252": 0.3047408856957642
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "KC",
+    "score": null,
+    "rank": 3.0,
+    "signal": "hold",
+    "predictedReturn": 0.09502946997681457,
+    "risk": {
+      "vol60": 1.363992172460915,
+      "maxdd252": -0.7400420031602035
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "META",
+    "score": null,
+    "rank": 5.0,
+    "signal": "hold",
+    "predictedReturn": 0.06587819266403945,
+    "risk": {
+      "vol60": 0.04927114880943222,
+      "maxdd252": 0.05399088136726686
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "MSFT",
+    "score": null,
+    "rank": 5.5,
+    "signal": "hold",
+    "predictedReturn": 0.032650456358973984,
+    "risk": {
+      "vol60": -0.8843490875110718,
+      "maxdd252": 0.6555777797651345
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "NVDA",
+    "score": null,
+    "rank": 5.0,
+    "signal": "hold",
+    "predictedReturn": 0.03560477294482571,
+    "risk": {
+      "vol60": 0.24741133805155588,
+      "maxdd252": -0.1035715044618098
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "V",
+    "score": null,
+    "rank": 9.0,
+    "signal": "hold",
+    "predictedReturn": 0.022233619305645807,
+    "risk": {
+      "vol60": -0.8495796391172227,
+      "maxdd252": 1.1383626075748046
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "XOM",
+    "score": null,
+    "rank": 8.5,
+    "signal": "hold",
+    "predictedReturn": 0.02116444815607331,
+    "risk": {
+      "vol60": -0.9361841144347763,
+      "maxdd252": 0.9330801608837904
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  }
+]

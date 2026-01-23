@@ -3,6 +3,7 @@ import { ArrowUp, ArrowDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { IndicatorTooltip } from "./IndicatorTooltip";
+import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
 
 interface StockCardProps {
   stock: StockData;
@@ -90,6 +91,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
             </div>
           )}
         </div>
+        {stock.quant && <QuantMetricsDisplay metrics={stock.quant} />}
       </div>
 
       <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">

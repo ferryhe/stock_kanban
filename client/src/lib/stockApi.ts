@@ -2,6 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 
 export type SignalType = "BUY" | "SELL" | "NEUTRAL" | "WARNING";
 
+export interface QuantMetrics {
+  score?: number | null;
+  rank?: number;
+  predictedReturn?: number;
+  risk?: {
+    vol60?: number;
+    maxdd252?: number;
+  };
+  status?: {
+    bucket?: "HOLD" | "LONG" | "SHORT";
+  };
+}
+
 export interface StockData {
   ticker: string;
   name: string;
@@ -24,6 +37,7 @@ export interface StockData {
     type: SignalType;
     value?: string;
   }[];
+  quant?: QuantMetrics;
 }
 
 export interface ChartDataPoint {

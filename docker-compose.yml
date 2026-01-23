@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  stock-kanban-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stock-kanban-app
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+    expose:
+      - 3000
+    networks:
+      - caddy-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/watchlists"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  caddy-net:
+    external: true
