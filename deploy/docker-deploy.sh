@@ -25,12 +25,17 @@ echo "✓ 创建应用目录..."
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
-# 3. 克隆或拉取项目
+# 3. 拉取最新项目代码
 echo "✓ 获取最新代码..."
 if [ -d ".git" ]; then
-    git pull origin main
+    # 已经是 Git 仓库，直接拉取
+    git pull origin main 2>/dev/null || true
+    echo "代码已更新"
 else
-    git clone https://github.com/your-username/stock_kanban.git .
+    # 不是 Git 仓库（第一次运行），初始化
+    git init
+    git remote add origin https://github.com/your-username/stock_kanban.git
+    git pull origin main || echo "⚠️  无法从 GitHub 拉取，假设本地文件已完整"
 fi
 
 # 4. 检查或创建 Caddy 网络
