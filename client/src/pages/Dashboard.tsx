@@ -4,7 +4,7 @@ import { StockCard } from "@/components/StockCard";
 import { StockDetailModal } from "@/components/StockDetailModal";
 import { WatchlistManager } from "@/components/WatchlistManager";
 import { BottomNav } from "@/components/BottomNav";
-import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
+// import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
 import { Loader2, Settings2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -75,8 +75,8 @@ export default function Dashboard() {
       <div 
         className="fixed inset-0 z-0 opacity-40 pointer-events-none mix-blend-overlay"
         style={{ 
-            backgroundImage: `url(${generatedImage})`,
-            backgroundSize: '400px',
+            backgroundImage: `radial-gradient(circle, rgba(59, 130, 246, 0.1) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px',
             backgroundRepeat: 'repeat'
         }}
       />
