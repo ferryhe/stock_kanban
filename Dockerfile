@@ -41,4 +41,4 @@ RUN mkdir -p /app/logs
 EXPOSE 3000
 
 # 启动命令
-CMD ["node", "dist/server/index.js"]
+CMD ["node", "dist/index.cjs"]
