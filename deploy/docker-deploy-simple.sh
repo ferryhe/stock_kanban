@@ -39,8 +39,8 @@ echo "✓ 删除旧镜像..."
 docker rmi "$IMAGE_NAME" 2>/dev/null || true
 
 # 5. 构建镜像
-echo "✓ 构建镜像..."
-docker build -t "$IMAGE_NAME" .
+echo "✓ 构建镜像（强制重新构建，不使用缓存）..."
+docker build --no-cache -t "$IMAGE_NAME" .
 
 # 6. 启动容器
 echo "✓ 启动容器..."

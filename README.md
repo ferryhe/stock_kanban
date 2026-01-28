@@ -33,7 +33,8 @@ docker-compose up -d
 # 更新 Caddy 配置（见下方）
 ```
 
-👉 **[Docker + Caddy 完全指南 →](deploy/DOCKER_CADDY_DEPLOYMENT.md)**
+👉 **[Docker + Caddy 完全指南 →](deploy/DOCKER_CADDY_DEPLOYMENT.md)**  
+⚠️ **[网站更新不显示？点这里 →](HOW_TO_UPDATE_WEBSITE.md)**
 
 ### ☁️ AWS EC2 原生部署
 不使用 Docker，直接用 PM2 和 Nginx 的方案
