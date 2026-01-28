@@ -1,86 +1,87 @@
-#!/bin/bash
+﻿#!/bin/bash
 
-# Stock Kanban - Docker 云端部署脚本
-# 用于已有 Caddy �?EC2 环境
+# Stock Kanban - Docker 浜戠閮ㄧ讲鑴氭湰
+# 鐢ㄤ簬宸叉湁 Caddy 鐨?EC2 鐜
 
 set -e
 
-echo "🚀 Stock Kanban Docker 部署开�?.."
+echo "馃殌 Stock Kanban Docker 閮ㄧ讲寮€濮?.."
 
-# 配置变量
+# 閰嶇疆鍙橀噺
 APP_DIR="/home/ec2-user/stock_kanban"
 DOCKER_NETWORK="caddy-net"
 
-# 1. 检�?Docker �?Docker Compose
-echo "�?检�?Docker..."
+# 1. 妫€鏌?Docker 鍜?Docker Compose
+echo "鉁?妫€鏌?Docker..."
 if ! command -v docker &> /dev/null; then
-    echo "�?Docker 未安装，请先安装 Docker"
+    echo "鉂?Docker 鏈畨瑁咃紝璇峰厛瀹夎 Docker"
     exit 1
 fi
 
 docker --version
 
-# 2. 创建应用目录
-echo "�?创建应用目录..."
+# 2. 鍒涘缓搴旂敤鐩綍
+echo "鉁?鍒涘缓搴旂敤鐩綍..."
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
-# 3. 拉取最新项目代�?echo "�?获取最新代�?.."
+# 3. 鎷夊彇鏈€鏂伴」鐩唬鐮?echo "鉁?鑾峰彇鏈€鏂颁唬鐮?.."
 if [ -d ".git" ]; then
-    # 已经�?Git 仓库，直接拉�?    git pull origin main 2>/dev/null || true
-    echo "代码已更�?
+    # 宸茬粡鏄?Git 浠撳簱锛岀洿鎺ユ媺鍙?    git pull origin main 2>/dev/null || true
+    echo "浠ｇ爜宸叉洿鏂?
 else
-    # 不是 Git 仓库（第一次运行），初始化
+    # 涓嶆槸 Git 浠撳簱锛堢涓€娆¤繍琛岋級锛屽垵濮嬪寲
     git init
     git remote add origin https://github.com/your-username/stock_kanban.git
-    git pull origin main || echo "⚠️  无法�?GitHub 拉取，假设本地文件已完整"
+    git pull origin main || echo "鈿狅笍  鏃犳硶浠?GitHub 鎷夊彇锛屽亣璁炬湰鍦版枃浠跺凡瀹屾暣"
 fi
 
-# 4. 检查或创建 Caddy 网络
-echo "�?检�?Caddy 网络..."
+# 4. 妫€鏌ユ垨鍒涘缓 Caddy 缃戠粶
+echo "鉁?妫€鏌?Caddy 缃戠粶..."
 if ! docker network ls | grep -q "$DOCKER_NETWORK"; then
-    echo "创建 Caddy 网络..."
+    echo "鍒涘缓 Caddy 缃戠粶..."
     docker network create "$DOCKER_NETWORK"
 else
-    echo "Caddy 网络已存�?
+    echo "Caddy 缃戠粶宸插瓨鍦?
 fi
 
-# 5. 构建镜像
-echo "�?构建 Docker 镜像..."
+# 5. 鏋勫缓闀滃儚
+echo "鉁?鏋勫缓 Docker 闀滃儚..."
 docker build -t stock-kanban:latest .
 
-# 6. 启动容器
-echo "�?启动 Docker 容器..."
+# 6. 鍚姩瀹瑰櫒
+echo "鉁?鍚姩 Docker 瀹瑰櫒..."
 docker compose down 2>/dev/null || true
 docker compose up -d
 
-# 7. 等待容器启动
-echo "�?等待容器启动..."
+# 7. 绛夊緟瀹瑰櫒鍚姩
+echo "鉁?绛夊緟瀹瑰櫒鍚姩..."
 sleep 5
 
-# 8. 测试健康检�?echo "�?测试容器健康..."
-if docker exec stock-kanban-app curl -f http://localhost:3000/api/watchlists > /dev/null 2>&1; then
-    echo "�?容器健康检查通过"
+# 8. 娴嬭瘯鍋ュ悍妫€鏌?echo "鉁?娴嬭瘯瀹瑰櫒鍋ュ悍..."
+if docker exec stock-kanban-app node -e "fetch('http://localhost:3000/api/watchlists').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" > /dev/null 2>&1; then
+    echo "鉁?瀹瑰櫒鍋ュ悍妫€鏌ラ€氳繃"
 else
-    echo "⚠️  容器可能还在启动中，查看日志�?
+    echo "鈿狅笍  瀹瑰櫒鍙兘杩樺湪鍚姩涓紝鏌ョ湅鏃ュ織锛?
     docker logs stock-kanban-app
 fi
 
-# 9. 显示容器信息
+# 9. 鏄剧ず瀹瑰櫒淇℃伅
 echo ""
-echo "�?Docker 部署完成�?
+echo "鉁?Docker 閮ㄧ讲瀹屾垚锛?
 echo ""
-echo "📊 容器状态："
+echo "馃搳 瀹瑰櫒鐘舵€侊細"
 docker ps -f name=stock-kanban-app --format "table {{.Names}}\t{{.Status}}\t{{.Networks}}"
 
 echo ""
-echo "📝 下一步："
-echo "1. 更新 Caddy 配置（添�?reverse_proxy �?stock-kanban-app:3000�?
-echo "2. 重新加载 Caddy: docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
-echo "3. 访问应用: https://stocks.yourdomain.com"
+echo "馃摑 涓嬩竴姝ワ細"
+echo "1. 鏇存柊 Caddy 閰嶇疆锛堟坊鍔?reverse_proxy 鍒?stock-kanban-app:3000锛?
+echo "2. 閲嶆柊鍔犺浇 Caddy: docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
+echo "3. 璁块棶搴旂敤: https://stocks.yourdomain.com"
 echo ""
-echo "📋 有用的命令："
-echo "   docker logs -f stock-kanban-app          # 查看日志"
-echo "   docker compose restart stock-kanban-api  # 重启应用"
-echo "   docker compose down                      # 停止应用"
+echo "馃搵 鏈夌敤鐨勫懡浠わ細"
+echo "   docker logs -f stock-kanban-app          # 鏌ョ湅鏃ュ織"
+echo "   docker compose restart stock-kanban-api  # 閲嶅惎搴旂敤"
+echo "   docker compose down                      # 鍋滄搴旂敤"
 echo ""
+
