@@ -15,7 +15,8 @@ export function serveStatic(app: Express) {
     maxAge: 0, // No caching for non-hashed files (like index.html)
     setHeaders: (res, filepath) => {
       // Cache hashed assets (JS/CSS with hash in filename) for 1 year
-      if (filepath.match(/\.[a-f0-9]{8,}\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/)) {
+      // Matches Vite's pattern: filename-hash.ext (e.g., index-yk1YeRUD.js)
+      if (filepath.match(/\-[a-zA-Z0-9]{8,}\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/)) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       } else {
         // Don't cache index.html and other non-hashed files
