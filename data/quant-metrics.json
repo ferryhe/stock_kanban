@@ -264,19 +264,5 @@
     "status": {
       "bucket": "HOLD"
     }
-  },
-  {
-    "ticker": "ZEEP",
-    "score": null,
-    "rank": null,
-    "signal": NaN,
-    "predictedReturn": null,
-    "risk": {
-      "vol60": null,
-      "maxdd252": null
-    },
-    "status": {
-      "bucket": "RISK_ALERT"
-    }
   }
 ]
