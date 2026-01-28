@@ -1,6 +1,6 @@
 import React from "react";
 import { QuantMetrics } from "@/lib/stockApi";
-import { TrendingUp, Award, TrendingDown } from "lucide-react";
+import { Award, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 
@@ -53,7 +53,7 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
     // 紧凑模式用于详细页
     return (
       <div className="space-y-3">
-        {/* 顶行：Rank, Score, Bucket */}
+        {/* 顶行：Rank, Signal */}
         <div className="flex gap-2 flex-wrap">
           {metrics.rank !== undefined && (
             <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
@@ -67,15 +67,6 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
               )}>
                 <Award className="w-3 h-3" />
                 <span>R{metrics.rank}</span>
-              </div>
-            </IndicatorTooltip>
-          )}
-
-          {metrics.score !== null && metrics.score !== undefined && (
-            <IndicatorTooltip indicator="score" value={metrics.score.toFixed(2)}>
-              <div className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium font-mono bg-primary/10 text-primary border border-primary/20">
-                <TrendingUp className="w-3 h-3" />
-                <span>S{metrics.score.toFixed(1)}</span>
               </div>
             </IndicatorTooltip>
           )}
@@ -149,7 +140,7 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
 
   return (
     <div className="space-y-2 pt-2 border-t border-border/50">
-      {/* 顶行：Rank, Score, Bucket - 按钮形式 */}
+      {/* 顶行：Rank, Signal - 按钮形式 */}
       <div className="flex gap-1.5 flex-wrap">
         {metrics.rank !== undefined && (
           <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
@@ -163,15 +154,6 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
             )}>
               <Award className="w-3 h-3" />
               <span>R{metrics.rank}</span>
-            </div>
-          </IndicatorTooltip>
-        )}
-
-        {metrics.score !== null && metrics.score !== undefined && (
-          <IndicatorTooltip indicator="score" value={metrics.score.toFixed(2)}>
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium font-mono bg-primary/10 text-primary border border-primary/20">
-              <TrendingUp className="w-3 h-3" />
-              <span>S{metrics.score.toFixed(1)}</span>
             </div>
           </IndicatorTooltip>
         )}

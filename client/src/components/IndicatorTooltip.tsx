@@ -23,8 +23,8 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
   },
   shortFloat: {
     title: "Short Float %",
-    description: "The percentage of a company's shares that are being shorted (bet against) by investors.",
-    interpretation: "Short Float > 20% = High short interest (potential squeeze)\nShort Float 10-20% = Moderate bearish sentiment\nShort Float < 10% = Normal levels"
+    description: "The percentage of a company's public float (shares available to trade) that has been sold short.",
+    interpretation: "Short Float 5-10% = Usually not alarming\nShort Float 20%+ = High short interest (crowded short, squeeze risk)\nHigher % = More bearish positioning"
   },
   macd: {
     title: "MACD (Moving Average Convergence Divergence)",
@@ -58,7 +58,7 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
   },
   score: {
     title: "Ensemble Score (Rank Percentile)",
-    description: "Normalized score derived from the ensemble ranking. Lower values indicate stronger candidates.",
+    description: "Normalized composite score from the ensemble ranking (0-1). Lower values indicate stronger candidates.",
     interpretation: "Lower values are better\nScore reflects relative ranking percentile\nUse alongside rank for decision making\nScores are comparable across stocks"
   },
   predictedReturn: {

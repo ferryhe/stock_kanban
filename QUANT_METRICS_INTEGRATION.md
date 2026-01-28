@@ -38,8 +38,8 @@
 
 #### [client/src/components/QuantMetricsDisplay.tsx](client/src/components/QuantMetricsDisplay.tsx)
 新增组件，显示量化指标：
-- Rank 和 Score 徽章（带颜色编码）
-- Signal 标签
+- Rank 和 Signal 徽章（带颜色编码）
+- 前端不展示 Score（仍保留在数据里）
 - 风险指标（Vol60、MaxDD252）
 - 预测回报
 - 所有指标都有交互式信息提示
