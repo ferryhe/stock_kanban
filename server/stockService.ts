@@ -89,19 +89,31 @@ const CHART_CACHE_TTL = 30 * 1000; // 30 seconds for chart data
 // Load quantitative metrics from JSON file
 let quantMetricsCache: Map<string, QuantMetrics> | null = null;
 let quantMetricsCacheTime = 0;
+let quantMetricsCacheMtime = 0;
 const QUANT_CACHE_TTL = 60 * 60 * 1000; // 1 hour cache for quant metrics
 
 function loadQuantMetrics(): Map<string, QuantMetrics> {
   const now = Date.now();
-  if (quantMetricsCache && now - quantMetricsCacheTime < QUANT_CACHE_TTL) {
+  const metricsPath = path.join(process.cwd(), "data", "quant-metrics.json");
+  let fileMtime = 0;
+  if (fs.existsSync(metricsPath)) {
+    try {
+      fileMtime = fs.statSync(metricsPath).mtimeMs;
+    } catch {
+      fileMtime = 0;
+    }
+  }
+
+  const cacheFresh =
+    quantMetricsCache && now - quantMetricsCacheTime < QUANT_CACHE_TTL;
+  const fileUnchanged = fileMtime > 0 ? fileMtime <= quantMetricsCacheMtime : quantMetricsCacheMtime === 0;
+
+  if (cacheFresh && fileUnchanged) {
     return quantMetricsCache;
   }
 
   const metricsMap = new Map<string, QuantMetrics>();
-  
-  // Load from project local data file
-  const metricsPath = path.join(process.cwd(), "data", "quant-metrics.json");
-  
+
   try {
     if (fs.existsSync(metricsPath)) {
       const rawData = fs.readFileSync(metricsPath, "utf-8");
@@ -130,6 +142,7 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
   
   quantMetricsCache = metricsMap;
   quantMetricsCacheTime = now;
+  quantMetricsCacheMtime = fileMtime;
   
   return metricsMap;
 }
