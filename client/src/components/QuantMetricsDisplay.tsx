@@ -1,6 +1,6 @@
 import React from "react";
 import { QuantMetrics } from "@/lib/stockApi";
-import { TrendingUp, AlertTriangle, Award, TrendingDown } from "lucide-react";
+import { TrendingUp, Award, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 
@@ -30,6 +30,19 @@ const getColorByValue = (value: number, type: 'vol' | 'dd' | 'return') => {
       return 'text-muted-foreground bg-muted/30';
     default:
       return 'text-muted-foreground';
+  }
+};
+
+const getSignalClass = (signal: string) => {
+  switch (signal) {
+    case "BUY":
+      return "bg-positive/10 text-positive border-positive/20";
+    case "SELL":
+      return "bg-negative/10 text-negative border-negative/20";
+    case "RISK_ALERT":
+      return "bg-orange-500/10 text-orange-600 border-orange-500/20";
+    default:
+      return "bg-muted text-muted-foreground border-border";
   }
 };
 
@@ -67,17 +80,13 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
             </IndicatorTooltip>
           )}
 
-          {metrics.status?.bucket && (
-            <IndicatorTooltip indicator="bucket" value={metrics.status.bucket}>
+          {metrics.signal && (
+            <IndicatorTooltip indicator="signal" value={metrics.signal}>
               <div className={cn(
-                "px-2 py-1 rounded text-xs font-medium border",
-                metrics.status.bucket === "LONG"
-                  ? "bg-positive/10 text-positive border-positive/20"
-                  : metrics.status.bucket === "SHORT"
-                  ? "bg-negative/10 text-negative border-negative/20"
-                  : "bg-muted text-muted-foreground border-border"
+                "px-2 py-1 rounded text-xs font-medium border flex items-center gap-1",
+                getSignalClass(metrics.signal)
               )}>
-                {metrics.status.bucket === "LONG" ? "↑" : metrics.status.bucket === "SHORT" ? "↓" : "="} {metrics.status.bucket}
+                {metrics.signal === "BUY" ? "↑" : metrics.signal === "SELL" ? "↓" : metrics.signal === "RISK_ALERT" ? "!" : "="} {metrics.signal}
               </div>
             </IndicatorTooltip>
           )}
@@ -167,18 +176,14 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
           </IndicatorTooltip>
         )}
 
-        {metrics.status?.bucket && (
-          <IndicatorTooltip indicator="bucket" value={metrics.status.bucket}>
+        {metrics.signal && (
+          <IndicatorTooltip indicator="signal" value={metrics.signal}>
             <div className={cn(
               "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border",
-              metrics.status.bucket === "LONG"
-                ? "bg-positive/10 text-positive border-positive/20"
-                : metrics.status.bucket === "SHORT"
-                ? "bg-negative/10 text-negative border-negative/20"
-                : "bg-muted text-muted-foreground border-border"
+              getSignalClass(metrics.signal)
             )}>
-              {metrics.status.bucket === "LONG" ? "↑" : metrics.status.bucket === "SHORT" ? "↓" : "="} 
-              <span>{metrics.status.bucket}</span>
+              {metrics.signal === "BUY" ? "↑" : metrics.signal === "SELL" ? "↓" : metrics.signal === "RISK_ALERT" ? "!" : "="} 
+              <span>{metrics.signal}</span>
             </div>
           </IndicatorTooltip>
         )}

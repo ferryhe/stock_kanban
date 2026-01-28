@@ -10,9 +10,7 @@ export interface QuantMetrics {
     vol60?: number;
     maxdd252?: number;
   };
-  status?: {
-    bucket?: "HOLD" | "LONG" | "SHORT";
-  };
+  signal?: "BUY" | "SELL" | "HOLD" | "RISK_ALERT";
 }
 
 export interface StockData {

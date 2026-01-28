@@ -6,12 +6,15 @@
 ## 实现的指标
 
 ### 核心指标
-- **score** - 汇总集合分数（值越高越好）
-- **rank** - 结合排名（1最优，值越小越好）
-- **predictedReturn** - 20个交易日预测回报
-- **risk.vol60** - 60日波动率 z-score
-- **risk.maxdd252** - 252日最大回撤 z-score  
-- **status.bucket** - 信号分类（HOLD、LONG、SHORT）
+- **ticker** - 股票代码
+- **score** - 综合评分（0~1，越小排名越靠前；基于多模型排名结果）
+- **rank** - 排名名次（1 为最好，数值越小越好）
+- **predictedReturn** - 未来 20 个交易日的预测收益（加权融合模型输出）
+- **signal** - 交易信号（BUY / SELL / HOLD / RISK_ALERT；RISK_ALERT 表示缺少 risk 输入）
+- **risk.vol60** - 60 日波动率 z-score（数值越高表示波动越大，风险越高）
+- **risk.maxdd252** - 252 日最大回撤 z-score（数值越低/越负表示回撤越大，风险越高）
+
+说明：risk 指标为 z-score，可为正或负，用于相对风险比较。vol60 越高越风险；maxdd252 越低(越负)越风险。信号为统一信号，不区分持仓状态。
 
 ## 文件更改
 
@@ -20,7 +23,7 @@
 #### [server/stockService.ts](server/stockService.ts)
 - 添加 `QuantMetrics` 接口定义
 - 添加 `loadQuantMetrics()` 函数：
-  - 从 `c:\Projects\stock_quant_work\outputs\kanban\latest.json` 加载数据
+  - 从 `c:\Projects\stock_quant_work\outputs\kanban\quant-metrics.json` 加载数据
   - 1小时缓存机制
   - 自动处理文件不存在的情况
 - 修改 `getStockAnalysis()` 函数：
@@ -36,7 +39,7 @@
 #### [client/src/components/QuantMetricsDisplay.tsx](client/src/components/QuantMetricsDisplay.tsx)
 新增组件，显示量化指标：
 - Rank 和 Score 徽章（带颜色编码）
-- Status Bucket 标签
+- Signal 标签
 - 风险指标（Vol60、MaxDD252）
 - 预测回报
 - 所有指标都有交互式信息提示
@@ -53,7 +56,7 @@
 - `predictedReturn` - 预测回报说明
 - `vol60` - 60日波动率说明
 - `maxdd252` - 252日最大回撤说明
-- `bucket` - 信号分类说明
+- `signal` - 信号说明
 
 ## 工作流程
 
@@ -95,20 +98,18 @@ JSON 数据来源：`data/quant-metrics.json`（项目相对路径）
 [
   {
     "ticker": "AAPL",
-    "score": 0.85,
-    "rank": 1.0,
-    "signal": "hold",
-    "predictedReturn": 0.05,
+    "score": 0.18,
+    "rank": 4.0,
+    "predictedReturn": 0.052,
+    "signal": "BUY",
     "risk": {
-      "vol60": -0.5,
-      "maxdd252": 0.2
-    },
-    "status": {
-      "bucket": "LONG"
+      "vol60": -0.35,
+      "maxdd252": 0.22
     }
   }
 ]
 ```
+
 
 ## 特性
 
@@ -118,7 +119,9 @@ JSON 数据来源：`data/quant-metrics.json`（项目相对路径）
 - ✅ 1小时缓存机制减少文件系统访问
 
 ### UI/UX
-- ✅ 颜色编码：排名越高越绿色，越低越灰色
+- ✅ signal 图标/颜色：BUY(↑, 绿) / SELL(↓, 红) / HOLD(=, 灰) / RISK_ALERT(!, 橙)
+- ✅ risk 颜色方向：vol60 越高越偏红；maxdd252 越低(越负)越偏红
+- ✅ 颜色编码：排名越低（名次从 1 开始）越偏绿，越高越偏灰
 - ✅ 交互式提示：用户可点击任何指标查看详细说明
 - ✅ 响应式设计：适配移动和桌面
 - ✅ 只有有数据时才显示指标部分
@@ -134,7 +137,7 @@ JSON 数据来源：`data/quant-metrics.json`（项目相对路径）
 ## 测试
 
 要测试此功能：
-1. 确保 `latest.json` 文件存在并包含有效数据
+1. 确保 `quant-metrics.json` 文件存在并包含有效数据
 2. 运行前端应用：`npm run dev:client`
 3. 查看股票卡 - 应该显示量化指标（如果数据可用）
 4. 点击任何指标查看交互式提示

@@ -57,9 +57,9 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
     interpretation: "Rank 1 = Best candidate (lowest is better)\nRank 1-3 = Top tier signals\nRank 4-5 = Strong signals\nRank > 5 = Weaker signals\nLower rank values are favorable"
   },
   score: {
-    title: "Ensemble Score",
-    description: "Aggregated ensemble score combining multiple quantitative factors and model predictions.",
-    interpretation: "Higher values are better\nScore reflects consensus strength\nUse alongside rank for decision making\nScores are comparable across stocks"
+    title: "Ensemble Score (Rank Percentile)",
+    description: "Normalized score derived from the ensemble ranking. Lower values indicate stronger candidates.",
+    interpretation: "Lower values are better\nScore reflects relative ranking percentile\nUse alongside rank for decision making\nScores are comparable across stocks"
   },
   predictedReturn: {
     title: "Predicted Return (20 Trading Days)",
@@ -68,18 +68,18 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
   },
   vol60: {
     title: "60-Day Volatility (Z-Score)",
-    description: "Standardized 60-day historical volatility relative to statistical baseline. Positive values indicate higher relative volatility.",
-    interpretation: "Z-score > 1 = High volatility (risky)\nZ-score between -1 and 1 = Normal volatility\nZ-score < -1 = Low volatility (stable)\nHigher absolute values = More relative risk\nLower magnitude is generally better"
+    description: "Standardized 60-day historical volatility relative to the same-date cross-sectional baseline.",
+    interpretation: "Higher values = More volatile (riskier)\nNear 0 = Average volatility\nLower values = More stable\nUse alongside drawdown for risk context"
   },
   maxdd252: {
     title: "252-Day Maximum Drawdown (Z-Score)",
-    description: "Standardized 252-day (1 year) maximum drawdown from peak to trough relative to historical baseline.",
-    interpretation: "Z-score > 0.5 = High drawdown risk\nZ-score between -0.5 and 0.5 = Normal drawdown\nZ-score < -0.5 = Low drawdown risk\nHigher positive values = More drawdown risk\nNegative values = Less downside risk"
+    description: "Standardized 252-day (1 year) maximum drawdown from peak to trough relative to the same-date baseline.",
+    interpretation: "Lower (more negative) values = Larger drawdowns (riskier)\nNear 0 = Average drawdown\nHigher values = Smaller drawdowns\nUse with volatility for risk screening"
   },
-  bucket: {
-    title: "Signal Bucket",
-    description: "Grouped signal classification for UI consumption based on ensemble predictions: HOLD, LONG, or SHORT.",
-    interpretation: "LONG = Bullish signal, consider buying\nHOLD = Neutral or mixed signals, no clear direction\nSHORT = Bearish signal, consider avoiding or shorting\nUse with other indicators for confirmation"
+  signal: {
+    title: "Signal",
+    description: "Final action label derived from quantitative ranking and risk checks.",
+    interpretation: "BUY = Strong candidate\nSELL = Weak candidate or exit signal\nHOLD = Neutral or mixed signals\nRISK_ALERT = Missing risk inputs (vol60/maxdd252)\nUse with other indicators for confirmation"
   }
 };
 

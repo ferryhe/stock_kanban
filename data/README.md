@@ -23,16 +23,13 @@
 [
   {
     "ticker": "AAPL",
-    "score": 0.85,
-    "rank": 1.0,
-    "signal": "hold",
-    "predictedReturn": 0.05,
+    "score": 0.18,
+    "rank": 4.0,
+    "predictedReturn": 0.052,
+    "signal": "BUY",
     "risk": {
-      "vol60": -0.5,
-      "maxdd252": 0.2
-    },
-    "status": {
-      "bucket": "LONG"
+      "vol60": -0.35,
+      "maxdd252": 0.22
     }
   }
 ]
@@ -40,11 +37,10 @@
 
 ## 字段说明
 
-- `ticker` - 股票代码
-- `score` - 汇总集合分数（值越高越好）
-- `rank` - 排名（1最优）
-- `signal` - 信号类型
-- `predictedReturn` - 20天预测回报
-- `risk.vol60` - 60日波动率 z-score
-- `risk.maxdd252` - 252日最大回撤 z-score
-- `status.bucket` - 信号分类（HOLD/LONG/SHORT）
+- `ticker` - ????
+- `score` - ?????rank_pct??????
+- `rank` - ???1 ???
+- `predictedReturn` - 20 ?????
+- `signal` - ???BUY/SELL/HOLD/RISK_ALERT?RISK_ALERT ???? risk ???
+- `risk.vol60` - 60 ???? z-score???????
+- `risk.maxdd252` - 252 ????? z-score???/??????

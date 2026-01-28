@@ -56,7 +56,7 @@ git pull
 | 股票数量 | 10 支（当前） |
 | 更新方式 | Git pull |
 | 自动加载 | ✅ 启动时自动加载 |
-| 监控指标 | score, rank, predictedReturn, risk (vol60, maxdd252), status.bucket |
+| 监控指标 | score, rank, predictedReturn, risk (vol60, maxdd252), signal |
 
 ## 📂 文件树
 

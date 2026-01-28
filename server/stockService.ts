@@ -15,9 +15,7 @@ interface QuantMetrics {
     vol60?: number;
     maxdd252?: number;
   };
-  status?: {
-    bucket?: "HOLD" | "LONG" | "SHORT";
-  };
+  signal?: "BUY" | "SELL" | "HOLD" | "RISK_ALERT";
 }
 
 interface StockAnalysis {
@@ -127,7 +125,7 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
               rank: item.rank,
               predictedReturn: item.predictedReturn,
               risk: item.risk,
-              status: item.status,
+              signal: item.signal,
             });
           }
         });
