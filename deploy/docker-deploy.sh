@@ -37,7 +37,7 @@ fi
 
 # 5) Build image
 echo "Building Docker image..."
-docker build -t stock-kanban:latest .
+docker build --no-cache -t stock-kanban:latest .
 
 # 6) Start container
 echo "Starting containers..."
