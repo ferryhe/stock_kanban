@@ -2,12 +2,12 @@
   {
     "ticker": "AAPL",
     "score": null,
-    "rank": 9.0,
+    "rank": 11.0,
     "signal": "hold",
-    "predictedReturn": 0.02110994744633738,
+    "predictedReturn": 0.009223191929671797,
     "risk": {
-      "vol60": -0.9876702225420664,
-      "maxdd252": 0.09959975485599498
+      "vol60": -1.179269319921004,
+      "maxdd252": 0.6748981718756843
     },
     "status": {
       "bucket": "HOLD"
@@ -16,12 +16,54 @@
   {
     "ticker": "AMZN",
     "score": null,
-    "rank": 5.0,
+    "rank": 10.5,
     "signal": "hold",
-    "predictedReturn": 0.04681231172885175,
+    "predictedReturn": 0.043038515852636065,
     "risk": {
-      "vol60": 0.011370709206386453,
-      "maxdd252": 0.24294624017263425
+      "vol60": -0.6058369315052643,
+      "maxdd252": 0.8035286182940985
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "ASTS",
+    "score": null,
+    "rank": 18.5,
+    "signal": "hold",
+    "predictedReturn": -0.1295241759890333,
+    "risk": {
+      "vol60": 2.3456997683849266,
+      "maxdd252": -0.3987695763214865
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "BILI",
+    "score": null,
+    "rank": 11.0,
+    "signal": "hold",
+    "predictedReturn": 0.0060632435986101175,
+    "risk": {
+      "vol60": -0.24987993859145186,
+      "maxdd252": -0.17806545380958883
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "DUO",
+    "score": null,
+    "rank": 3.0,
+    "signal": "hold",
+    "predictedReturn": 0.3115955073261394,
+    "risk": {
+      "vol60": 1.9263862751637104,
+      "maxdd252": -2.5382740731913342
     },
     "status": {
       "bucket": "HOLD"
@@ -32,10 +74,24 @@
     "score": null,
     "rank": 1.0,
     "signal": "hold",
-    "predictedReturn": 0.23298690768771085,
+    "predictedReturn": 0.6081094128191855,
     "risk": {
-      "vol60": 2.165128825297398,
-      "maxdd252": -2.584684802693375
+      "vol60": 0.6447564814587874,
+      "maxdd252": -1.8975220143151832
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "FUTU",
+    "score": null,
+    "rank": 10.0,
+    "signal": "hold",
+    "predictedReturn": 0.03571353217021156,
+    "risk": {
+      "vol60": 0.17108174738001436,
+      "maxdd252": 0.2995741874887217
     },
     "status": {
       "bucket": "HOLD"
@@ -44,12 +100,26 @@
   {
     "ticker": "GOOGL",
     "score": null,
-    "rank": 4.0,
+    "rank": 16.0,
     "signal": "hold",
-    "predictedReturn": 0.03994042054644088,
+    "predictedReturn": -0.021092756300421574,
     "risk": {
-      "vol60": -0.17939113022055067,
-      "maxdd252": 0.3047408856957642
+      "vol60": -0.7192074150604275,
+      "maxdd252": 0.8589796131138125
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "IQ",
+    "score": null,
+    "rank": 3.0,
+    "signal": "hold",
+    "predictedReturn": 0.17505719043801826,
+    "risk": {
+      "vol60": -0.35367383716697254,
+      "maxdd252": -1.407659158670838
     },
     "status": {
       "bucket": "HOLD"
@@ -58,12 +128,12 @@
   {
     "ticker": "KC",
     "score": null,
-    "rank": 3.0,
+    "rank": 5.0,
     "signal": "hold",
-    "predictedReturn": 0.09502946997681457,
+    "predictedReturn": 0.07525486779434182,
     "risk": {
-      "vol60": 1.363992172460915,
-      "maxdd252": -0.7400420031602035
+      "vol60": 0.044437880105030594,
+      "maxdd252": -0.12084959246591247
     },
     "status": {
       "bucket": "HOLD"
@@ -72,12 +142,26 @@
   {
     "ticker": "META",
     "score": null,
-    "rank": 5.0,
+    "rank": 13.0,
     "signal": "hold",
-    "predictedReturn": 0.06587819266403945,
+    "predictedReturn": 0.019342363443622855,
     "risk": {
-      "vol60": 0.04927114880943222,
-      "maxdd252": 0.05399088136726686
+      "vol60": -0.5830326288715489,
+      "maxdd252": 0.6339719514226667
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "MNSO",
+    "score": null,
+    "rank": 9.5,
+    "signal": "hold",
+    "predictedReturn": 0.001727727896054583,
+    "risk": {
+      "vol60": -0.6970269851957405,
+      "maxdd252": -0.03163756818219936
     },
     "status": {
       "bucket": "HOLD"
@@ -86,12 +170,26 @@
   {
     "ticker": "MSFT",
     "score": null,
-    "rank": 5.5,
+    "rank": 12.0,
     "signal": "hold",
-    "predictedReturn": 0.032650456358973984,
+    "predictedReturn": 0.010957971317365874,
     "risk": {
-      "vol60": -0.8843490875110718,
-      "maxdd252": 0.6555777797651345
+      "vol60": -1.1353602514606875,
+      "maxdd252": 1.173798773996402
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "NIU",
+    "score": null,
+    "rank": 8.0,
+    "signal": "hold",
+    "predictedReturn": 0.07292725282779706,
+    "risk": {
+      "vol60": 0.9587045245774262,
+      "maxdd252": -0.14837831499035053
     },
     "status": {
       "bucket": "HOLD"
@@ -100,43 +198,85 @@
   {
     "ticker": "NVDA",
     "score": null,
-    "rank": 5.0,
+    "rank": 11.0,
     "signal": "hold",
-    "predictedReturn": 0.03560477294482571,
+    "predictedReturn": -0.004126869248255286,
     "risk": {
-      "vol60": 0.24741133805155588,
-      "maxdd252": -0.1035715044618098
+      "vol60": -0.46554636966657253,
+      "maxdd252": 0.4925848463089175
     },
     "status": {
       "bucket": "HOLD"
     }
   },
   {
-    "ticker": "V",
+    "ticker": "NVS",
     "score": null,
     "rank": 9.0,
     "signal": "hold",
-    "predictedReturn": 0.022233619305645807,
+    "predictedReturn": 0.017376002938103,
     "risk": {
-      "vol60": -0.8495796391172227,
-      "maxdd252": 1.1383626075748046
+      "vol60": -1.102242958327475,
+      "maxdd252": 1.3470833348945888
     },
     "status": {
       "bucket": "HOLD"
     }
   },
   {
-    "ticker": "XOM",
+    "ticker": "ONC",
     "score": null,
-    "rank": 8.5,
+    "rank": 12.5,
     "signal": "hold",
-    "predictedReturn": 0.02116444815607331,
+    "predictedReturn": 0.01946957378668946,
     "risk": {
-      "vol60": -0.9361841144347763,
-      "maxdd252": 0.9330801608837904
+      "vol60": -0.4105659536600128,
+      "maxdd252": 0.9093758955741508
     },
     "status": {
       "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "RKLB",
+    "score": null,
+    "rank": 14.0,
+    "signal": "hold",
+    "predictedReturn": -0.09154926700233756,
+    "risk": {
+      "vol60": 1.495302012988418,
+      "maxdd252": -0.09083436299482206
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "TSLA",
+    "score": null,
+    "rank": 12.0,
+    "signal": "hold",
+    "predictedReturn": 0.002910086170768888,
+    "risk": {
+      "vol60": -0.08472610063115546,
+      "maxdd252": -0.3818052780273283
+    },
+    "status": {
+      "bucket": "HOLD"
+    }
+  },
+  {
+    "ticker": "ZEEP",
+    "score": null,
+    "rank": null,
+    "signal": NaN,
+    "predictedReturn": null,
+    "risk": {
+      "vol60": null,
+      "maxdd252": null
+    },
+    "status": {
+      "bucket": "RISK_ALERT"
     }
   }
 ]
