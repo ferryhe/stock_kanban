@@ -235,9 +235,11 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   const python = process.env.PYTHON || "python";
   const child = spawn(python, args, { stdio: "ignore", windowsHide: true });
 
-  child.on("close", () => {
+  child.on("close", (code: number | null) => {
     missing.forEach((s) => pendingZhUpdates.delete(s));
-    zhNameCacheTime = 0;
+    if (code === 0) {
+      zhNameCacheTime = 0;
+    }
   });
   child.on("error", () => {
     missing.forEach((s) => pendingZhUpdates.delete(s));
