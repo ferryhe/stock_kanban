@@ -21,8 +21,6 @@
 - `risk.maxdd252`：252 日最大回撤 z-score（越低/越负回撤越大）
 - `signal`：交易信号（BUY / SELL / HOLD / RISK_ALERT）
 
-更多细节见：`QUANT_METRICS_INTEGRATION.md`
-
 ## 数据文件
 
 - `data/quant-metrics.json`：量化指标数据
@@ -35,7 +33,6 @@
 
 ## 文档
 
-- `QUANT_METRICS_INTEGRATION.md`
 - `data/README.md`
 
 ## 许可
