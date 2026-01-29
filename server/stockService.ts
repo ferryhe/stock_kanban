@@ -134,7 +134,8 @@ function buildFixedTimes(sessions: MarketSession[], stepMinutes: number = 5): st
       const startMin = h === session.startHour ? session.startMinute : 0;
       const endMin = h === session.endHour ? session.endMinute : 55;
       for (let m = startMin; m <= endMin; m += stepMinutes) {
-        const hour12 = h > 12 ? h - 12 : h;
+        const hour24 = h % 24;
+        const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
         const ampm = h >= 12 ? "PM" : "AM";
         const timeStr = `${hour12.toString().padStart(2, "0")}:${m
           .toString()
