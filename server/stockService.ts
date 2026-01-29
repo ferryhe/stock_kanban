@@ -469,7 +469,8 @@ async function getShortFloat(ticker: string): Promise<number> {
     });
     shortFloat = (keyStats.defaultKeyStatistics?.shortPercentOfFloat || 0) * 100;
   } catch {
-    shortFloat = Math.random() * 15;
+    // If the API call fails, keep shortFloat at 0 rather than using a random fallback.
+    shortFloat = 0;
   }
 
   shortFloatCache.set(cacheKey, {
