@@ -78,6 +78,66 @@ interface ChartCacheEntry {
   timestamp: number;
 }
 
+type MarketSession = {
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+};
+
+type MarketInfo = {
+  timeZone: string;
+  sessions: MarketSession[];
+};
+
+const US_MARKET: MarketInfo = {
+  timeZone: "America/New_York",
+  sessions: [{ startHour: 9, startMinute: 30, endHour: 16, endMinute: 0 }],
+};
+
+const CN_MARKET: MarketInfo = {
+  timeZone: "Asia/Shanghai",
+  sessions: [
+    { startHour: 9, startMinute: 30, endHour: 11, endMinute: 30 },
+    { startHour: 13, startMinute: 0, endHour: 15, endMinute: 0 },
+  ],
+};
+
+const HK_MARKET: MarketInfo = {
+  timeZone: "Asia/Hong_Kong",
+  sessions: [
+    { startHour: 9, startMinute: 30, endHour: 12, endMinute: 0 },
+    { startHour: 13, startMinute: 0, endHour: 16, endMinute: 0 },
+  ],
+};
+
+function getMarketInfo(ticker: string): MarketInfo {
+  const upper = ticker.toUpperCase();
+  if (upper.endsWith(".SS") || upper.endsWith(".SZ")) return CN_MARKET;
+  if (upper.endsWith(".HK")) return HK_MARKET;
+  return US_MARKET;
+}
+
+function buildFixedTimes(sessions: MarketSession[]): string[] {
+  const fixedTimes: string[] = [];
+  for (const session of sessions) {
+    for (let h = session.startHour; h <= session.endHour; h++) {
+      const startMin = h === session.startHour ? session.startMinute : 0;
+      const endMin = h === session.endHour ? session.endMinute : 55;
+      for (let m = startMin; m <= endMin; m += 5) {
+        const hour12 = h > 12 ? h - 12 : h;
+        const ampm = h >= 12 ? "PM" : "AM";
+        const timeStr = `${hour12.toString().padStart(2, "0")}:${m
+          .toString()
+          .padStart(2, "0")} ${ampm}`;
+        fixedTimes.push(timeStr);
+        if (h === session.endHour && m === session.endMinute) break;
+      }
+    }
+  }
+  return fixedTimes;
+}
+
 const stockCache: Map<string, CacheEntry> = new Map();
 const marketCache: Map<string, MarketCacheEntry> = new Map();
 const chartCache: Map<string, ChartCacheEntry> = new Map();
@@ -502,67 +562,55 @@ export async function getStockChart(
     // For 1D, filter to only today's data (using ET timezone)
     let quotes = historical.quotes.filter((q: any) => q.close !== null && q.close !== undefined);
     let data: ChartDataPoint[] = [];
+    const market = getMarketInfo(ticker);
     
     if (period === "1d") {
-      // Get today's date in ET timezone
-      const etFormatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
+      const dayFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: market.timeZone,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       });
-      const todayET = etFormatter.format(new Date());
-      
+      const todayLocal = dayFormatter.format(new Date());
+
       let todayQuotes = quotes.filter((q: any) => {
         const qDate = new Date(q.date);
-        const qDateET = etFormatter.format(qDate);
-        return qDateET === todayET;
+        const qDateLocal = dayFormatter.format(qDate);
+        return qDateLocal === todayLocal;
       });
-      
-      let targetDate = todayET;
-      
+
+      let targetDate = todayLocal;
+
       // If no data for today (weekend/holiday), get last trading day's data
       if (todayQuotes.length === 0 && quotes.length > 0) {
-        const lastDate = etFormatter.format(new Date(quotes[quotes.length - 1].date));
+        const lastDate = dayFormatter.format(new Date(quotes[quotes.length - 1].date));
         targetDate = lastDate;
         todayQuotes = quotes.filter((q: any) => {
-          const qDateET = etFormatter.format(new Date(q.date));
-          return qDateET === lastDate;
+          const qDateLocal = dayFormatter.format(new Date(q.date));
+          return qDateLocal === lastDate;
         });
       }
-      
+
       // Create a map of existing data points by time
       const dataMap = new Map<string, any>();
       for (const q of todayQuotes) {
         const date = new Date(q.date);
         const timeKey = date.toLocaleTimeString("en-US", {
-          timeZone: "America/New_York",
+          timeZone: market.timeZone,
           hour: "2-digit",
           minute: "2-digit",
           hour12: true,
         });
         dataMap.set(timeKey, q);
       }
-      
-      // Generate fixed timeline from 9:30 AM to 4:00 PM ET (every 5 minutes = 79 points)
-      const fixedTimes: string[] = [];
-      for (let h = 9; h <= 16; h++) {
-        const startMin = h === 9 ? 30 : 0;
-        const endMin = h === 16 ? 0 : 55;
-        for (let m = startMin; m <= endMin; m += 5) {
-          const hour12 = h > 12 ? h - 12 : h;
-          const ampm = h >= 12 ? "PM" : "AM";
-          const timeStr = `${hour12.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${ampm}`;
-          fixedTimes.push(timeStr);
-          if (h === 16 && m === 0) break;
-        }
-      }
-      
+
+      const fixedTimes = buildFixedTimes(market.sessions);
+
       // Parse targetDate for display
       const [month, day, year] = targetDate.split("/");
       const displayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       const dateDisplay = displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      
+
       // Build data array with fixed timeline
       data = fixedTimes.map((time) => {
         const quote = dataMap.get(time);
@@ -581,7 +629,7 @@ export async function getStockChart(
           date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           time: isIntraday
             ? date.toLocaleTimeString("en-US", {
-                timeZone: "America/New_York",
+                timeZone: market.timeZone,
                 hour: "2-digit",
                 minute: "2-digit",
                 hour12: true,
@@ -592,7 +640,7 @@ export async function getStockChart(
             month: "short", 
             day: "numeric",
             year: "numeric",
-          }) + (isIntraday ? " " + date.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: true }) : ""),
+          }) + (isIntraday ? " " + date.toLocaleTimeString("en-US", { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hour12: true }) : ""),
           price: q.close,
           volume: q.volume || 0,
         };
