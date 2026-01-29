@@ -127,13 +127,13 @@ function getLocalZhName(ticker: string, uiLang: UILang) {
   return map.get(ticker.toUpperCase());
 }
 
-function buildFixedTimes(sessions: MarketSession[]): string[] {
+function buildFixedTimes(sessions: MarketSession[], stepMinutes: number = 5): string[] {
   const fixedTimes: string[] = [];
   for (const session of sessions) {
     for (let h = session.startHour; h <= session.endHour; h++) {
       const startMin = h === session.startHour ? session.startMinute : 0;
       const endMin = h === session.endHour ? session.endMinute : 55;
-      for (let m = startMin; m <= endMin; m += 5) {
+      for (let m = startMin; m <= endMin; m += stepMinutes) {
         const hour12 = h > 12 ? h - 12 : h;
         const ampm = h >= 12 ? "PM" : "AM";
         const timeStr = `${hour12.toString().padStart(2, "0")}:${m
@@ -703,7 +703,7 @@ export async function getStockChart(
         dataMap.set(timeKey, q);
       }
 
-      const fixedTimes = buildFixedTimes(market.sessions);
+      const fixedTimes = buildFixedTimes(market.sessions, 5);
 
       // Parse targetDate for display
       const [month, day, year] = targetDate.split("/");
@@ -721,6 +721,58 @@ export async function getStockChart(
           volume: quote ? quote.volume || 0 : 0,
         };
       });
+    } else if (period === "5d") {
+      const dayFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: market.timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const timeFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: market.timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      const dayMap = new Map<string, Map<string, any>>();
+      const dayDateMap = new Map<string, string>();
+      for (const q of quotes) {
+        const qDate = new Date(q.date);
+        const dayKey = dayFormatter.format(qDate);
+        const timeKey = timeFormatter.format(qDate);
+        if (!dayMap.has(dayKey)) {
+          dayMap.set(dayKey, new Map());
+          dayDateMap.set(dayKey, dayKey);
+        }
+        dayMap.get(dayKey)!.set(timeKey, q);
+      }
+
+      const fixedTimes = buildFixedTimes(market.sessions, 30);
+      const dayKeys = Array.from(dayMap.keys()).sort((a, b) => {
+        const [am, ad, ay] = a.split("/");
+        const [bm, bd, by] = b.split("/");
+        const adate = new Date(parseInt(ay), parseInt(am) - 1, parseInt(ad));
+        const bdate = new Date(parseInt(by), parseInt(bm) - 1, parseInt(bd));
+        return adate.getTime() - bdate.getTime();
+      });
+
+      data = dayKeys.flatMap((dayKey) => {
+        const [month, day, year] = dayKey.split("/");
+        const displayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const dateDisplay = displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const byTime = dayMap.get(dayKey) || new Map();
+        return fixedTimes.map((time) => {
+          const quote = byTime.get(time);
+          return {
+            date: dateDisplay,
+            time,
+            fullDate: `${displayDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${time}`,
+            price: quote ? quote.close : null,
+            volume: quote ? quote.volume || 0 : 0,
+          };
+        });
+      });
     } else {
       data = quotes.map((q: any) => {
         const date = new Date(q.date);
@@ -734,12 +786,22 @@ export async function getStockChart(
                 hour12: true,
               })
             : date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          fullDate: date.toLocaleDateString("en-US", { 
-            weekday: "short",
-            month: "short", 
-            day: "numeric",
-            year: "numeric",
-          }) + (isIntraday ? " " + date.toLocaleTimeString("en-US", { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hour12: true }) : ""),
+          fullDate:
+            date.toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }) +
+            (isIntraday
+              ? " " +
+                date.toLocaleTimeString("en-US", {
+                  timeZone: market.timeZone,
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
+              : ""),
           price: q.close,
           volume: q.volume || 0,
         };
