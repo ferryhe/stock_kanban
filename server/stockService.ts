@@ -233,7 +233,8 @@ export async function getStockAnalysis(
   tickers: string[],
   sectorLabel: string
 ): Promise<StockAnalysis[]> {
-  const cacheKey = tickers.sort().join(",");
+  // Don't sort tickers - preserve the original order from the client
+  const cacheKey = tickers.join(",");
   const cached = stockCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
