@@ -233,15 +233,36 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   ];
 
   const python = process.env.PYTHON || "python";
-  const child = spawn(python, args, { stdio: "ignore", windowsHide: true });
+  const child = spawn(python, args, {
+    stdio: ["ignore", "ignore", "pipe"],
+    windowsHide: true,
+  });
+
+  if (child.stderr) {
+    child.stderr.on("data", (data: Buffer) => {
+      const msg = data.toString().trim();
+      if (msg) {
+        console.error(`[ZhName] Python stderr: ${msg}`);
+      }
+    });
+  }
 
   child.on("close", (code: number | null) => {
+    if (code !== 0) {
+      console.error(
+        `[ZhName] Python script exited with code ${code} for symbols: ${missing.join(",")}`,
+      );
+    }
     missing.forEach((s) => pendingZhUpdates.delete(s));
     if (code === 0) {
       zhNameCacheTime = 0;
     }
   });
-  child.on("error", () => {
+  child.on("error", (err) => {
+    console.error(
+      `[ZhName] Failed to spawn Python process for symbols: ${missing.join(",")}`,
+      err,
+    );
     missing.forEach((s) => pendingZhUpdates.delete(s));
   });
 }
