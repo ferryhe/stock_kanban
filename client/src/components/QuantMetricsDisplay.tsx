@@ -3,6 +3,7 @@ import { QuantMetrics } from "@/lib/stockApi";
 import { Award, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
+import { getIndicatorClasses } from "@/lib/indicatorHelpers";
 
 interface QuantMetricsDisplayProps {
   metrics?: QuantMetrics;
@@ -12,29 +13,6 @@ interface QuantMetricsDisplayProps {
 }
 
 // 根据值获取颜色 - 只改变字体颜色，不改变背景
-const getColorByValue = (value: number, type: 'vol' | 'dd' | 'return') => {
-  switch (type) {
-    case 'vol':
-      // Vol60: 高于 1 是风险
-      if (value > 1.5) return 'text-red-600 dark:text-red-400';
-      if (value > 0.8) return 'text-orange-600 dark:text-orange-400';
-      return 'text-green-600 dark:text-green-400';
-    case 'dd':
-      // MaxDD252: 更负表示风险更大
-      if (value < -1.5) return 'text-red-600 dark:text-red-400';
-      if (value < -0.5) return 'text-orange-600 dark:text-orange-400';
-      return 'text-green-600 dark:text-green-400';
-    case 'return':
-      // Return: 正数好
-      if (value > 0.1) return 'text-green-600 dark:text-green-400';
-      if (value > 0.02) return 'text-blue-600 dark:text-blue-400';
-      if (value < -0.05) return 'text-red-600 dark:text-red-400';
-      return 'text-muted-foreground';
-    default:
-      return 'text-muted-foreground';
-  }
-};
-
 const getSignalClass = (signal: string) => {
   switch (signal) {
     case "BUY":
@@ -50,9 +28,14 @@ const getSignalClass = (signal: string) => {
 
 export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndicators }: QuantMetricsDisplayProps) {
   if (!metrics) return null;
+  const rankStyle = metrics.rank !== undefined ? getIndicatorClasses("rank", metrics.rank) : null;
+  const scoreStyle = metrics.score !== undefined && metrics.score !== null ? getIndicatorClasses("score", metrics.score) : null;
+  const returnStyle = metrics.predictedReturn !== undefined ? getIndicatorClasses("predictedreturn", metrics.predictedReturn * 100) : null;
+  const volStyle = metrics.risk?.vol60 !== undefined ? getIndicatorClasses("vol60", metrics.risk.vol60) : null;
+  const maxddStyle = metrics.risk?.maxdd252 !== undefined ? getIndicatorClasses("maxdd252", metrics.risk.maxdd252) : null;
 
   if (compact) {
-    // ??????????????- ??????????????????
+    // Compact layout for the detail modal.
     return (
       <div className="space-y-3">
         {(metrics.rank !== undefined || metrics.score !== undefined || metrics.signal) && (
@@ -61,11 +44,9 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
               <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
                 <div className={cn(
                   "flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full",
-                  metrics.rank <= 3 
-                    ? "bg-positive/10 text-positive border-positive/20" 
-                    : metrics.rank <= 5 
-                    ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                    : "bg-muted text-muted-foreground border-border"
+                  rankStyle?.bg || "bg-muted",
+                  rankStyle?.text || "text-muted-foreground",
+                  rankStyle?.border || "border-border"
                 )}>
                   <Award className="w-3 h-3" />
                   <span>R{metrics.rank}</span>
@@ -75,7 +56,12 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
 
             {metrics.score !== undefined && metrics.score !== null && (
               <IndicatorTooltip indicator="score" value={metrics.score.toFixed(3)}>
-                <div className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full bg-muted text-muted-foreground border-border">
+                <div className={cn(
+                  "flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full",
+                  scoreStyle?.bg || "bg-muted",
+                  scoreStyle?.text || "text-muted-foreground",
+                  scoreStyle?.border || "border-border"
+                )}>
                   <Hash className="w-3 h-3" />
                   <span>{metrics.score.toFixed(3)}</span>
                 </div>
@@ -105,7 +91,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
                 </div>
                 <div className={cn(
                   "text-lg font-mono font-bold",
-                  getColorByValue(metrics.predictedReturn, 'return')
+                  returnStyle?.text || "text-muted-foreground"
                 )}>
                   {(metrics.predictedReturn * 100).toFixed(2)}%
                 </div>
@@ -121,7 +107,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
                 </div>
                 <div className={cn(
                   "text-lg font-mono font-bold",
-                  getColorByValue(metrics.risk.vol60, 'vol')
+                  volStyle?.text || "text-muted-foreground"
                 )}>
                   {metrics.risk.vol60.toFixed(2)}
                 </div>
@@ -137,7 +123,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
                 </div>
                 <div className={cn(
                   "text-lg font-mono font-bold",
-                  getColorByValue(metrics.risk.maxdd252, 'dd')
+                  maxddStyle?.text || "text-muted-foreground"
                 )}>
                   {metrics.risk.maxdd252.toFixed(2)}
                 </div>
@@ -157,11 +143,9 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
           <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
             <div className={cn(
               "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium font-mono border",
-              metrics.rank <= 3 
-                ? "bg-positive/10 text-positive border-positive/20" 
-                : metrics.rank <= 5 
-                ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                : "bg-muted text-muted-foreground border-border"
+              rankStyle?.bg || "bg-muted",
+              rankStyle?.text || "text-muted-foreground",
+              rankStyle?.border || "border-border"
             )}>
               <Award className="w-3 h-3" />
               <span>R{metrics.rank}</span>
@@ -207,7 +191,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
               <div>
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol60</div>
-                <div className={cn("text-sm font-mono font-medium", getColorByValue(metrics.risk.vol60, 'vol'))}>
+                <div className={cn("text-sm font-mono font-medium", volStyle?.text || "text-muted-foreground")}>
                   {metrics.risk.vol60.toFixed(2)}
                 </div>
               </div>
@@ -218,7 +202,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
               <div>
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">MaxDD</div>
-                <div className={cn("text-sm font-mono font-medium", getColorByValue(metrics.risk.maxdd252, 'dd'))}>
+                <div className={cn("text-sm font-mono font-medium", maxddStyle?.text || "text-muted-foreground")}>
                   {metrics.risk.maxdd252.toFixed(2)}
                 </div>
               </div>
@@ -229,7 +213,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
               <div>
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">20DRet</div>
-                <div className={cn("text-sm font-mono font-medium", getColorByValue(metrics.predictedReturn, 'return'))}>
+                <div className={cn("text-sm font-mono font-medium", returnStyle?.text || "text-muted-foreground")}>
                   {(metrics.predictedReturn * 100).toFixed(2)}%
                 </div>
               </div>

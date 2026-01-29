@@ -1,46 +1,16 @@
-import { StockData, SignalType } from "@/lib/stockApi";
+import { StockData } from "@/lib/stockApi";
 import { ArrowUp, ArrowDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
+import { SignalBadge } from "./SignalBadge";
 
 interface StockCardProps {
   stock: StockData;
   index: number;
   onClick?: () => void;
 }
-
-const getIndicatorType = (label: string): string => {
-  const labelLower = label.toLowerCase();
-  if (labelLower.includes('rsi')) return 'rsi';
-  if (labelLower.includes('macd')) return 'macd';
-  if (labelLower.includes('trend')) return 'trend';
-  if (labelLower.includes('52w') || labelLower.includes('week')) return 'week52';
-  if (labelLower.includes('bollinger')) return 'bollinger';
-  if (labelLower.includes('volume')) return 'volume';
-  return 'trend';
-};
-
-const SignalBadge = ({ type, label, value, indicator }: { type: SignalType; label: string; value?: string; indicator?: string }) => {
-  const colors = {
-    BUY: "bg-positive/10 text-positive border-positive/20",
-    SELL: "bg-negative/10 text-negative border-negative/20",
-    WARNING: "bg-warning/10 text-warning border-warning/20",
-    NEUTRAL: "bg-muted text-muted-foreground border-border",
-  };
-
-  const indicatorType = indicator || getIndicatorType(label);
-
-  return (
-    <IndicatorTooltip indicator={indicatorType} value={value}>
-      <div className={cn("flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium font-mono", colors[type])}>
-        <span>{label}</span>
-        {value && <span className="opacity-70 border-l border-current pl-2">{value}</span>}
-      </div>
-    </IndicatorTooltip>
-  );
-};
 
 export function StockCard({ stock, index, onClick }: StockCardProps) {
   const isPositive = stock.changePercent >= 0;
@@ -112,8 +82,8 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
           />
         ) : (
           <div className="flex flex-wrap gap-2">
-            {tagBadges.map((tag, i) => (
-              <SignalBadge key={i} type={tag.type} label={tag.label} value={tag.value} />
+            {tagBadges.map((tag) => (
+              <SignalBadge key={`${tag.label}-${tag.value ?? ""}`} type={tag.type} label={tag.label} value={tag.value} />
             ))}
             {stock.tags.length > 4 && (
               <div className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-mono">

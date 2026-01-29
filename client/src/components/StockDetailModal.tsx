@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
-import { useStockChart, ChartInterval, useSingleStock, isMarketOpen } from "@/lib/stockApi";
+import { useStockChart, ChartInterval, useSingleStock } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
+import { SignalBadge } from "./SignalBadge";
 import {
   AreaChart,
   Area,
@@ -12,7 +13,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 
 interface StockDetailModalProps {
@@ -29,7 +29,7 @@ const INTERVALS: { label: string; value: ChartInterval }[] = [
   { label: "1Y", value: "1y" },
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length && payload[0].value !== null) {
     const data = payload[0].payload;
     return (
@@ -208,7 +208,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                 </div>
               ) : stock && (
                 <>
-                  {/* Quant Metrics ?????? */}
+                  {/* Quant Metrics */}
                   {stock.quant && (
                     <div className="mt-6">
                       <QuantMetricsDisplay metrics={stock.quant} compact={true} />
@@ -217,45 +217,19 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
 
                   {stock.tags.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {stock.tags.map((tag, i) => {
-                        const colors = {
-                          BUY: "bg-positive/10 text-positive border-positive/20",
-                          SELL: "bg-negative/10 text-negative border-negative/20",
-                          WARNING: "bg-warning/10 text-warning border-warning/20",
-                          NEUTRAL: "bg-muted text-muted-foreground border-border",
-                        };
-                        const getIndicatorType = (label: string): string => {
-                          const labelLower = label.toLowerCase();
-                          if (labelLower.includes('rsi')) return 'rsi';
-                          if (labelLower.includes('macd')) return 'macd';
-                          if (labelLower.includes('trend')) return 'trend';
-                          if (labelLower.includes('52w') || labelLower.includes('week')) return 'week52';
-                          if (labelLower.includes('bollinger')) return 'bollinger';
-                          if (labelLower.includes('volume')) return 'volume';
-                          return 'trend';
-                        };
-                        return (
-                          <IndicatorTooltip key={i} indicator={getIndicatorType(tag.label)} value={tag.value}>
-                            <div
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
-                                colors[tag.type]
-                              )}
-                            >
-                              <span>{tag.label}</span>
-                              {tag.value && (
-                                <span className="opacity-70 border-l border-current pl-2">
-                                  {tag.value}
-                                </span>
-                              )}
-                            </div>
-                          </IndicatorTooltip>
-                        );
-                      })}
+                      {stock.tags.map((tag) => (
+                        <SignalBadge
+                          key={`${tag.label}-${tag.value ?? ""}`}
+                          type={tag.type}
+                          label={tag.label}
+                          value={tag.value}
+                          className="px-3 py-1.5"
+                        />
+                      ))}
                     </div>
                   )}
 
-                  {/* Technical Indicators ???? */}
+                  {/* Technical Indicators */}
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     <IndicatorTooltip indicator="week52" value={`High: $${stock.week52High?.toFixed(2) || "-"}`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
