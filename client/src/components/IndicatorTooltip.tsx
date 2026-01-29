@@ -21,10 +21,10 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
     description: "The number of shares traded during a given period. High volume confirms price movements.",
     interpretation: "Volume > 1.5x Average = Strong interest/momentum\nVolume < Average = Weak conviction\nVolume spikes often precede big moves"
   },
-  shortFloat: {
+  shortfloat: {
     title: "Short Float %",
-    description: "The percentage of a company's public float (shares available to trade) that has been sold short.",
-    interpretation: "Short Float 5-10% = Usually not alarming\nShort Float 20%+ = High short interest (crowded short, squeeze risk)\nHigher % = More bearish positioning"
+    description: "Percentage of shares available for trading that have been sold short but not yet covered. Represents bearish bets against the stock.",
+    interpretation: "Short Float < 10% = Low bearish interest\nShort Float 10-20% = Moderate short interest\nShort Float 20%+ = High short interest (squeeze risk)\nHigher % = More bearish sentiment, higher squeeze potential"
   },
   macd: {
     title: "MACD (Moving Average Convergence Divergence)",
@@ -61,10 +61,10 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
     description: "Normalized composite score from the ensemble ranking (0-1). Lower values indicate stronger candidates.",
     interpretation: "Lower values are better\nScore reflects relative ranking percentile\nUse alongside rank for decision making\nScores are comparable across stocks"
   },
-  predictedReturn: {
+  predictedreturn: {
     title: "Predicted Return (20 Trading Days)",
-    description: "Mean predicted return from machine learning models looking ahead 20 trading days (approximately 1 month).",
-    interpretation: "Positive % = Bullish signal\nNegative % = Bearish signal\n> 5% = Strong upside\n< -5% = Strong downside\nBased on historical patterns and technical factors"
+    description: "Forecasted price return over the next 20 trading days (~1 month) from ML models analyzing historical patterns and technical factors.",
+    interpretation: "Positive % = Bullish signal (expected increase)\nNegative % = Bearish signal (expected decrease)\n> 5% = Strong upside potential\n< -5% = Strong downside risk\nBased on historical patterns and technical indicators"
   },
   vol60: {
     title: "60-Day Volatility (Z-Score)",
