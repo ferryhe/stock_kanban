@@ -156,6 +156,8 @@ const CHART_CACHE_TTL = 30 * 1000; // 30 seconds for chart data
 const ZH_NAME_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const ZH_NAME_SCRIPT = path.join(process.cwd(), "scripts", "build_zh_name_map.py");
 const pendingZhUpdates: Set<string> = new Set();
+const queuedZhUpdates: Set<string> = new Set();
+let zhUpdateRunning = false;
 
 // Load quantitative metrics from JSON file
 let quantMetricsCache: Map<string, QuantMetrics> | null = null;
@@ -212,31 +214,38 @@ function loadZhNameMap(): Map<string, string> {
   return map;
 }
 
-export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
-  if (uiLang !== "zh") return;
-  const map = loadZhNameMap();
-  const missing: string[] = [];
-  for (const raw of symbols) {
-    const symbol = raw.toUpperCase();
-    if (map.has(symbol) || pendingZhUpdates.has(symbol)) {
-      continue;
+function runQueuedZhUpdates(uiLang: UILang) {
+  if (uiLang !== "zh" || zhUpdateRunning) return;
+  if (queuedZhUpdates.size === 0) return;
+
+  const batch = Array.from(queuedZhUpdates);
+  queuedZhUpdates.clear();
+
+  let includeA = false;
+  let includeHk = false;
+  let includeUs = false;
+  for (const symbol of batch) {
+    if (symbol.endsWith(".SS") || symbol.endsWith(".SZ")) {
+      includeA = true;
+    } else if (symbol.endsWith(".HK")) {
+      includeHk = true;
+    } else {
+      includeUs = true;
     }
-    pendingZhUpdates.add(symbol);
-    missing.push(symbol);
   }
 
-  if (missing.length === 0) return;
+  if (!includeA && !includeHk && !includeUs) return;
+  batch.forEach((s) => pendingZhUpdates.add(s));
+  zhUpdateRunning = true;
+  console.log(
+    `[ZhName] Update start: batch=${batch.length} A=${includeA ? 1 : 0} HK=${includeHk ? 1 : 0} US=${includeUs ? 1 : 0}`,
+  );
 
-  const args = [
-    ZH_NAME_SCRIPT,
-    "--out",
-    zhNamePath,
-    "--include-a",
-    "--include-hk",
-    "--include-us-cname",
-    "--symbols",
-    missing.join(","),
-  ];
+  const args = [ZH_NAME_SCRIPT, "--out", zhNamePath];
+  if (includeA) args.push("--include-a");
+  if (includeHk) args.push("--include-hk");
+  if (includeUs) args.push("--include-us-cname");
+  args.push("--symbols", batch.join(","));
 
   const python = process.env.PYTHON || "python";
   const child = spawn(python, args, {
@@ -256,23 +265,49 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   child.on("close", (code: number | null) => {
     if (code !== 0) {
       console.error(
-        `[ZhName] Python script exited with code ${code} for symbols: ${missing.join(",")}`,
+        `[ZhName] Python script exited with code ${code} for symbols: ${batch.join(",")}`,
       );
     }
-    missing.forEach((s) => pendingZhUpdates.delete(s));
+    batch.forEach((s) => pendingZhUpdates.delete(s));
     if (code === 0) {
       zhNameCacheTime = 0;
     }
+    zhUpdateRunning = false;
+    if (queuedZhUpdates.size > 0) {
+      runQueuedZhUpdates(uiLang);
+    }
   });
+
   child.on("error", (err) => {
     console.error(
       `[ZhName] Failed to spawn Python process "${python}" with args ${JSON.stringify(
         args,
-      )} for symbols: ${missing.join(",")}`,
+      )} for symbols: ${batch.join(",")}`,
       err,
     );
-    missing.forEach((s) => pendingZhUpdates.delete(s));
+    batch.forEach((s) => pendingZhUpdates.delete(s));
+    zhUpdateRunning = false;
+    if (queuedZhUpdates.size > 0) {
+      runQueuedZhUpdates(uiLang);
+    }
   });
+}
+
+export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
+  if (uiLang !== "zh") return;
+  const map = loadZhNameMap();
+  const missing: string[] = [];
+  for (const raw of symbols) {
+    const symbol = raw.toUpperCase();
+    if (map.has(symbol) || pendingZhUpdates.has(symbol) || queuedZhUpdates.has(symbol)) {
+      continue;
+    }
+    missing.push(symbol);
+    queuedZhUpdates.add(symbol);
+  }
+
+  if (missing.length === 0) return;
+  runQueuedZhUpdates(uiLang);
 }
 
 function loadQuantMetrics(): Map<string, QuantMetrics> {
