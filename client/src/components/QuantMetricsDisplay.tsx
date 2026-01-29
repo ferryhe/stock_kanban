@@ -1,6 +1,5 @@
 import React from "react";
 import { QuantMetrics } from "@/lib/stockApi";
-import { Award, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 
@@ -50,90 +49,108 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
   if (!metrics) return null;
 
   if (compact) {
-    // 紧凑模式用于详细页
+    // 紧凑模式用于详细页 - 使用与技术指标相同的样式
     return (
-      <div className="space-y-3">
-        {/* 顶行：Rank, Signal */}
-        <div className="flex gap-2 flex-wrap">
-          {metrics.rank !== undefined && (
-            <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
+      <div className="grid grid-cols-2 gap-4">
+        {metrics.rank !== undefined && (
+          <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                Ensemble Rank
+              </div>
               <div className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium font-mono border",
+                "text-lg font-mono font-bold",
                 metrics.rank <= 3 
-                  ? "bg-positive/10 text-positive border-positive/20" 
+                  ? "text-positive" 
                   : metrics.rank <= 5 
-                  ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                  : "bg-muted text-muted-foreground border-border"
+                  ? "text-yellow-600"
+                  : "text-foreground"
               )}>
-                <Award className="w-3 h-3" />
-                <span>R{metrics.rank}</span>
+                {metrics.rank}
               </div>
-            </IndicatorTooltip>
-          )}
+            </div>
+          </IndicatorTooltip>
+        )}
 
-          {metrics.signal && (
-            <IndicatorTooltip indicator="signal" value={metrics.signal}>
+        {metrics.score !== undefined && metrics.score !== null && (
+          <IndicatorTooltip indicator="score" value={metrics.score.toFixed(3)}>
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                Score
+              </div>
+              <div className="text-lg font-mono font-bold">
+                {metrics.score.toFixed(3)}
+              </div>
+            </div>
+          </IndicatorTooltip>
+        )}
+
+        {metrics.predictedReturn !== undefined && (
+          <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                Predicted Return (20d)
+              </div>
               <div className={cn(
-                "px-2 py-1 rounded text-xs font-medium border flex items-center gap-1",
-                getSignalClass(metrics.signal)
+                "text-lg font-mono font-bold",
+                getColorByValue(metrics.predictedReturn, 'return')
               )}>
-                {metrics.signal === "BUY" ? "↑" : metrics.signal === "SELL" ? "↓" : metrics.signal === "RISK_ALERT" ? "!" : "="} {metrics.signal}
+                {(metrics.predictedReturn * 100).toFixed(2)}%
               </div>
-            </IndicatorTooltip>
-          )}
-        </div>
+            </div>
+          </IndicatorTooltip>
+        )}
 
-        {/* 详情部分 */}
-        <div className="space-y-2">
-          {/* Vol & DD 一行 */}
-          <div className="flex gap-2">
-            {metrics.risk?.vol60 !== undefined && (
-              <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
-                <div className={cn(
-                  "flex-1 flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-mono border",
-                  "transition-colors cursor-pointer",
-                  getColorByValue(metrics.risk.vol60, 'vol'),
-                  "border-current/20"
-                )}>
-                  <span className="font-medium">Vol60</span>
-                  <span className="font-semibold">{metrics.risk.vol60.toFixed(1)}</span>
-                </div>
-              </IndicatorTooltip>
-            )}
-
-            {metrics.risk?.maxdd252 !== undefined && (
-              <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
-                <div className={cn(
-                  "flex-1 flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-mono border",
-                  "transition-colors cursor-pointer",
-                  getColorByValue(metrics.risk.maxdd252, 'dd'),
-                  "border-current/20"
-                )}>
-                  <span className="font-medium">MaxDD</span>
-                  <span className="font-semibold">{metrics.risk.maxdd252.toFixed(1)}</span>
-                </div>
-              </IndicatorTooltip>
-            )}
-          </div>
-
-          {/* Return */}
-          {metrics.predictedReturn !== undefined && (
-            <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
+        {metrics.risk?.vol60 !== undefined && (
+          <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                60-Day Volatility
+              </div>
               <div className={cn(
-                "flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-mono border",
-                "transition-colors cursor-pointer",
-                getColorByValue(metrics.predictedReturn, 'return'),
-                "border-current/20"
+                "text-lg font-mono font-bold",
+                getColorByValue(metrics.risk.vol60, 'vol')
               )}>
-                <span className="font-medium flex items-center gap-1">
-                  <TrendingDown className="w-3 h-3" />
-                  20dReturn
-                </span>
-                <span className="font-semibold">{(metrics.predictedReturn * 100).toFixed(2)}%</span>
+                {metrics.risk.vol60.toFixed(2)}
               </div>
-            </IndicatorTooltip>
-          )}
-        </div>
+            </div>
+          </IndicatorTooltip>
+        )}
+
+        {metrics.risk?.maxdd252 !== undefined && (
+          <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                Max Drawdown (252d)
+              </div>
+              <div className={cn(
+                "text-lg font-mono font-bold",
+                getColorByValue(metrics.risk.maxdd252, 'dd')
+              )}>
+                {metrics.risk.maxdd252.toFixed(2)}
+              </div>
+            </div>
+          </IndicatorTooltip>
+        )}
+
+        {metrics.signal && (
+          <IndicatorTooltip indicator="signal" value={metrics.signal}>
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                Signal
+              </div>
+              <div className={cn(
+                "text-lg font-mono font-bold",
+                metrics.signal === "BUY" ? "text-positive" 
+                  : metrics.signal === "SELL" ? "text-negative" 
+                  : metrics.signal === "RISK_ALERT" ? "text-orange-600"
+                  : "text-foreground"
+              )}>
+                {metrics.signal}
+              </div>
+            </div>
+          </IndicatorTooltip>
+        )}
       </div>
     );
   }
