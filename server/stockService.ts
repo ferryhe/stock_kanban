@@ -179,10 +179,10 @@ function loadZhNameMap(): Map<string, string> {
     }
   }
 
-  const cacheFresh = zhNameCache && now - zhNameCacheTime < ZH_NAME_CACHE_TTL;
+  const cacheFresh = zhNameCache !== null && now - zhNameCacheTime < ZH_NAME_CACHE_TTL;
   const fileUnchanged =
     newestMtime > 0 ? newestMtime <= zhNameCacheMtime : zhNameCacheMtime === 0;
-  if (cacheFresh && fileUnchanged) {
+  if (cacheFresh && fileUnchanged && zhNameCache) {
     return zhNameCache;
   }
 
