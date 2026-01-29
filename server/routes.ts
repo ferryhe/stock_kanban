@@ -1,8 +1,17 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
-import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks } from "./stockService";
+import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate } from "./stockService";
 
-const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
+const getUiLang = (req: Request) => {
+  const header = req.headers["x-ui-lang"] || req.headers["accept-language"];
+  const lang = Array.isArray(header) ? header[0] : header;
+  if (typeof lang === "string" && lang.toLowerCase().startsWith("zh")) {
+    return "zh";
+  }
+  return "en";
+};
+
+export const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
   ai_chips: { label: "🔥 AI & Chips", tickers: ["NVDA", "AMD", "TSM", "PLTR"] },
   nuclear: { label: "⚛️ Nuclear/Energy", tickers: ["OKLO", "SMR", "CCJ"] },
   indices: { label: "📉 Market Indices", tickers: ["SPY", "QQQ", "IWM"] },
@@ -41,7 +50,9 @@ export async function registerRoutes(
         return res.json([]);
       }
 
-      const data = await getStockAnalysis(tickers, label);
+      const uiLang = getUiLang(req);
+      scheduleZhNameUpdate(tickers, uiLang);
+      const data = await getStockAnalysis(tickers, label, uiLang);
       res.json(data);
     } catch (error) {
       console.error("Error in /api/stocks:", error);
@@ -90,7 +101,7 @@ export async function registerRoutes(
       if (!query || query.length < 1) {
         return res.json([]);
       }
-      const results = await searchStocks(query);
+      const results = await searchStocks(query, getUiLang(req));
       res.json(results);
     } catch (error) {
       console.error("Error in /api/search:", error);
@@ -102,7 +113,10 @@ export async function registerRoutes(
   app.get("/api/stock/:ticker", async (req, res) => {
     try {
       const { ticker } = req.params;
-      const data = await getStockAnalysis([ticker.toUpperCase()], "Single Stock");
+      const uiLang = getUiLang(req);
+      const symbol = ticker.toUpperCase();
+      scheduleZhNameUpdate([symbol], uiLang);
+      const data = await getStockAnalysis([symbol], "Single Stock", uiLang);
       if (data.length === 0) {
         return res.status(404).json({ error: "Stock not found" });
       }

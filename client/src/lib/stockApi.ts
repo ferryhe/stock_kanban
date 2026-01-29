@@ -64,6 +64,18 @@ export interface SearchResult {
   type: string;
 }
 
+const getUiLang = (): "en" | "zh" => {
+  if (typeof window === "undefined") return "en";
+  const stored = localStorage.getItem("ui_language");
+  return stored === "zh" ? "zh" : "en";
+};
+
+const withUiLang = () => ({
+  headers: {
+    "x-ui-lang": getUiLang(),
+  },
+});
+
 // Check if US market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
 export function isMarketOpen(): boolean {
   const now = new Date();
@@ -262,7 +274,7 @@ export const useStockData = (watchlistId: string) => {
         ? `/api/stocks/${watchlistId}?tickers=${encodeURIComponent(customTickers)}`
         : `/api/stocks/${watchlistId}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, withUiLang());
       if (!res.ok) {
         throw new Error("Failed to fetch stock data");
       }
@@ -277,7 +289,7 @@ export const useMarketOverview = () => {
   return useQuery<MarketOverview>({
     queryKey: ["market"],
     queryFn: async () => {
-      const res = await fetch("/api/market");
+      const res = await fetch("/api/market", withUiLang());
       if (!res.ok) {
         throw new Error("Failed to fetch market data");
       }
@@ -294,7 +306,7 @@ export const useStockChart = (ticker: string, interval: ChartInterval, enabled: 
   return useQuery<ChartDataPoint[]>({
     queryKey: ["chart", ticker, interval],
     queryFn: async () => {
-      const res = await fetch(`/api/chart/${ticker}?interval=${interval}`);
+      const res = await fetch(`/api/chart/${ticker}?interval=${interval}`, withUiLang());
       if (!res.ok) {
         throw new Error("Failed to fetch chart data");
       }
@@ -311,7 +323,7 @@ export const useStockSearch = (query: string) => {
     queryKey: ["search", query],
     queryFn: async () => {
       if (!query || query.length < 1) return [];
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, withUiLang());
       if (!res.ok) {
         throw new Error("Failed to search stocks");
       }
@@ -327,7 +339,7 @@ export const useSingleStock = (ticker: string, enabled: boolean = true) => {
   return useQuery<StockData>({
     queryKey: ["single-stock", ticker],
     queryFn: async () => {
-      const res = await fetch(`/api/stock/${ticker}`);
+      const res = await fetch(`/api/stock/${ticker}`, withUiLang());
       if (!res.ok) {
         throw new Error("Failed to fetch stock data");
       }

@@ -1,4 +1,5 @@
 import YahooFinance from "yahoo-finance2";
+import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -78,6 +79,8 @@ interface ChartCacheEntry {
   timestamp: number;
 }
 
+type UILang = "en" | "zh";
+
 type MarketSession = {
   startHour: number;
   startMinute: number;
@@ -118,6 +121,12 @@ function getMarketInfo(ticker: string): MarketInfo {
   return US_MARKET;
 }
 
+function getLocalZhName(ticker: string, uiLang: UILang) {
+  if (uiLang !== "zh") return undefined;
+  const map = loadZhNameMap();
+  return map.get(ticker.toUpperCase());
+}
+
 function buildFixedTimes(sessions: MarketSession[]): string[] {
   const fixedTimes: string[] = [];
   for (const session of sessions) {
@@ -143,12 +152,97 @@ const marketCache: Map<string, MarketCacheEntry> = new Map();
 const chartCache: Map<string, ChartCacheEntry> = new Map();
 const CACHE_TTL = 2 * 1000; // 2 seconds cache during market hours
 const CHART_CACHE_TTL = 30 * 1000; // 30 seconds for chart data
+const ZH_NAME_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const ZH_NAME_SCRIPT = path.join(process.cwd(), "scripts", "build_zh_name_map.py");
+const pendingZhUpdates: Set<string> = new Set();
 
 // Load quantitative metrics from JSON file
 let quantMetricsCache: Map<string, QuantMetrics> | null = null;
 let quantMetricsCacheTime = 0;
 let quantMetricsCacheMtime = 0;
 const QUANT_CACHE_TTL = 60 * 60 * 1000; // 1 hour cache for quant metrics
+
+// Load Chinese name mapping from JSON file (AKShare or other source)
+let zhNameCache: Map<string, string> | null = null;
+let zhNameCacheTime = 0;
+let zhNameCacheMtime = 0;
+const zhNamePath = path.join(process.cwd(), "data", "zh-name-map-all.json");
+
+function loadZhNameMap(): Map<string, string> {
+  const now = Date.now();
+  let newestMtime = 0;
+  if (fs.existsSync(zhNamePath)) {
+    try {
+      newestMtime = fs.statSync(zhNamePath).mtimeMs;
+    } catch {
+      newestMtime = 0;
+    }
+  }
+
+  const cacheFresh = zhNameCache && now - zhNameCacheTime < ZH_NAME_CACHE_TTL;
+  const fileUnchanged =
+    newestMtime > 0 ? newestMtime <= zhNameCacheMtime : zhNameCacheMtime === 0;
+  if (cacheFresh && fileUnchanged) {
+    return zhNameCache;
+  }
+
+  const map = new Map<string, string>();
+  if (fs.existsSync(zhNamePath)) {
+    try {
+      const raw = fs.readFileSync(zhNamePath, "utf-8");
+      const data = JSON.parse(raw) as Record<string, string>;
+      Object.entries(data || {}).forEach(([symbol, name]) => {
+        if (symbol && name) {
+          map.set(symbol.toUpperCase(), name);
+        }
+      });
+    } catch (error) {
+      console.warn("[Names] Failed to load zh name map:", error);
+    }
+  }
+
+  if (map.size > 0) {
+    console.log(`[Names] Loaded ${map.size} zh names from ${zhNamePath}`);
+  }
+
+  zhNameCache = map;
+  zhNameCacheTime = now;
+  zhNameCacheMtime = newestMtime;
+  return map;
+}
+
+export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
+  if (uiLang !== "zh") return;
+  const map = loadZhNameMap();
+  const missing = symbols
+    .map((s) => s.toUpperCase())
+    .filter((s) => !map.has(s) && !pendingZhUpdates.has(s));
+
+  if (missing.length === 0) return;
+  missing.forEach((s) => pendingZhUpdates.add(s));
+
+  const args = [
+    ZH_NAME_SCRIPT,
+    "--out",
+    zhNamePath,
+    "--include-a",
+    "--include-hk",
+    "--include-us-cname",
+    "--symbols",
+    missing.join(","),
+  ];
+
+  const python = process.env.PYTHON || "python";
+  const child = spawn(python, args, { stdio: "ignore", windowsHide: true });
+
+  child.on("close", () => {
+    missing.forEach((s) => pendingZhUpdates.delete(s));
+    zhNameCacheTime = 0;
+  });
+  child.on("error", () => {
+    missing.forEach((s) => pendingZhUpdates.delete(s));
+  });
+}
 
 function loadQuantMetrics(): Map<string, QuantMetrics> {
   const now = Date.now();
@@ -291,7 +385,8 @@ function calculateBollingerBands(
 
 export async function getStockAnalysis(
   tickers: string[],
-  sectorLabel: string
+  sectorLabel: string,
+  uiLang: UILang = "en"
 ): Promise<StockAnalysis[]> {
   // Don't sort tickers - preserve the original order from the client
   const cacheKey = tickers.join(",");
@@ -311,12 +406,16 @@ export async function getStockAnalysis(
 
   for (const ticker of tickers) {
     try {
-      const quote = await yf.quote(ticker);
-      const historical = await yf.chart(ticker, {
-        period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days
-        period2: new Date(),
-        interval: "1d",
-      });
+      const [quote, historical] = await Promise.all([
+        yf.quote(ticker),
+        yf.chart(ticker, {
+          period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days
+          period2: new Date(),
+          interval: "1d",
+        }),
+      ]);
+      const localZhName = getLocalZhName(ticker, uiLang);
+      const localizedName = localZhName;
 
       const prices = historical.quotes
         .map((q: any) => q.close)
@@ -424,7 +523,7 @@ export async function getStockAnalysis(
 
       results.push({
         ticker,
-        name: quote.shortName || quote.longName || ticker,
+        name: localizedName || quote.shortName || quote.longName || ticker,
         price: currentPrice,
         changePercent,
         rsi,
@@ -655,14 +754,14 @@ export async function getStockChart(
   }
 }
 
-export async function searchStocks(query: string): Promise<SearchResult[]> {
+export async function searchStocks(query: string, uiLang: UILang = "en"): Promise<SearchResult[]> {
   try {
-    const results = await yf.search(query, { quotesCount: 10 });
+    const results = await yf.search(query, { quotesCount: 10 }, { validateResult: false });
     return (results.quotes || [])
       .filter((q: any) => q.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF"))
       .map((q: any) => ({
         symbol: q.symbol,
-        name: q.shortname || q.longname || q.symbol,
+        name: getLocalZhName(q.symbol, uiLang) || q.shortname || q.longname || q.symbol,
         exchange: q.exchange || "",
         type: q.quoteType || "EQUITY",
       }));
