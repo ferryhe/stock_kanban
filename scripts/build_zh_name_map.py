@@ -142,6 +142,7 @@ def main() -> int:
                     if line.strip():
                         target_symbols.add(line.strip().upper())
             except Exception:
+                # Ignore errors reading the optional symbols file and continue.
                 pass
 
     if args.include_a:

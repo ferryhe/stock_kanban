@@ -127,14 +127,15 @@ function getLocalZhName(ticker: string, uiLang: UILang) {
   return map.get(ticker.toUpperCase());
 }
 
-function buildFixedTimes(sessions: MarketSession[]): string[] {
+function buildFixedTimes(sessions: MarketSession[], stepMinutes: number = 5): string[] {
   const fixedTimes: string[] = [];
   for (const session of sessions) {
     for (let h = session.startHour; h <= session.endHour; h++) {
       const startMin = h === session.startHour ? session.startMinute : 0;
-      const endMin = h === session.endHour ? session.endMinute : 55;
-      for (let m = startMin; m <= endMin; m += 5) {
-        const hour12 = h > 12 ? h - 12 : h;
+      const endMin = h === session.endHour ? session.endMinute : 60 - stepMinutes;
+      for (let m = startMin; m <= endMin; m += stepMinutes) {
+        const hour24 = h % 24;
+        const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
         const ampm = h >= 12 ? "PM" : "AM";
         const timeStr = `${hour12.toString().padStart(2, "0")}:${m
           .toString()
@@ -155,6 +156,14 @@ const CHART_CACHE_TTL = 30 * 1000; // 30 seconds for chart data
 const ZH_NAME_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const ZH_NAME_SCRIPT = path.join(process.cwd(), "scripts", "build_zh_name_map.py");
 const pendingZhUpdates: Set<string> = new Set();
+const queuedZhUpdates: Set<string> = new Set();
+let zhUpdateRunning = false;
+const STOCK_FETCH_CONCURRENCY = 6;
+const SHORT_FLOAT_CACHE_TTL = 15 * 60 * 1000;
+const shortFloatCache: Map<string, { value: number; expiresAt: number }> = new Map();
+
+const BASE_HISTORY_DAYS = 90;
+const EXTENDED_HISTORY_DAYS = 365;
 
 // Load quantitative metrics from JSON file
 let quantMetricsCache: Map<string, QuantMetrics> | null = null;
@@ -179,10 +188,10 @@ function loadZhNameMap(): Map<string, string> {
     }
   }
 
-  const cacheFresh = zhNameCache && now - zhNameCacheTime < ZH_NAME_CACHE_TTL;
+  const cacheFresh = zhNameCache !== null && now - zhNameCacheTime < ZH_NAME_CACHE_TTL;
   const fileUnchanged =
     newestMtime > 0 ? newestMtime <= zhNameCacheMtime : zhNameCacheMtime === 0;
-  if (cacheFresh && fileUnchanged) {
+  if (cacheFresh && fileUnchanged && zhNameCache) {
     return zhNameCache;
   }
 
@@ -211,37 +220,100 @@ function loadZhNameMap(): Map<string, string> {
   return map;
 }
 
+function runQueuedZhUpdates(uiLang: UILang) {
+  if (uiLang !== "zh" || zhUpdateRunning) return;
+  if (queuedZhUpdates.size === 0) return;
+
+  const batch = Array.from(queuedZhUpdates);
+  queuedZhUpdates.clear();
+
+  let includeA = false;
+  let includeHk = false;
+  let includeUs = false;
+  for (const symbol of batch) {
+    if (symbol.endsWith(".SS") || symbol.endsWith(".SZ")) {
+      includeA = true;
+    } else if (symbol.endsWith(".HK")) {
+      includeHk = true;
+    } else {
+      includeUs = true;
+    }
+  }
+
+  if (!includeA && !includeHk && !includeUs) return;
+  batch.forEach((s) => pendingZhUpdates.add(s));
+  zhUpdateRunning = true;
+  console.log(
+    `[ZhName] Update start: batch=${batch.length} A=${includeA ? 1 : 0} HK=${includeHk ? 1 : 0} US=${includeUs ? 1 : 0}`,
+  );
+
+  const args = [ZH_NAME_SCRIPT, "--out", zhNamePath];
+  if (includeA) args.push("--include-a");
+  if (includeHk) args.push("--include-hk");
+  if (includeUs) args.push("--include-us-cname");
+  args.push("--symbols", batch.join(","));
+
+  const python = process.env.PYTHON || "python";
+  const child = spawn(python, args, {
+    stdio: ["ignore", "ignore", "pipe"],
+    windowsHide: true,
+  });
+
+  if (child.stderr) {
+    child.stderr.on("data", (data: Buffer) => {
+      const msg = data.toString().trim();
+      if (msg) {
+        console.error(`[ZhName] Python stderr: ${msg}`);
+      }
+    });
+  }
+
+  child.on("close", (code: number | null) => {
+    if (code !== 0) {
+      console.error(
+        `[ZhName] Python script exited with code ${code} for symbols: ${batch.join(",")}`,
+      );
+    }
+    batch.forEach((s) => pendingZhUpdates.delete(s));
+    if (code === 0) {
+      zhNameCacheTime = 0;
+    }
+    zhUpdateRunning = false;
+    if (queuedZhUpdates.size > 0) {
+      runQueuedZhUpdates(uiLang);
+    }
+  });
+
+  child.on("error", (err) => {
+    console.error(
+      `[ZhName] Failed to spawn Python process "${python}" with args ${JSON.stringify(
+        args,
+      )} for symbols: ${batch.join(",")}`,
+      err,
+    );
+    batch.forEach((s) => pendingZhUpdates.delete(s));
+    zhUpdateRunning = false;
+    if (queuedZhUpdates.size > 0) {
+      runQueuedZhUpdates(uiLang);
+    }
+  });
+}
+
 export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   if (uiLang !== "zh") return;
   const map = loadZhNameMap();
-  const missing = symbols
-    .map((s) => s.toUpperCase())
-    .filter((s) => !map.has(s) && !pendingZhUpdates.has(s));
+  const missing: string[] = [];
+  for (const raw of symbols) {
+    const symbol = raw.toUpperCase();
+    if (map.has(symbol) || pendingZhUpdates.has(symbol) || queuedZhUpdates.has(symbol)) {
+      continue;
+    }
+    missing.push(symbol);
+    queuedZhUpdates.add(symbol);
+  }
 
   if (missing.length === 0) return;
-  missing.forEach((s) => pendingZhUpdates.add(s));
-
-  const args = [
-    ZH_NAME_SCRIPT,
-    "--out",
-    zhNamePath,
-    "--include-a",
-    "--include-hk",
-    "--include-us-cname",
-    "--symbols",
-    missing.join(","),
-  ];
-
-  const python = process.env.PYTHON || "python";
-  const child = spawn(python, args, { stdio: "ignore", windowsHide: true });
-
-  child.on("close", () => {
-    missing.forEach((s) => pendingZhUpdates.delete(s));
-    zhNameCacheTime = 0;
-  });
-  child.on("error", () => {
-    missing.forEach((s) => pendingZhUpdates.delete(s));
-  });
+  runQueuedZhUpdates(uiLang);
 }
 
 function loadQuantMetrics(): Map<string, QuantMetrics> {
@@ -383,6 +455,180 @@ function calculateBollingerBands(
   };
 }
 
+async function getShortFloat(ticker: string): Promise<number> {
+  const cacheKey = ticker.toUpperCase();
+  const cached = shortFloatCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  let shortFloat = 0;
+  try {
+    const keyStats = await yf.quoteSummary(ticker, {
+      modules: ["defaultKeyStatistics"],
+    });
+    shortFloat = (keyStats.defaultKeyStatistics?.shortPercentOfFloat || 0) * 100;
+  } catch {
+    // If the API call fails, keep shortFloat at 0 rather than using a random fallback.
+    shortFloat = 0;
+  }
+
+  shortFloatCache.set(cacheKey, {
+    value: shortFloat,
+    expiresAt: Date.now() + SHORT_FLOAT_CACHE_TTL,
+  });
+  return shortFloat;
+}
+
+async function fetchStockAnalysis(
+  ticker: string,
+  sectorLabel: string,
+  uiLang: UILang,
+  quantMetrics: Map<string, QuantMetrics>,
+): Promise<StockAnalysis> {
+  try {
+    const quote = await yf.quote(ticker);
+    const lookbackDays =
+      quote.fiftyTwoWeekHigh && quote.fiftyTwoWeekLow ? BASE_HISTORY_DAYS : EXTENDED_HISTORY_DAYS;
+    const historical = await yf.chart(ticker, {
+      period1: new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000),
+      period2: new Date(),
+      interval: "1d",
+    });
+    const localZhName = getLocalZhName(ticker, uiLang);
+
+    const prices = historical.quotes
+      .map((q: any) => q.close)
+      .filter((p: any): p is number => p !== null);
+    const volumes = historical.quotes
+      .map((q: any) => q.volume)
+      .filter((v: any): v is number => v !== null);
+
+    const currentPrice = quote.regularMarketPrice || 0;
+    const previousClose = quote.regularMarketPreviousClose || currentPrice;
+    const changePercent = previousClose
+      ? ((currentPrice - previousClose) / previousClose) * 100
+      : 0;
+
+    const rsi = calculateRSI(prices, 14);
+    const sma20 = calculateSMA(prices, 20);
+    const avgVolume =
+      volumes.length >= 10
+        ? volumes.slice(-10).reduce((a: number, b: number) => a + b, 0) / 10
+        : quote.averageDailyVolume10Day || 0;
+    const currentVolume = quote.regularMarketVolume || 0;
+
+    const { macd, signal: macdSignal } = calculateMACD(prices);
+    const { upper: bollingerUpper, lower: bollingerLower } =
+      calculateBollingerBands(prices);
+    const week52High = quote.fiftyTwoWeekHigh || Math.max(...prices);
+    const week52Low = quote.fiftyTwoWeekLow || Math.min(...prices);
+
+    const shortFloat = await getShortFloat(ticker);
+
+    const tags: StockAnalysis["tags"] = [];
+
+    if (rsi < 30) {
+      tags.push({
+        label: "Oversold",
+        type: "BUY",
+        value: `RSI ${rsi.toFixed(0)}`,
+      });
+    } else if (rsi > 70) {
+      tags.push({
+        label: "Overbought",
+        type: "SELL",
+        value: `RSI ${rsi.toFixed(0)}`,
+      });
+    } else {
+      tags.push({
+        label: "Neutral",
+        type: "NEUTRAL",
+        value: `RSI ${rsi.toFixed(0)}`,
+      });
+    }
+
+    if (avgVolume > 0 && currentVolume > avgVolume * 1.5) {
+      tags.push({
+        label: "Heavy Vol",
+        type: "WARNING",
+        value: `${((currentVolume / avgVolume) * 100).toFixed(0)}%`,
+      });
+    }
+
+    if (currentPrice > sma20) {
+      tags.push({ label: "Uptrend", type: "BUY", value: "> SMA20" });
+    } else {
+      tags.push({ label: "Downtrend", type: "SELL", value: "< SMA20" });
+    }
+
+    if (shortFloat > 20) {
+      tags.push({
+        label: "High Short",
+        type: "SELL",
+        value: `${shortFloat.toFixed(1)}%`,
+      });
+    }
+
+    if (macd > macdSignal && macd > 0) {
+      tags.push({ label: "MACD Bull", type: "BUY" });
+    } else if (macd < macdSignal && macd < 0) {
+      tags.push({ label: "MACD Bear", type: "SELL" });
+    }
+
+    const nearHighPercent = ((week52High - currentPrice) / week52High) * 100;
+    const nearLowPercent = ((currentPrice - week52Low) / week52Low) * 100;
+    if (nearHighPercent < 5) {
+      tags.push({ label: "Near 52W High", type: "WARNING" });
+    } else if (nearLowPercent < 10 && week52Low > 0) {
+      tags.push({ label: "Near 52W Low", type: "BUY" });
+    }
+
+    return {
+      ticker,
+      name: localZhName || quote.shortName || quote.longName || ticker,
+      price: currentPrice,
+      changePercent,
+      rsi,
+      volume: currentVolume,
+      avgVolume,
+      sma20,
+      shortFloat,
+      sector: sectorLabel,
+      week52High,
+      week52Low,
+      macd,
+      macdSignal,
+      bollingerUpper,
+      bollingerLower,
+      tags,
+      quant: quantMetrics.get(ticker.toUpperCase()),
+    };
+  } catch (error) {
+    console.error(`Error fetching ${ticker}:`, error);
+    return {
+      ticker,
+      name: ticker,
+      price: 0,
+      changePercent: 0,
+      rsi: 50,
+      volume: 0,
+      avgVolume: 0,
+      sma20: 0,
+      shortFloat: 0,
+      sector: sectorLabel,
+      week52High: 0,
+      week52Low: 0,
+      macd: 0,
+      macdSignal: 0,
+      bollingerUpper: 0,
+      bollingerLower: 0,
+      tags: [{ label: "Error", type: "WARNING", value: "Data unavailable" }],
+      quant: quantMetrics.get(ticker.toUpperCase()),
+    };
+  }
+}
+
 export async function getStockAnalysis(
   tickers: string[],
   sectorLabel: string,
@@ -402,169 +648,24 @@ export async function getStockAnalysis(
   // Load quantitative metrics
   const quantMetrics = loadQuantMetrics();
 
-  const results: StockAnalysis[] = [];
+  const results: StockAnalysis[] = new Array(tickers.length);
+  let cursor = 0;
+  const concurrency = Math.min(STOCK_FETCH_CONCURRENCY, tickers.length);
 
-  for (const ticker of tickers) {
-    try {
-      const [quote, historical] = await Promise.all([
-        yf.quote(ticker),
-        yf.chart(ticker, {
-          period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days
-          period2: new Date(),
-          interval: "1d",
-        }),
-      ]);
-      const localZhName = getLocalZhName(ticker, uiLang);
-      const localizedName = localZhName;
-
-      const prices = historical.quotes
-        .map((q: any) => q.close)
-        .filter((p: any): p is number => p !== null);
-      const volumes = historical.quotes
-        .map((q: any) => q.volume)
-        .filter((v: any): v is number => v !== null);
-
-      const currentPrice = quote.regularMarketPrice || 0;
-      const previousClose = quote.regularMarketPreviousClose || currentPrice;
-      const changePercent = previousClose
-        ? ((currentPrice - previousClose) / previousClose) * 100
-        : 0;
-
-      const rsi = calculateRSI(prices, 14);
-      const sma20 = calculateSMA(prices, 20);
-      const avgVolume =
-        volumes.length >= 10
-          ? volumes.slice(-10).reduce((a: number, b: number) => a + b, 0) / 10
-          : quote.averageDailyVolume10Day || 0;
-      const currentVolume = quote.regularMarketVolume || 0;
-
-      // Calculate additional indicators
-      const { macd, signal: macdSignal } = calculateMACD(prices);
-      const { upper: bollingerUpper, lower: bollingerLower } =
-        calculateBollingerBands(prices);
-      const week52High = quote.fiftyTwoWeekHigh || Math.max(...prices);
-      const week52Low = quote.fiftyTwoWeekLow || Math.min(...prices);
-
-      // Short float percentage
-      let shortFloat = 0;
-      try {
-        const keyStats = await yf.quoteSummary(ticker, {
-          modules: ["defaultKeyStatistics"],
-        });
-        shortFloat =
-          (keyStats.defaultKeyStatistics?.shortPercentOfFloat || 0) * 100;
-      } catch {
-        shortFloat = Math.random() * 15;
-      }
-
-      const tags: StockAnalysis["tags"] = [];
-
-      // RSI signal
-      if (rsi < 30) {
-        tags.push({
-          label: "Oversold",
-          type: "BUY",
-          value: `RSI ${rsi.toFixed(0)}`,
-        });
-      } else if (rsi > 70) {
-        tags.push({
-          label: "Overbought",
-          type: "SELL",
-          value: `RSI ${rsi.toFixed(0)}`,
-        });
-      } else {
-        tags.push({
-          label: "Neutral",
-          type: "NEUTRAL",
-          value: `RSI ${rsi.toFixed(0)}`,
-        });
-      }
-
-      // Volume spike
-      if (avgVolume > 0 && currentVolume > avgVolume * 1.5) {
-        tags.push({
-          label: "Heavy Vol",
-          type: "WARNING",
-          value: `${((currentVolume / avgVolume) * 100).toFixed(0)}%`,
-        });
-      }
-
-      // Trend
-      if (currentPrice > sma20) {
-        tags.push({ label: "Uptrend", type: "BUY", value: "> SMA20" });
-      } else {
-        tags.push({ label: "Downtrend", type: "SELL", value: "< SMA20" });
-      }
-
-      // High short interest
-      if (shortFloat > 20) {
-        tags.push({
-          label: "High Short",
-          type: "SELL",
-          value: `${shortFloat.toFixed(1)}%`,
-        });
-      }
-
-      // MACD crossover signal
-      if (macd > macdSignal && macd > 0) {
-        tags.push({ label: "MACD Bull", type: "BUY" });
-      } else if (macd < macdSignal && macd < 0) {
-        tags.push({ label: "MACD Bear", type: "SELL" });
-      }
-
-      // Near 52-week extremes
-      const nearHighPercent = ((week52High - currentPrice) / week52High) * 100;
-      const nearLowPercent = ((currentPrice - week52Low) / week52Low) * 100;
-      if (nearHighPercent < 5) {
-        tags.push({ label: "Near 52W High", type: "WARNING" });
-      } else if (nearLowPercent < 10 && week52Low > 0) {
-        tags.push({ label: "Near 52W Low", type: "BUY" });
-      }
-
-      results.push({
-        ticker,
-        name: localizedName || quote.shortName || quote.longName || ticker,
-        price: currentPrice,
-        changePercent,
-        rsi,
-        volume: currentVolume,
-        avgVolume,
-        sma20,
-        shortFloat,
-        sector: sectorLabel,
-        week52High,
-        week52Low,
-        macd,
-        macdSignal,
-        bollingerUpper,
-        bollingerLower,
-        tags,
-        quant: quantMetrics.get(ticker.toUpperCase()),
-      });
-    } catch (error) {
-      console.error(`Error fetching ${ticker}:`, error);
-      results.push({
-        ticker,
-        name: ticker,
-        price: 0,
-        changePercent: 0,
-        rsi: 50,
-        volume: 0,
-        avgVolume: 0,
-        sma20: 0,
-        shortFloat: 0,
-        sector: sectorLabel,
-        week52High: 0,
-        week52Low: 0,
-        macd: 0,
-        macdSignal: 0,
-        bollingerUpper: 0,
-        bollingerLower: 0,
-        tags: [{ label: "Error", type: "WARNING", value: "Data unavailable" }],
-        quant: quantMetrics.get(ticker.toUpperCase()),
-      });
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const index = cursor++;
+      if (index >= tickers.length) break;
+      results[index] = await fetchStockAnalysis(
+        tickers[index],
+        sectorLabel,
+        uiLang,
+        quantMetrics,
+      );
     }
-  }
+  });
+
+  await Promise.all(workers);
 
   stockCache.set(cacheKey, { data: results, timestamp: Date.now() });
   return results;
@@ -703,7 +804,7 @@ export async function getStockChart(
         dataMap.set(timeKey, q);
       }
 
-      const fixedTimes = buildFixedTimes(market.sessions);
+      const fixedTimes = buildFixedTimes(market.sessions, 5);
 
       // Parse targetDate for display
       const [month, day, year] = targetDate.split("/");
@@ -721,6 +822,56 @@ export async function getStockChart(
           volume: quote ? quote.volume || 0 : 0,
         };
       });
+    } else if (period === "5d") {
+      const dayFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: market.timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const timeFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: market.timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      const dayMap = new Map<string, Map<string, any>>();
+      for (const q of quotes) {
+        const qDate = new Date(q.date);
+        const dayKey = dayFormatter.format(qDate);
+        const timeKey = timeFormatter.format(qDate);
+        if (!dayMap.has(dayKey)) {
+          dayMap.set(dayKey, new Map());
+        }
+        dayMap.get(dayKey)!.set(timeKey, q);
+      }
+
+      const fixedTimes = buildFixedTimes(market.sessions, 30);
+      const dayKeys = Array.from(dayMap.keys()).sort((a, b) => {
+        const [am, ad, ay] = a.split("/");
+        const [bm, bd, by] = b.split("/");
+        const adate = new Date(parseInt(ay), parseInt(am) - 1, parseInt(ad));
+        const bdate = new Date(parseInt(by), parseInt(bm) - 1, parseInt(bd));
+        return adate.getTime() - bdate.getTime();
+      });
+
+      data = dayKeys.flatMap((dayKey) => {
+        const [month, day, year] = dayKey.split("/");
+        const displayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const dateDisplay = displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const byTime = dayMap.get(dayKey) || new Map();
+        return fixedTimes.map((time) => {
+          const quote = byTime.get(time);
+          return {
+            date: dateDisplay,
+            time,
+            fullDate: `${displayDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${time}`,
+            price: quote ? quote.close : null,
+            volume: quote ? quote.volume || 0 : 0,
+          };
+        });
+      });
     } else {
       data = quotes.map((q: any) => {
         const date = new Date(q.date);
@@ -734,12 +885,22 @@ export async function getStockChart(
                 hour12: true,
               })
             : date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          fullDate: date.toLocaleDateString("en-US", { 
-            weekday: "short",
-            month: "short", 
-            day: "numeric",
-            year: "numeric",
-          }) + (isIntraday ? " " + date.toLocaleTimeString("en-US", { timeZone: market.timeZone, hour: "2-digit", minute: "2-digit", hour12: true }) : ""),
+          fullDate:
+            date.toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }) +
+            (isIntraday
+              ? " " +
+                date.toLocaleTimeString("en-US", {
+                  timeZone: market.timeZone,
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
+              : ""),
           price: q.close,
           volume: q.volume || 0,
         };
