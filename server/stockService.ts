@@ -214,12 +214,17 @@ function loadZhNameMap(): Map<string, string> {
 export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   if (uiLang !== "zh") return;
   const map = loadZhNameMap();
-  const missing = symbols
-    .map((s) => s.toUpperCase())
-    .filter((s) => !map.has(s) && !pendingZhUpdates.has(s));
+  const missing: string[] = [];
+  for (const raw of symbols) {
+    const symbol = raw.toUpperCase();
+    if (map.has(symbol) || pendingZhUpdates.has(symbol)) {
+      continue;
+    }
+    pendingZhUpdates.add(symbol);
+    missing.push(symbol);
+  }
 
   if (missing.length === 0) return;
-  missing.forEach((s) => pendingZhUpdates.add(s));
 
   const args = [
     ZH_NAME_SCRIPT,
@@ -260,7 +265,9 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   });
   child.on("error", (err) => {
     console.error(
-      `[ZhName] Failed to spawn Python process for symbols: ${missing.join(",")}`,
+      `[ZhName] Failed to spawn Python process "${python}" with args ${JSON.stringify(
+        args,
+      )} for symbols: ${missing.join(",")}`,
       err,
     );
     missing.forEach((s) => pendingZhUpdates.delete(s));
