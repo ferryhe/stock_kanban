@@ -16,11 +16,12 @@ services:
       - caddy-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/watchlists').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      # 使用 Node.js 原生 http 模块进行检查，兼容性最强
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/watchlists', (r) => { if (r.statusCode === 200) process.exit(0); else process.exit(1); }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 20s
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
