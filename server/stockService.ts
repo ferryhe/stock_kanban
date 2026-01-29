@@ -132,7 +132,7 @@ function buildFixedTimes(sessions: MarketSession[], stepMinutes: number = 5): st
   for (const session of sessions) {
     for (let h = session.startHour; h <= session.endHour; h++) {
       const startMin = h === session.startHour ? session.startMinute : 0;
-      const endMin = h === session.endHour ? session.endMinute : 55;
+      const endMin = h === session.endHour ? session.endMinute : 60 - stepMinutes;
       for (let m = startMin; m <= endMin; m += stepMinutes) {
         const hour24 = h % 24;
         const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
@@ -837,14 +837,12 @@ export async function getStockChart(
       });
 
       const dayMap = new Map<string, Map<string, any>>();
-      const dayDateMap = new Map<string, string>();
       for (const q of quotes) {
         const qDate = new Date(q.date);
         const dayKey = dayFormatter.format(qDate);
         const timeKey = timeFormatter.format(qDate);
         if (!dayMap.has(dayKey)) {
           dayMap.set(dayKey, new Map());
-          dayDateMap.set(dayKey, dayKey);
         }
         dayMap.get(dayKey)!.set(timeKey, q);
       }
