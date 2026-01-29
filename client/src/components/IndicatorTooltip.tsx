@@ -99,11 +99,7 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={cn(
-          "cursor-pointer hover:opacity-80 transition-opacity",
-          isOpen && "relative z-[101]",
-          className
-        )}
+        className={cn("cursor-pointer hover:opacity-80 transition-opacity", className)}
         data-testid={`indicator-${indicator}`}
       >
         {children}
@@ -125,8 +121,8 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative z-[102] bg-card border border-border w-full max-w-sm max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col select-none"
-              onClick={(e) => e.stopPropagation()}
+              className="bg-card border border-border w-full max-w-sm max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col select-none"
+              onClick={() => setIsOpen(false)}
             >
               <div className="flex-shrink-0 flex justify-between items-center p-4 border-b border-border bg-secondary/30">
                 <div className="flex items-center gap-2">

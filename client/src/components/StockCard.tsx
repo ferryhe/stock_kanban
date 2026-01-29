@@ -47,6 +47,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
   const rsiTag = stock.tags.find((tag) => tag.value?.toLowerCase().includes("rsi"));
   const trendTag = stock.tags.find((tag) => tag.label.toLowerCase().includes("trend"));
   const showTrendIndicators = rsiTag || trendTag;
+  const tagBadges = stock.tags.slice(0, 4);
 
   return (
     <motion.div
@@ -84,7 +85,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
       </div>
 
       <div className="space-y-2">
-        {stock.quant && (
+        {stock.quant ? (
           <QuantMetricsDisplay
             metrics={stock.quant}
             macd={stock.macd}
@@ -109,6 +110,17 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
               </div>
             ) : undefined}
           />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {tagBadges.map((tag, i) => (
+              <SignalBadge key={i} type={tag.type} label={tag.label} value={tag.value} />
+            ))}
+            {stock.tags.length > 4 && (
+              <div className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-mono">
+                +{stock.tags.length - 4}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
