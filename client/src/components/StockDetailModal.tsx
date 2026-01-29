@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
 import { SignalBadge } from "./SignalBadge";
+import { useI18n } from "@/lib/i18n";
 import {
   AreaChart,
   Area,
@@ -48,6 +49,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
   const [interval, setInterval] = useState<ChartInterval>("1mo");
   const { data: stock, isLoading: stockLoading } = useSingleStock(ticker, isOpen);
   const { data: chartData, isLoading: chartLoading } = useStockChart(ticker, interval, isOpen);
+  const { t } = useI18n();
 
   if (!stock && !stockLoading) return null;
 
@@ -80,7 +82,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
               <div>
                 <h2 className="text-xl font-bold font-mono">{ticker}</h2>
                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {stock?.name || "Loading..."}
+                  {stock?.name || t("loading")}
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -197,7 +199,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    No chart data available
+                    {t("noChartData")}
                   </div>
                 )}
               </div>
@@ -234,7 +236,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                     <IndicatorTooltip indicator="week52" value={`High: $${stock.week52High?.toFixed(2) || "-"}`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
                         <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                          52 Week High
+                          {t("week52High")}
                         </div>
                         <div className="text-lg font-mono font-bold">
                           ${stock.week52High?.toFixed(2) || "-"}
@@ -244,7 +246,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                     <IndicatorTooltip indicator="week52" value={`Low: $${stock.week52Low?.toFixed(2) || "-"}`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
                         <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                          52 Week Low
+                          {t("week52Low")}
                         </div>
                         <div className="text-lg font-mono font-bold">
                           ${stock.week52Low?.toFixed(2) || "-"}
@@ -269,7 +271,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                     <IndicatorTooltip indicator="bollinger" value={`$${stock.bollingerLower?.toFixed(0) || "-"} - $${stock.bollingerUpper?.toFixed(0) || "-"}`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
                         <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                          Bollinger Bands
+                          {t("bollinger")}
                         </div>
                         <div className="text-sm font-mono">
                           <span className="text-positive">
@@ -285,7 +287,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                     <IndicatorTooltip indicator="rsi" value={stock.rsi}>
                       <div className="bg-secondary/50 rounded-xl p-4">
                         <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                          RSI (14)
+                          {t("rsi14")}
                         </div>
                         <div
                           className={cn(
@@ -304,7 +306,7 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                     <IndicatorTooltip indicator="shortFloat" value={`${stock.shortFloat.toFixed(1)}%`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
                         <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                          Short Float
+                          {t("shortFloat")}
                         </div>
                         <div
                           className={cn(

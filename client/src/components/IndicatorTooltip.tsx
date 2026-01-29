@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface IndicatorTooltipProps {
   indicator: string;
@@ -10,86 +11,13 @@ interface IndicatorTooltipProps {
   className?: string;
 }
 
-const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: string; interpretation: string }> = {
-  rsi: {
-    title: "RSI (Relative Strength Index)",
-    description: "RSI measures the speed and magnitude of recent price changes to evaluate overbought or oversold conditions.",
-    interpretation: "RSI > 70 = Overbought (potential sell signal)\nRSI < 30 = Oversold (potential buy signal)\nRSI 30-70 = Neutral range"
-  },
-  volume: {
-    title: "Volume",
-    description: "The number of shares traded during a given period. High volume confirms price movements.",
-    interpretation: "Volume > 1.5x Average = Strong interest/momentum\nVolume < Average = Weak conviction\nVolume spikes often precede big moves"
-  },
-  shortfloat: {
-    title: "Short Float %",
-    description: "Percentage of shares available for trading that have been sold short but not yet covered. Represents bearish bets against the stock.",
-    interpretation: "Short Float < 10% = Low bearish interest\nShort Float 10-20% = Moderate short interest\nShort Float 20%+ = High short interest (squeeze risk)\nHigher % = More bearish sentiment, higher squeeze potential"
-  },
-  macd: {
-    title: "MACD (Moving Average Convergence Divergence)",
-    description: "MACD shows the relationship between two moving averages. It helps identify trend direction and momentum.",
-    interpretation: "MACD > Signal Line = Bullish momentum\nMACD < Signal Line = Bearish momentum\nMACD crossing above signal = Buy signal\nMACD crossing below signal = Sell signal"
-  },
-  bollinger: {
-    title: "Bollinger Bands",
-    description: "Bollinger Bands show price volatility by plotting bands 2 standard deviations above and below a moving average.",
-    interpretation: "Price near upper band = Potentially overbought\nPrice near lower band = Potentially oversold\nBands widening = Increasing volatility\nBands narrowing = Decreasing volatility"
-  },
-  sma: {
-    title: "SMA (Simple Moving Average)",
-    description: "The average closing price over a specific period (20 days). Shows the overall trend direction.",
-    interpretation: "Price > SMA20 = Uptrend\nPrice < SMA20 = Downtrend\nSMA acts as support/resistance"
-  },
-  week52: {
-    title: "52-Week High/Low",
-    description: "The highest and lowest prices the stock has traded at during the past year.",
-    interpretation: "Near 52W High = Strong momentum, but may be extended\nNear 52W Low = Potential value, but weak momentum\nBreaking 52W High = Very bullish signal"
-  },
-  trend: {
-    title: "Trend Indicator",
-    description: "Shows whether the stock is in an uptrend or downtrend based on its position relative to the 20-day moving average.",
-    interpretation: "Uptrend = Price above SMA20 (bullish)\nDowntrend = Price below SMA20 (bearish)"
-  },
-  rank: {
-    title: "Ensemble Rank",
-    description: "Ordinal ranking after combining quantitative scores, buffers, and predictive signals from machine learning models.",
-    interpretation: "Rank 1 = Best candidate (lowest is better)\nRank 1-3 = Top tier signals\nRank 4-5 = Strong signals\nRank > 5 = Weaker signals\nLower rank values are favorable"
-  },
-  score: {
-    title: "Ensemble Score (Rank Percentile)",
-    description: "Normalized composite score from the ensemble ranking (0-1). Lower values indicate stronger candidates.",
-    interpretation: "Lower values are better\nScore reflects relative ranking percentile\nUse alongside rank for decision making\nScores are comparable across stocks"
-  },
-  predictedreturn: {
-    title: "Predicted Return (20 Trading Days)",
-    description: "Forecasted price return over the next 20 trading days (~1 month) from ML models analyzing historical patterns and technical factors.",
-    interpretation: "Positive % = Bullish signal\nNegative % = Bearish signal\n> 5% = Strong upside potential\n< -5% = Strong downside risk\nBased on historical patterns and technical indicators"
-  },
-  vol60: {
-    title: "60-Day Volatility (Z-Score)",
-    description: "Standardized 60-day historical volatility relative to the same-date cross-sectional baseline.",
-    interpretation: "Higher values = More volatile (riskier)\nNear 0 = Average volatility\nLower values = More stable\nUse alongside drawdown for risk context"
-  },
-  maxdd252: {
-    title: "252-Day Maximum Drawdown (Z-Score)",
-    description: "Standardized 252-day (1 year) maximum drawdown from peak to trough relative to the same-date baseline.",
-    interpretation: "Lower (more negative) values = Larger drawdowns (riskier)\nNear 0 = Average drawdown\nHigher values = Smaller drawdowns\nUse with volatility for risk screening"
-  },
-  signal: {
-    title: "Signal",
-    description: "Final action label derived from quantitative ranking and risk checks.",
-    interpretation: "BUY = Strong candidate\nSELL = Weak candidate or exit signal\nHOLD = Neutral or mixed signals\nRISK_ALERT = Missing risk inputs (vol60/maxdd252)\nUse with other indicators for confirmation"
-  }
-};
-
 export function IndicatorTooltip({ indicator, value, children, className }: IndicatorTooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
-  
-  const explanation = INDICATOR_EXPLANATIONS[indicator.toLowerCase()] || {
+  const { indicator: indicatorCopy, t } = useI18n();
+  const explanation = indicatorCopy[indicator.toLowerCase() as keyof typeof indicatorCopy] || {
     title: indicator,
-    description: "Technical indicator used for stock analysis.",
-    interpretation: "Consult financial resources for detailed interpretation."
+    description: t("unknownIndicatorDescription"),
+    interpretation: t("unknownIndicatorInterpretation"),
   };
 
   return (
@@ -145,14 +73,14 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
                       {typeof value === 'number' ? value.toFixed(2) : value}
                     </div>
                     <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Current Value
+                      {t("currentValue")}
                     </div>
                   </div>
                 )}
                 
                 <div>
                   <h4 className="text-xs uppercase text-muted-foreground font-semibold tracking-wider mb-2">
-                    What is it?
+                    {t("whatIsIt")}
                   </h4>
                   <p className="text-sm text-foreground/90 leading-relaxed">
                     {explanation.description}
@@ -161,7 +89,7 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
                 
                 <div>
                   <h4 className="text-xs uppercase text-muted-foreground font-semibold tracking-wider mb-2">
-                    How to interpret
+                    {t("howToInterpret")}
                   </h4>
                   <div className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed bg-secondary/30 p-3 rounded-xl font-mono text-xs">
                     {explanation.interpretation}

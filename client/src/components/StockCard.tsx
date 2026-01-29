@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
 import { SignalBadge } from "./SignalBadge";
+import { useI18n } from "@/lib/i18n";
 
 interface StockCardProps {
   stock: StockData;
@@ -18,6 +19,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
   const trendTag = stock.tags.find((tag) => tag.label.toLowerCase().includes("trend"));
   const showTrendIndicators = rsiTag || trendTag;
   const tagBadges = stock.tags.slice(0, 4);
+  const { t } = useI18n();
 
   return (
     <motion.div
@@ -97,7 +99,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
       <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
         <IndicatorTooltip indicator="volume" value={`${(stock.volume / 1000000).toFixed(1)}M / ${(stock.avgVolume / 1000000).toFixed(1)}M`}>
           <div>
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol / Avg</div>
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("volAvg")}</div>
               <div className="text-sm font-mono text-foreground">
                   {(stock.volume / 1000000).toFixed(1)}M <span className="text-muted-foreground">/ {(stock.avgVolume / 1000000).toFixed(1)}M</span>
               </div>
@@ -105,7 +107,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
         </IndicatorTooltip>
         <IndicatorTooltip indicator="rsi" value={stock.rsi}>
           <div>
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">RSI (14)</div>
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("rsi14")}</div>
               <div className={cn("text-sm font-mono font-medium", 
                   stock.rsi > 70 ? "text-negative" : stock.rsi < 30 ? "text-positive" : "text-foreground"
               )}>
@@ -115,7 +117,7 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
         </IndicatorTooltip>
         <IndicatorTooltip indicator="shortFloat" value={`${stock.shortFloat.toFixed(1)}%`}>
           <div>
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Short Float</div>
+              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("shortFloat")}</div>
               <div className={cn("text-sm font-mono font-medium", 
                   stock.shortFloat > 20 ? "text-negative" : "text-foreground"
               )}>

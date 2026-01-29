@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Loader2, Settings2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface MarketTickerProps {
   symbol: string;
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
   const [currentTime, setCurrentTime] = useState(getCurrentETTime());
   const [, forceUpdate] = useState(0);
+  const { lang, setLang, t } = useI18n();
 
   const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist);
 
@@ -84,7 +86,16 @@ export default function Dashboard() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
         <div className="max-w-md mx-auto flex justify-between items-center gap-4">
             <div className="flex-shrink-0">
-                <h1 className="text-lg font-bold tracking-tight">Quant<span className="text-primary/60">Dash</span></h1>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLang(lang === "en" ? "zh" : "en")}
+                    className="px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    data-testid="lang-toggle"
+                  >
+                    {t("langToggle")}
+                  </button>
+                  <h1 className="text-lg font-bold tracking-tight">Quant<span className="text-primary/60">Dash</span></h1>
+                </div>
                 <div className="flex items-center gap-1.5">
                     <div className={cn("w-1.5 h-1.5 rounded-full", 
                       isFetching ? "bg-warning animate-pulse" : marketOpen ? "bg-positive" : "bg-muted-foreground"
@@ -105,7 +116,7 @@ export default function Dashboard() {
                     />
                     <MarketTicker 
                       symbol="VIX" 
-                      label="Volatility" 
+                      label={t("volatility")} 
                       price={marketData?.vix.price || 0}
                       change={marketData?.vix.change || 0}
                     />
@@ -146,7 +157,7 @@ export default function Dashboard() {
                         className="flex flex-col items-center justify-center py-20 text-muted-foreground"
                     >
                         <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                        <p className="text-sm font-mono">Fetching Real Data...</p>
+                        <p className="text-sm font-mono">{t("fetchingRealData")}</p>
                     </motion.div>
                 ) : error ? (
                     <motion.div 
@@ -155,13 +166,13 @@ export default function Dashboard() {
                         exit={{ opacity: 0 }}
                         className="flex flex-col items-center justify-center py-20 text-negative"
                     >
-                        <p className="text-sm font-mono mb-2">Failed to load data</p>
+                        <p className="text-sm font-mono mb-2">{t("failedLoad")}</p>
                         <button 
                           onClick={() => refetch()}
                           className="text-xs bg-secondary px-4 py-2 rounded-lg hover:bg-secondary/80"
                           data-testid="retry-button"
                         >
-                          Retry
+                          {t("retry")}
                         </button>
                     </motion.div>
                 ) : (
@@ -176,12 +187,12 @@ export default function Dashboard() {
                         ))}
                         {stocks?.length === 0 && (
                           <div className="text-center text-muted-foreground py-10">
-                            <p className="text-sm">No stocks in this watchlist</p>
+                            <p className="text-sm">{t("emptyWatchlist")}</p>
                             <button
                               onClick={() => setIsManagerOpen(true)}
                               className="text-primary text-sm mt-2 hover:underline"
                             >
-                              Add stocks
+                              {t("addStocks")}
                             </button>
                           </div>
                         )}

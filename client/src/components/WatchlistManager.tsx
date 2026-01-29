@@ -15,17 +15,24 @@ import {
   useStockSearch 
 } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 function DraggableWatchlistItem({ 
   watchlist, 
   onEdit, 
   onDelete, 
-  canDelete 
+  canDelete,
+  stocksLabel,
+  editLabel,
+  displayLabel
 }: { 
   watchlist: Watchlist; 
   onEdit: () => void; 
   onDelete: () => void; 
   canDelete: boolean;
+  stocksLabel: string;
+  editLabel: string;
+  displayLabel: string;
 }) {
   const dragControls = useDragControls();
   
@@ -44,9 +51,9 @@ function DraggableWatchlistItem({
           <GripVertical className="w-5 h-5 text-muted-foreground" />
         </div>
         <div className="flex-1">
-          <div className="font-medium">{watchlist.label}</div>
+          <div className="font-medium">{displayLabel}</div>
           <div className="text-xs text-muted-foreground font-mono">
-            {watchlist.tickers.length} stocks
+            {stocksLabel}
           </div>
         </div>
       </div>
@@ -56,7 +63,7 @@ function DraggableWatchlistItem({
           className="px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
           data-testid={`edit-${watchlist.id}`}
         >
-          Edit
+          {editLabel}
         </button>
         {canDelete && (
           <button
@@ -121,6 +128,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
   const [searchQuery, setSearchQuery] = useState("");
   const [editLabel, setEditLabel] = useState("");
   const [watchlistsArray, setWatchlistsArray] = useState<Watchlist[]>(Object.values(WATCHLISTS));
+  const { t, watchlistLabel } = useI18n();
   
   const { data: searchResults, isLoading: isSearching } = useStockSearch(searchQuery);
 
@@ -221,9 +229,9 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
           >
             <div className="flex justify-between items-center p-4 border-b border-border">
               <h2 className="text-lg font-bold">
-                {mode === "list" && "Manage Watchlists"}
+                {mode === "list" && t("manageWatchlists")}
                 {mode === "edit" && selectedWatchlist?.label}
-                {mode === "create" && "Create Watchlist"}
+                {mode === "create" && t("createWatchlist")}
               </h2>
               <div className="flex items-center gap-2">
                 {mode !== "list" && (
@@ -231,7 +239,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                     onClick={() => setMode("list")}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
-                    Back
+                    {t("back")}
                   </button>
                 )}
                 <button onClick={onClose} data-testid="close-manager">
@@ -244,7 +252,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
               {mode === "list" && (
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground mb-2">
-                    Drag to reorder watchlists
+                    {t("dragWatchlists")}
                   </p>
                   <Reorder.Group 
                     axis="y" 
@@ -259,6 +267,9 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                         onEdit={() => openEditMode(watchlist)}
                         onDelete={() => handleDeleteWatchlist(watchlist.id)}
                         canDelete={watchlistsArray.length > 1}
+                        stocksLabel={t("stocksCount", { count: watchlist.tickers.length })}
+                        editLabel={t("edit")}
+                        displayLabel={watchlistLabel(watchlist.id, watchlist.label)}
                       />
                     ))}
                   </Reorder.Group>
@@ -269,7 +280,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                     data-testid="create-watchlist-btn"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Create New Watchlist</span>
+                    <span>{t("createNewWatchlist")}</span>
                   </button>
                 </div>
               )}
@@ -278,13 +289,13 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
-                      Watchlist Name
+                      {t("watchlistName")}
                     </label>
                     <input
                       type="text"
                       value={newWatchlistName}
                       onChange={(e) => setNewWatchlistName(e.target.value)}
-                      placeholder="e.g., Tech Giants"
+                      placeholder={t("watchlistPlaceholder")}
                       className="w-full bg-secondary/50 border border-border rounded-xl p-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                       data-testid="new-watchlist-name"
                     />
@@ -295,7 +306,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                     className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
                     data-testid="confirm-create-watchlist"
                   >
-                    Create Watchlist
+                    {t("createWatchlistBtn")}
                   </button>
                 </div>
               )}
@@ -304,7 +315,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
-                      Watchlist Name
+                      {t("watchlistName")}
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -319,14 +330,14 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                         className="px-4 bg-primary text-primary-foreground rounded-xl font-medium"
                         data-testid="save-watchlist-name"
                       >
-                        Save
+                        {t("save")}
                       </button>
                     </div>
                   </div>
 
                   <div>
                     <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
-                      Add Stock
+                      {t("addStock")}
                     </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -334,7 +345,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search by name or ticker..."
+                        placeholder={t("searchPlaceholder")}
                         className="w-full bg-secondary/50 border border-border rounded-xl p-3 pl-10 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                         data-testid="search-stock-input"
                       />
@@ -365,7 +376,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                                 </div>
                               </div>
                               {selectedWatchlist.tickers.includes(result.symbol) ? (
-                                <span className="text-xs text-muted-foreground">Added</span>
+                                <span className="text-xs text-muted-foreground">{t("added")}</span>
                               ) : (
                                 <Plus className="w-4 h-4 text-positive" />
                               )}
@@ -373,7 +384,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                           ))
                         ) : (
                           <div className="p-4 text-center text-muted-foreground text-sm">
-                            No results found
+                            {t("noResults")}
                           </div>
                         )}
                       </div>
@@ -382,7 +393,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
 
                   <div>
                     <label className="text-xs font-mono text-muted-foreground uppercase mb-2 block">
-                      Current Stocks ({selectedWatchlist.tickers.length}) - Drag to reorder
+                      {t("currentStocks", { count: selectedWatchlist.tickers.length })}
                     </label>
                     <Reorder.Group
                       axis="y"
@@ -400,7 +411,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                     </Reorder.Group>
                     {selectedWatchlist.tickers.length === 0 && (
                       <div className="text-center text-muted-foreground text-sm py-4">
-                        No stocks in this watchlist
+                        {t("noStocksInWatchlist")}
                       </div>
                     )}
                   </div>
@@ -415,7 +426,7 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
                 data-testid="done-button"
               >
                 <Check className="w-5 h-5" />
-                <span>Done</span>
+                <span>{t("done")}</span>
               </button>
             </div>
           </motion.div>

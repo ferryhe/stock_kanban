@@ -4,6 +4,7 @@ import { Award, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 import { getIndicatorClasses } from "@/lib/indicatorHelpers";
+import { useI18n } from "@/lib/i18n";
 
 interface QuantMetricsDisplayProps {
   metrics?: QuantMetrics;
@@ -28,6 +29,7 @@ const getSignalClass = (signal: string) => {
 
 export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndicators }: QuantMetricsDisplayProps) {
   if (!metrics) return null;
+  const { t } = useI18n();
   const rankStyle = metrics.rank !== undefined ? getIndicatorClasses("rank", metrics.rank) : null;
   const scoreStyle = metrics.score !== undefined && metrics.score !== null ? getIndicatorClasses("score", metrics.score) : null;
   const returnStyle = metrics.predictedReturn !== undefined ? getIndicatorClasses("predictedreturn", metrics.predictedReturn * 100) : null;
@@ -87,7 +89,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
               <div className="bg-secondary/50 rounded-xl p-4 h-full">
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                  Predicted Return (20d)
+                  {t("predictedReturn20d")}
                 </div>
                 <div className={cn(
                   "text-lg font-mono font-bold",
@@ -103,7 +105,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
               <div className="bg-secondary/50 rounded-xl p-4 h-full">
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                  60-Day Volatility
+                  {t("vol60")}
                 </div>
                 <div className={cn(
                   "text-lg font-mono font-bold",
@@ -119,7 +121,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
               <div className="bg-secondary/50 rounded-xl p-4 h-full">
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                  Max Drawdown (252d)
+                  {t("maxdd")}
                 </div>
                 <div className={cn(
                   "text-lg font-mono font-bold",
@@ -190,7 +192,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
           {metrics.risk?.vol60 !== undefined && (
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol60</div>
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("vol60Short")}</div>
                 <div className={cn("text-sm font-mono font-medium", volStyle?.text || "text-muted-foreground")}>
                   {metrics.risk.vol60.toFixed(2)}
                 </div>
@@ -201,7 +203,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
           {metrics.risk?.maxdd252 !== undefined && (
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">MaxDD</div>
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("maxddShort")}</div>
                 <div className={cn("text-sm font-mono font-medium", maxddStyle?.text || "text-muted-foreground")}>
                   {metrics.risk.maxdd252.toFixed(2)}
                 </div>
@@ -212,7 +214,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
           {metrics.predictedReturn !== undefined && (
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">20DRet</div>
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("ret20Short")}</div>
                 <div className={cn("text-sm font-mono font-medium", returnStyle?.text || "text-muted-foreground")}>
                   {(metrics.predictedReturn * 100).toFixed(2)}%
                 </div>
