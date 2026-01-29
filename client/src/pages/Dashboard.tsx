@@ -9,6 +9,7 @@ import { Loader2, Settings2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MarketTickerProps {
   symbol: string;
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState(getCurrentETTime());
   const [, forceUpdate] = useState(0);
   const { lang, setLang, t } = useI18n();
+  const queryClient = useQueryClient();
 
   const currentList = Object.values(WATCHLISTS).find(l => l.id === activeWatchlist);
 
@@ -62,6 +64,10 @@ export default function Dashboard() {
     const unsubscribe = subscribeToWatchlistChanges(refreshWatchlists);
     return unsubscribe;
   }, [refreshWatchlists]);
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["stocks", activeWatchlist] });
+  }, [lang, activeWatchlist, queryClient]);
 
   // Update time every second
   useEffect(() => {

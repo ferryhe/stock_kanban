@@ -811,9 +811,36 @@ export async function getStockChart(
       const displayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       const dateDisplay = displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+      const firstTime = fixedTimes[0];
+      const lastTime = fixedTimes[fixedTimes.length - 1];
+      let firstQuote: any = null;
+      let lastQuote: any = null;
+      if (dataMap.size > 0) {
+        for (const time of fixedTimes) {
+          const candidate = dataMap.get(time);
+          if (candidate) {
+            firstQuote = candidate;
+            break;
+          }
+        }
+        for (let i = fixedTimes.length - 1; i >= 0; i -= 1) {
+          const candidate = dataMap.get(fixedTimes[i]);
+          if (candidate) {
+            lastQuote = candidate;
+            break;
+          }
+        }
+      }
+
       // Build data array with fixed timeline
       data = fixedTimes.map((time) => {
-        const quote = dataMap.get(time);
+        let quote = dataMap.get(time);
+        if (!quote && firstQuote && time === firstTime) {
+          quote = firstQuote;
+        }
+        if (!quote && lastQuote && time === lastTime) {
+          quote = lastQuote;
+        }
         return {
           date: dateDisplay,
           time,
@@ -848,21 +875,50 @@ export async function getStockChart(
       }
 
       const fixedTimes = buildFixedTimes(market.sessions, 30);
-      const dayKeys = Array.from(dayMap.keys()).sort((a, b) => {
+      let dayKeys = Array.from(dayMap.keys()).sort((a, b) => {
         const [am, ad, ay] = a.split("/");
         const [bm, bd, by] = b.split("/");
         const adate = new Date(parseInt(ay), parseInt(am) - 1, parseInt(ad));
         const bdate = new Date(parseInt(by), parseInt(bm) - 1, parseInt(bd));
         return adate.getTime() - bdate.getTime();
       });
+      if (dayKeys.length > 5) {
+        dayKeys = dayKeys.slice(-5);
+      }
 
       data = dayKeys.flatMap((dayKey) => {
         const [month, day, year] = dayKey.split("/");
         const displayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         const dateDisplay = displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         const byTime = dayMap.get(dayKey) || new Map();
+        const firstTime = fixedTimes[0];
+        const lastTime = fixedTimes[fixedTimes.length - 1];
+        let firstQuote: any = null;
+        let lastQuote: any = null;
+        if (byTime.size > 0) {
+          for (const time of fixedTimes) {
+            const candidate = byTime.get(time);
+            if (candidate) {
+              firstQuote = candidate;
+              break;
+            }
+          }
+          for (let i = fixedTimes.length - 1; i >= 0; i -= 1) {
+            const candidate = byTime.get(fixedTimes[i]);
+            if (candidate) {
+              lastQuote = candidate;
+              break;
+            }
+          }
+        }
         return fixedTimes.map((time) => {
-          const quote = byTime.get(time);
+          let quote = byTime.get(time);
+          if (!quote && firstQuote && time === firstTime) {
+            quote = firstQuote;
+          }
+          if (!quote && lastQuote && time === lastTime) {
+            quote = lastQuote;
+          }
           return {
             date: dateDisplay,
             time,
