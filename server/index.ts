@@ -1,7 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { DEFAULT_WATCHLISTS, registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { scheduleZhNameUpdate } from "./stockService";
 
 const app = express();
 const httpServer = createServer(app);
@@ -61,6 +62,10 @@ app.use((req, res, next) => {
 
 (async () => {
   await registerRoutes(httpServer, app);
+  const defaultSymbols = Object.values(DEFAULT_WATCHLISTS)
+    .flatMap((list) => list.tickers)
+    .map((symbol) => symbol.toUpperCase());
+  scheduleZhNameUpdate(defaultSymbols, "zh");
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
