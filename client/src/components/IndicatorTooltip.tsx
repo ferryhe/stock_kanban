@@ -122,10 +122,7 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-card border border-border w-full max-w-sm max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsOpen(false);
-              }}
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex-shrink-0 flex justify-between items-center p-4 border-b border-border bg-secondary/30">
                 <div className="flex items-center gap-2">
