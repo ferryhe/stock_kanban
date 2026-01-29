@@ -445,7 +445,6 @@ export async function getStockAnalysis(
         }),
       ]);
       const localZhName = getLocalZhName(ticker, uiLang);
-      const localizedName = localZhName;
 
       const prices = historical.quotes
         .map((q: any) => q.close)
@@ -553,7 +552,7 @@ export async function getStockAnalysis(
 
       results.push({
         ticker,
-        name: localizedName || quote.shortName || quote.longName || ticker,
+        name: localZhName || quote.shortName || quote.longName || ticker,
         price: currentPrice,
         changePercent,
         rsi,
