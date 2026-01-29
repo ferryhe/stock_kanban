@@ -1,5 +1,5 @@
 import type { Express, Request } from "express";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate } from "./stockService";
 
 const getUiLang = (req: Request) => {
