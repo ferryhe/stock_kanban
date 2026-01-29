@@ -9,25 +9,25 @@ interface QuantMetricsDisplayProps {
   compact?: boolean;
 }
 
-// 根据值获取颜色
+// 根据值获取颜色 - 只改变字体颜色，不改变背景
 const getColorByValue = (value: number, type: 'vol' | 'dd' | 'return') => {
   switch (type) {
     case 'vol':
       // Vol60: 高于 1 是风险
-      if (value > 1.5) return 'text-red-600 dark:text-red-400 bg-red-500/10';
-      if (value > 0.8) return 'text-orange-600 dark:text-orange-400 bg-orange-500/10';
-      return 'text-green-600 dark:text-green-400 bg-green-500/10';
+      if (value > 1.5) return 'text-red-600 dark:text-red-400';
+      if (value > 0.8) return 'text-orange-600 dark:text-orange-400';
+      return 'text-green-600 dark:text-green-400';
     case 'dd':
       // MaxDD252: 更负表示风险更大
-      if (value < -1.5) return 'text-red-600 dark:text-red-400 bg-red-500/10';
-      if (value < -0.5) return 'text-orange-600 dark:text-orange-400 bg-orange-500/10';
-      return 'text-green-600 dark:text-green-400 bg-green-500/10';
+      if (value < -1.5) return 'text-red-600 dark:text-red-400';
+      if (value < -0.5) return 'text-orange-600 dark:text-orange-400';
+      return 'text-green-600 dark:text-green-400';
     case 'return':
       // Return: 正数好
-      if (value > 0.1) return 'text-green-600 dark:text-green-400 bg-green-500/10';
-      if (value > 0.02) return 'text-blue-600 dark:text-blue-400 bg-blue-500/10';
-      if (value < -0.05) return 'text-red-600 dark:text-red-400 bg-red-500/10';
-      return 'text-muted-foreground bg-muted/30';
+      if (value > 0.1) return 'text-green-600 dark:text-green-400';
+      if (value > 0.02) return 'text-blue-600 dark:text-blue-400';
+      if (value < -0.05) return 'text-red-600 dark:text-red-400';
+      return 'text-muted-foreground';
     default:
       return 'text-muted-foreground';
   }
@@ -195,10 +195,9 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
           {metrics.risk?.vol60 !== undefined && (
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
               <div className={cn(
-                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border",
+                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border border-border",
                 "transition-colors cursor-pointer font-mono",
-                getColorByValue(metrics.risk.vol60, 'vol'),
-                "border-current/20"
+                getColorByValue(metrics.risk.vol60, 'vol')
               )}>
                 <span className="font-medium text-[10px] opacity-70 uppercase">Vol60</span>
                 <span className="font-bold text-sm">{metrics.risk.vol60.toFixed(1)}</span>
@@ -209,10 +208,9 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
           {metrics.risk?.maxdd252 !== undefined && (
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
               <div className={cn(
-                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border",
+                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border border-border",
                 "transition-colors cursor-pointer font-mono",
-                getColorByValue(metrics.risk.maxdd252, 'dd'),
-                "border-current/20"
+                getColorByValue(metrics.risk.maxdd252, 'dd')
               )}>
                 <span className="font-medium text-[10px] opacity-70 uppercase">MaxDD</span>
                 <span className="font-bold text-sm">{metrics.risk.maxdd252.toFixed(1)}</span>
@@ -223,10 +221,9 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
           {metrics.predictedReturn !== undefined && (
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
               <div className={cn(
-                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border",
+                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border border-border",
                 "transition-colors cursor-pointer font-mono",
-                getColorByValue(metrics.predictedReturn, 'return'),
-                "border-current/20"
+                getColorByValue(metrics.predictedReturn, 'return')
               )}>
                 <span className="font-medium text-[10px] opacity-70 uppercase">20dRet</span>
                 <span className="font-bold text-sm">{(metrics.predictedReturn * 100).toFixed(1)}%</span>
