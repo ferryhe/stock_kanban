@@ -1,5 +1,6 @@
 import React from "react";
 import { QuantMetrics } from "@/lib/stockApi";
+import { Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 
