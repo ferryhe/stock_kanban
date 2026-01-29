@@ -158,6 +158,12 @@ const ZH_NAME_SCRIPT = path.join(process.cwd(), "scripts", "build_zh_name_map.py
 const pendingZhUpdates: Set<string> = new Set();
 const queuedZhUpdates: Set<string> = new Set();
 let zhUpdateRunning = false;
+const STOCK_FETCH_CONCURRENCY = 6;
+const SHORT_FLOAT_CACHE_TTL = 15 * 60 * 1000;
+const shortFloatCache: Map<string, { value: number; expiresAt: number }> = new Map();
+
+const BASE_HISTORY_DAYS = 90;
+const EXTENDED_HISTORY_DAYS = 365;
 
 // Load quantitative metrics from JSON file
 let quantMetricsCache: Map<string, QuantMetrics> | null = null;
@@ -449,6 +455,179 @@ function calculateBollingerBands(
   };
 }
 
+async function getShortFloat(ticker: string): Promise<number> {
+  const cacheKey = ticker.toUpperCase();
+  const cached = shortFloatCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  let shortFloat = 0;
+  try {
+    const keyStats = await yf.quoteSummary(ticker, {
+      modules: ["defaultKeyStatistics"],
+    });
+    shortFloat = (keyStats.defaultKeyStatistics?.shortPercentOfFloat || 0) * 100;
+  } catch {
+    shortFloat = Math.random() * 15;
+  }
+
+  shortFloatCache.set(cacheKey, {
+    value: shortFloat,
+    expiresAt: Date.now() + SHORT_FLOAT_CACHE_TTL,
+  });
+  return shortFloat;
+}
+
+async function fetchStockAnalysis(
+  ticker: string,
+  sectorLabel: string,
+  uiLang: UILang,
+  quantMetrics: Map<string, QuantMetrics>,
+): Promise<StockAnalysis> {
+  try {
+    const quote = await yf.quote(ticker);
+    const lookbackDays =
+      quote.fiftyTwoWeekHigh && quote.fiftyTwoWeekLow ? BASE_HISTORY_DAYS : EXTENDED_HISTORY_DAYS;
+    const historical = await yf.chart(ticker, {
+      period1: new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000),
+      period2: new Date(),
+      interval: "1d",
+    });
+    const localZhName = getLocalZhName(ticker, uiLang);
+
+    const prices = historical.quotes
+      .map((q: any) => q.close)
+      .filter((p: any): p is number => p !== null);
+    const volumes = historical.quotes
+      .map((q: any) => q.volume)
+      .filter((v: any): v is number => v !== null);
+
+    const currentPrice = quote.regularMarketPrice || 0;
+    const previousClose = quote.regularMarketPreviousClose || currentPrice;
+    const changePercent = previousClose
+      ? ((currentPrice - previousClose) / previousClose) * 100
+      : 0;
+
+    const rsi = calculateRSI(prices, 14);
+    const sma20 = calculateSMA(prices, 20);
+    const avgVolume =
+      volumes.length >= 10
+        ? volumes.slice(-10).reduce((a: number, b: number) => a + b, 0) / 10
+        : quote.averageDailyVolume10Day || 0;
+    const currentVolume = quote.regularMarketVolume || 0;
+
+    const { macd, signal: macdSignal } = calculateMACD(prices);
+    const { upper: bollingerUpper, lower: bollingerLower } =
+      calculateBollingerBands(prices);
+    const week52High = quote.fiftyTwoWeekHigh || Math.max(...prices);
+    const week52Low = quote.fiftyTwoWeekLow || Math.min(...prices);
+
+    const shortFloat = await getShortFloat(ticker);
+
+    const tags: StockAnalysis["tags"] = [];
+
+    if (rsi < 30) {
+      tags.push({
+        label: "Oversold",
+        type: "BUY",
+        value: `RSI ${rsi.toFixed(0)}`,
+      });
+    } else if (rsi > 70) {
+      tags.push({
+        label: "Overbought",
+        type: "SELL",
+        value: `RSI ${rsi.toFixed(0)}`,
+      });
+    } else {
+      tags.push({
+        label: "Neutral",
+        type: "NEUTRAL",
+        value: `RSI ${rsi.toFixed(0)}`,
+      });
+    }
+
+    if (avgVolume > 0 && currentVolume > avgVolume * 1.5) {
+      tags.push({
+        label: "Heavy Vol",
+        type: "WARNING",
+        value: `${((currentVolume / avgVolume) * 100).toFixed(0)}%`,
+      });
+    }
+
+    if (currentPrice > sma20) {
+      tags.push({ label: "Uptrend", type: "BUY", value: "> SMA20" });
+    } else {
+      tags.push({ label: "Downtrend", type: "SELL", value: "< SMA20" });
+    }
+
+    if (shortFloat > 20) {
+      tags.push({
+        label: "High Short",
+        type: "SELL",
+        value: `${shortFloat.toFixed(1)}%`,
+      });
+    }
+
+    if (macd > macdSignal && macd > 0) {
+      tags.push({ label: "MACD Bull", type: "BUY" });
+    } else if (macd < macdSignal && macd < 0) {
+      tags.push({ label: "MACD Bear", type: "SELL" });
+    }
+
+    const nearHighPercent = ((week52High - currentPrice) / week52High) * 100;
+    const nearLowPercent = ((currentPrice - week52Low) / week52Low) * 100;
+    if (nearHighPercent < 5) {
+      tags.push({ label: "Near 52W High", type: "WARNING" });
+    } else if (nearLowPercent < 10 && week52Low > 0) {
+      tags.push({ label: "Near 52W Low", type: "BUY" });
+    }
+
+    return {
+      ticker,
+      name: localZhName || quote.shortName || quote.longName || ticker,
+      price: currentPrice,
+      changePercent,
+      rsi,
+      volume: currentVolume,
+      avgVolume,
+      sma20,
+      shortFloat,
+      sector: sectorLabel,
+      week52High,
+      week52Low,
+      macd,
+      macdSignal,
+      bollingerUpper,
+      bollingerLower,
+      tags,
+      quant: quantMetrics.get(ticker.toUpperCase()),
+    };
+  } catch (error) {
+    console.error(`Error fetching ${ticker}:`, error);
+    return {
+      ticker,
+      name: ticker,
+      price: 0,
+      changePercent: 0,
+      rsi: 50,
+      volume: 0,
+      avgVolume: 0,
+      sma20: 0,
+      shortFloat: 0,
+      sector: sectorLabel,
+      week52High: 0,
+      week52Low: 0,
+      macd: 0,
+      macdSignal: 0,
+      bollingerUpper: 0,
+      bollingerLower: 0,
+      tags: [{ label: "Error", type: "WARNING", value: "Data unavailable" }],
+      quant: quantMetrics.get(ticker.toUpperCase()),
+    };
+  }
+}
+
 export async function getStockAnalysis(
   tickers: string[],
   sectorLabel: string,
@@ -468,168 +647,24 @@ export async function getStockAnalysis(
   // Load quantitative metrics
   const quantMetrics = loadQuantMetrics();
 
-  const results: StockAnalysis[] = [];
+  const results: StockAnalysis[] = new Array(tickers.length);
+  let cursor = 0;
+  const concurrency = Math.min(STOCK_FETCH_CONCURRENCY, tickers.length);
 
-  for (const ticker of tickers) {
-    try {
-      const [quote, historical] = await Promise.all([
-        yf.quote(ticker),
-        yf.chart(ticker, {
-          period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days
-          period2: new Date(),
-          interval: "1d",
-        }),
-      ]);
-      const localZhName = getLocalZhName(ticker, uiLang);
-
-      const prices = historical.quotes
-        .map((q: any) => q.close)
-        .filter((p: any): p is number => p !== null);
-      const volumes = historical.quotes
-        .map((q: any) => q.volume)
-        .filter((v: any): v is number => v !== null);
-
-      const currentPrice = quote.regularMarketPrice || 0;
-      const previousClose = quote.regularMarketPreviousClose || currentPrice;
-      const changePercent = previousClose
-        ? ((currentPrice - previousClose) / previousClose) * 100
-        : 0;
-
-      const rsi = calculateRSI(prices, 14);
-      const sma20 = calculateSMA(prices, 20);
-      const avgVolume =
-        volumes.length >= 10
-          ? volumes.slice(-10).reduce((a: number, b: number) => a + b, 0) / 10
-          : quote.averageDailyVolume10Day || 0;
-      const currentVolume = quote.regularMarketVolume || 0;
-
-      // Calculate additional indicators
-      const { macd, signal: macdSignal } = calculateMACD(prices);
-      const { upper: bollingerUpper, lower: bollingerLower } =
-        calculateBollingerBands(prices);
-      const week52High = quote.fiftyTwoWeekHigh || Math.max(...prices);
-      const week52Low = quote.fiftyTwoWeekLow || Math.min(...prices);
-
-      // Short float percentage
-      let shortFloat = 0;
-      try {
-        const keyStats = await yf.quoteSummary(ticker, {
-          modules: ["defaultKeyStatistics"],
-        });
-        shortFloat =
-          (keyStats.defaultKeyStatistics?.shortPercentOfFloat || 0) * 100;
-      } catch {
-        shortFloat = Math.random() * 15;
-      }
-
-      const tags: StockAnalysis["tags"] = [];
-
-      // RSI signal
-      if (rsi < 30) {
-        tags.push({
-          label: "Oversold",
-          type: "BUY",
-          value: `RSI ${rsi.toFixed(0)}`,
-        });
-      } else if (rsi > 70) {
-        tags.push({
-          label: "Overbought",
-          type: "SELL",
-          value: `RSI ${rsi.toFixed(0)}`,
-        });
-      } else {
-        tags.push({
-          label: "Neutral",
-          type: "NEUTRAL",
-          value: `RSI ${rsi.toFixed(0)}`,
-        });
-      }
-
-      // Volume spike
-      if (avgVolume > 0 && currentVolume > avgVolume * 1.5) {
-        tags.push({
-          label: "Heavy Vol",
-          type: "WARNING",
-          value: `${((currentVolume / avgVolume) * 100).toFixed(0)}%`,
-        });
-      }
-
-      // Trend
-      if (currentPrice > sma20) {
-        tags.push({ label: "Uptrend", type: "BUY", value: "> SMA20" });
-      } else {
-        tags.push({ label: "Downtrend", type: "SELL", value: "< SMA20" });
-      }
-
-      // High short interest
-      if (shortFloat > 20) {
-        tags.push({
-          label: "High Short",
-          type: "SELL",
-          value: `${shortFloat.toFixed(1)}%`,
-        });
-      }
-
-      // MACD crossover signal
-      if (macd > macdSignal && macd > 0) {
-        tags.push({ label: "MACD Bull", type: "BUY" });
-      } else if (macd < macdSignal && macd < 0) {
-        tags.push({ label: "MACD Bear", type: "SELL" });
-      }
-
-      // Near 52-week extremes
-      const nearHighPercent = ((week52High - currentPrice) / week52High) * 100;
-      const nearLowPercent = ((currentPrice - week52Low) / week52Low) * 100;
-      if (nearHighPercent < 5) {
-        tags.push({ label: "Near 52W High", type: "WARNING" });
-      } else if (nearLowPercent < 10 && week52Low > 0) {
-        tags.push({ label: "Near 52W Low", type: "BUY" });
-      }
-
-      results.push({
-        ticker,
-        name: localZhName || quote.shortName || quote.longName || ticker,
-        price: currentPrice,
-        changePercent,
-        rsi,
-        volume: currentVolume,
-        avgVolume,
-        sma20,
-        shortFloat,
-        sector: sectorLabel,
-        week52High,
-        week52Low,
-        macd,
-        macdSignal,
-        bollingerUpper,
-        bollingerLower,
-        tags,
-        quant: quantMetrics.get(ticker.toUpperCase()),
-      });
-    } catch (error) {
-      console.error(`Error fetching ${ticker}:`, error);
-      results.push({
-        ticker,
-        name: ticker,
-        price: 0,
-        changePercent: 0,
-        rsi: 50,
-        volume: 0,
-        avgVolume: 0,
-        sma20: 0,
-        shortFloat: 0,
-        sector: sectorLabel,
-        week52High: 0,
-        week52Low: 0,
-        macd: 0,
-        macdSignal: 0,
-        bollingerUpper: 0,
-        bollingerLower: 0,
-        tags: [{ label: "Error", type: "WARNING", value: "Data unavailable" }],
-        quant: quantMetrics.get(ticker.toUpperCase()),
-      });
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const index = cursor++;
+      if (index >= tickers.length) break;
+      results[index] = await fetchStockAnalysis(
+        tickers[index],
+        sectorLabel,
+        uiLang,
+        quantMetrics,
+      );
     }
-  }
+  });
+
+  await Promise.all(workers);
 
   stockCache.set(cacheKey, { data: results, timestamp: Date.now() });
   return results;
