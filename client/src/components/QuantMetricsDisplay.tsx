@@ -1,12 +1,14 @@
 import React from "react";
 import { QuantMetrics } from "@/lib/stockApi";
-import { Award } from "lucide-react";
+import { Award, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 
 interface QuantMetricsDisplayProps {
   metrics?: QuantMetrics;
   compact?: boolean;
+  macd?: number | null;
+  trendIndicators?: React.ReactNode;
 }
 
 // 根据值获取颜色 - 只改变字体颜色，不改变背景
@@ -46,112 +48,103 @@ const getSignalClass = (signal: string) => {
   }
 };
 
-export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDisplayProps) {
+export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndicators }: QuantMetricsDisplayProps) {
   if (!metrics) return null;
 
   if (compact) {
-    // 紧凑模式用于详细页 - 使用与技术指标相同的样式
+    // ??????????????- ??????????????????
     return (
-      <div className="grid grid-cols-2 gap-4">
-        {metrics.rank !== undefined && (
-          <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
-            <div className="bg-secondary/50 rounded-xl p-4">
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                Ensemble Rank
-              </div>
-              <div className={cn(
-                "text-lg font-mono font-bold",
-                metrics.rank <= 3 
-                  ? "text-positive" 
-                  : metrics.rank <= 5 
-                  ? "text-yellow-600"
-                  : "text-foreground"
-              )}>
-                {metrics.rank}
-              </div>
-            </div>
-          </IndicatorTooltip>
+      <div className="space-y-3">
+        {(metrics.rank !== undefined || metrics.score !== undefined || metrics.signal) && (
+          <div className="grid grid-cols-3 gap-3">
+            {metrics.rank !== undefined && (
+              <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
+                <div className={cn(
+                  "flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full",
+                  metrics.rank <= 3 
+                    ? "bg-positive/10 text-positive border-positive/20" 
+                    : metrics.rank <= 5 
+                    ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                    : "bg-muted text-muted-foreground border-border"
+                )}>
+                  <Award className="w-3 h-3" />
+                  <span>R{metrics.rank}</span>
+                </div>
+              </IndicatorTooltip>
+            )}
+
+            {metrics.score !== undefined && metrics.score !== null && (
+              <IndicatorTooltip indicator="score" value={metrics.score.toFixed(3)}>
+                <div className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full bg-muted text-muted-foreground border-border">
+                  <Hash className="w-3 h-3" />
+                  <span>{metrics.score.toFixed(3)}</span>
+                </div>
+              </IndicatorTooltip>
+            )}
+
+            {metrics.signal && (
+              <IndicatorTooltip indicator="signal" value={metrics.signal}>
+                <div className={cn(
+                  "flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full",
+                  getSignalClass(metrics.signal)
+                )}>
+                  <span>{metrics.signal === "BUY" ? "^" : metrics.signal === "SELL" ? "v" : metrics.signal === "RISK_ALERT" ? "!" : "="}</span>
+                  <span>{metrics.signal}</span>
+                </div>
+              </IndicatorTooltip>
+            )}
+          </div>
         )}
 
-        {metrics.score !== undefined && metrics.score !== null && (
-          <IndicatorTooltip indicator="score" value={metrics.score.toFixed(3)}>
-            <div className="bg-secondary/50 rounded-xl p-4">
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                Score
+        <div className="grid grid-cols-2 gap-4">
+          {metrics.predictedReturn !== undefined && (
+            <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
+              <div className="bg-secondary/50 rounded-xl p-4 h-full">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                  Predicted Return (20d)
+                </div>
+                <div className={cn(
+                  "text-lg font-mono font-bold",
+                  getColorByValue(metrics.predictedReturn, 'return')
+                )}>
+                  {(metrics.predictedReturn * 100).toFixed(2)}%
+                </div>
               </div>
-              <div className="text-lg font-mono font-bold">
-                {metrics.score.toFixed(3)}
-              </div>
-            </div>
-          </IndicatorTooltip>
-        )}
+            </IndicatorTooltip>
+          )}
 
-        {metrics.predictedReturn !== undefined && (
-          <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
-            <div className="bg-secondary/50 rounded-xl p-4">
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                Predicted Return (20d)
+          {metrics.risk?.vol60 !== undefined && (
+            <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
+              <div className="bg-secondary/50 rounded-xl p-4 h-full">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                  60-Day Volatility
+                </div>
+                <div className={cn(
+                  "text-lg font-mono font-bold",
+                  getColorByValue(metrics.risk.vol60, 'vol')
+                )}>
+                  {metrics.risk.vol60.toFixed(2)}
+                </div>
               </div>
-              <div className={cn(
-                "text-lg font-mono font-bold",
-                getColorByValue(metrics.predictedReturn, 'return')
-              )}>
-                {(metrics.predictedReturn * 100).toFixed(2)}%
-              </div>
-            </div>
-          </IndicatorTooltip>
-        )}
+            </IndicatorTooltip>
+          )}
 
-        {metrics.risk?.vol60 !== undefined && (
-          <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
-            <div className="bg-secondary/50 rounded-xl p-4">
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                60-Day Volatility
+          {metrics.risk?.maxdd252 !== undefined && (
+            <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
+              <div className="bg-secondary/50 rounded-xl p-4 h-full">
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
+                  Max Drawdown (252d)
+                </div>
+                <div className={cn(
+                  "text-lg font-mono font-bold",
+                  getColorByValue(metrics.risk.maxdd252, 'dd')
+                )}>
+                  {metrics.risk.maxdd252.toFixed(2)}
+                </div>
               </div>
-              <div className={cn(
-                "text-lg font-mono font-bold",
-                getColorByValue(metrics.risk.vol60, 'vol')
-              )}>
-                {metrics.risk.vol60.toFixed(2)}
-              </div>
-            </div>
-          </IndicatorTooltip>
-        )}
-
-        {metrics.risk?.maxdd252 !== undefined && (
-          <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
-            <div className="bg-secondary/50 rounded-xl p-4">
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                Max Drawdown (252d)
-              </div>
-              <div className={cn(
-                "text-lg font-mono font-bold",
-                getColorByValue(metrics.risk.maxdd252, 'dd')
-              )}>
-                {metrics.risk.maxdd252.toFixed(2)}
-              </div>
-            </div>
-          </IndicatorTooltip>
-        )}
-
-        {metrics.signal && (
-          <IndicatorTooltip indicator="signal" value={metrics.signal}>
-            <div className="bg-secondary/50 rounded-xl p-4">
-              <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
-                Signal
-              </div>
-              <div className={cn(
-                "text-lg font-mono font-bold",
-                metrics.signal === "BUY" ? "text-positive" 
-                  : metrics.signal === "SELL" ? "text-negative" 
-                  : metrics.signal === "RISK_ALERT" ? "text-orange-600"
-                  : "text-foreground"
-              )}>
-                {metrics.signal}
-              </div>
-            </div>
-          </IndicatorTooltip>
-        )}
+            </IndicatorTooltip>
+          )}
+        </div>
       </div>
     );
   }
@@ -159,7 +152,7 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
   return (
     <div className="space-y-2 pt-2 border-t border-border/50">
       {/* 顶行：Rank, Signal - 按钮形式 */}
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="grid grid-cols-3 gap-1.5">
         {metrics.rank !== undefined && (
           <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
             <div className={cn(
@@ -182,51 +175,63 @@ export function QuantMetricsDisplay({ metrics, compact = false }: QuantMetricsDi
               "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border",
               getSignalClass(metrics.signal)
             )}>
-              {metrics.signal === "BUY" ? "↑" : metrics.signal === "SELL" ? "↓" : metrics.signal === "RISK_ALERT" ? "!" : "="} 
+              {metrics.signal === "BUY" ? "^" : metrics.signal === "SELL" ? "v" : metrics.signal === "RISK_ALERT" ? "!" : "="} 
               <span>{metrics.signal}</span>
+            </div>
+          </IndicatorTooltip>
+        )}
+
+        {macd !== undefined && macd !== null && (
+          <IndicatorTooltip indicator="macd" value={macd.toFixed(2)}>
+            <div className={cn(
+              "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border font-mono",
+              macd >= 0 ? "bg-positive/10 text-positive border-positive/20" : "bg-negative/10 text-negative border-negative/20"
+            )}>
+              <span>MACD</span>
+              <span className="opacity-70">{macd.toFixed(2)}</span>
             </div>
           </IndicatorTooltip>
         )}
       </div>
 
+      {trendIndicators && (
+        <div className="mt-1.5">
+          {trendIndicators}
+        </div>
+      )}
+
       {/* Risk Metrics - 平行分布 */}
       {(metrics.risk?.vol60 !== undefined || metrics.risk?.maxdd252 !== undefined || metrics.predictedReturn !== undefined) && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 gap-4">
           {metrics.risk?.vol60 !== undefined && (
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
-              <div className={cn(
-                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border border-border",
-                "transition-colors cursor-pointer font-mono",
-                getColorByValue(metrics.risk.vol60, 'vol')
-              )}>
-                <span className="font-medium text-[10px] opacity-70 uppercase">Vol60</span>
-                <span className="font-bold text-sm">{metrics.risk.vol60.toFixed(1)}</span>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">Vol60</div>
+                <div className={cn("text-sm font-mono font-medium", getColorByValue(metrics.risk.vol60, 'vol'))}>
+                  {metrics.risk.vol60.toFixed(2)}
+                </div>
               </div>
             </IndicatorTooltip>
           )}
 
           {metrics.risk?.maxdd252 !== undefined && (
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
-              <div className={cn(
-                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border border-border",
-                "transition-colors cursor-pointer font-mono",
-                getColorByValue(metrics.risk.maxdd252, 'dd')
-              )}>
-                <span className="font-medium text-[10px] opacity-70 uppercase">MaxDD</span>
-                <span className="font-bold text-sm">{metrics.risk.maxdd252.toFixed(1)}</span>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">MaxDD</div>
+                <div className={cn("text-sm font-mono font-medium", getColorByValue(metrics.risk.maxdd252, 'dd'))}>
+                  {metrics.risk.maxdd252.toFixed(2)}
+                </div>
               </div>
             </IndicatorTooltip>
           )}
 
           {metrics.predictedReturn !== undefined && (
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
-              <div className={cn(
-                "flex flex-col items-center justify-center py-2 px-1.5 rounded text-xs border border-border",
-                "transition-colors cursor-pointer font-mono",
-                getColorByValue(metrics.predictedReturn, 'return')
-              )}>
-                <span className="font-medium text-[10px] opacity-70 uppercase">20dRet</span>
-                <span className="font-bold text-sm">{(metrics.predictedReturn * 100).toFixed(1)}%</span>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">20DRet</div>
+                <div className={cn("text-sm font-mono font-medium", getColorByValue(metrics.predictedReturn, 'return'))}>
+                  {(metrics.predictedReturn * 100).toFixed(2)}%
+                </div>
               </div>
             </IndicatorTooltip>
           )}

@@ -208,14 +208,54 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                 </div>
               ) : stock && (
                 <>
-                  {/* Quant Metrics 量化指标 */}
+                  {/* Quant Metrics ?????? */}
                   {stock.quant && (
                     <div className="mt-6">
                       <QuantMetricsDisplay metrics={stock.quant} compact={true} />
                     </div>
                   )}
 
-                  {/* Technical Indicators 技术指标 */}
+                  {stock.tags.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {stock.tags.map((tag, i) => {
+                        const colors = {
+                          BUY: "bg-positive/10 text-positive border-positive/20",
+                          SELL: "bg-negative/10 text-negative border-negative/20",
+                          WARNING: "bg-warning/10 text-warning border-warning/20",
+                          NEUTRAL: "bg-muted text-muted-foreground border-border",
+                        };
+                        const getIndicatorType = (label: string): string => {
+                          const labelLower = label.toLowerCase();
+                          if (labelLower.includes('rsi')) return 'rsi';
+                          if (labelLower.includes('macd')) return 'macd';
+                          if (labelLower.includes('trend')) return 'trend';
+                          if (labelLower.includes('52w') || labelLower.includes('week')) return 'week52';
+                          if (labelLower.includes('bollinger')) return 'bollinger';
+                          if (labelLower.includes('volume')) return 'volume';
+                          return 'trend';
+                        };
+                        return (
+                          <IndicatorTooltip key={i} indicator={getIndicatorType(tag.label)} value={tag.value}>
+                            <div
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
+                                colors[tag.type]
+                              )}
+                            >
+                              <span>{tag.label}</span>
+                              {tag.value && (
+                                <span className="opacity-70 border-l border-current pl-2">
+                                  {tag.value}
+                                </span>
+                              )}
+                            </div>
+                          </IndicatorTooltip>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Technical Indicators ???? */}
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     <IndicatorTooltip indicator="week52" value={`High: $${stock.week52High?.toFixed(2) || "-"}`}>
                       <div className="bg-secondary/50 rounded-xl p-4">
@@ -302,44 +342,6 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                         </div>
                       </div>
                     </IndicatorTooltip>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {stock.tags.map((tag, i) => {
-                      const colors = {
-                        BUY: "bg-positive/10 text-positive border-positive/20",
-                        SELL: "bg-negative/10 text-negative border-negative/20",
-                        WARNING: "bg-warning/10 text-warning border-warning/20",
-                        NEUTRAL: "bg-muted text-muted-foreground border-border",
-                      };
-                      const getIndicatorType = (label: string): string => {
-                        const labelLower = label.toLowerCase();
-                        if (labelLower.includes('rsi')) return 'rsi';
-                        if (labelLower.includes('macd')) return 'macd';
-                        if (labelLower.includes('trend')) return 'trend';
-                        if (labelLower.includes('52w') || labelLower.includes('week')) return 'week52';
-                        if (labelLower.includes('bollinger')) return 'bollinger';
-                        if (labelLower.includes('volume')) return 'volume';
-                        return 'trend';
-                      };
-                      return (
-                        <IndicatorTooltip key={i} indicator={getIndicatorType(tag.label)} value={tag.value}>
-                          <div
-                            className={cn(
-                              "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium font-mono",
-                              colors[tag.type]
-                            )}
-                          >
-                            <span>{tag.label}</span>
-                            {tag.value && (
-                              <span className="opacity-70 border-l border-current pl-2">
-                                {tag.value}
-                              </span>
-                            )}
-                          </div>
-                        </IndicatorTooltip>
-                      );
-                    })}
                   </div>
                 </>
               )}

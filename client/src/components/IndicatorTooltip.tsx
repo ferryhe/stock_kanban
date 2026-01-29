@@ -64,7 +64,7 @@ const INDICATOR_EXPLANATIONS: Record<string, { title: string; description: strin
   predictedreturn: {
     title: "Predicted Return (20 Trading Days)",
     description: "Forecasted price return over the next 20 trading days (~1 month) from ML models analyzing historical patterns and technical factors.",
-    interpretation: "Positive % = Bullish signal (expected increase)\nNegative % = Bearish signal (expected decrease)\n> 5% = Strong upside potential\n< -5% = Strong downside risk\nBased on historical patterns and technical indicators"
+    interpretation: "Positive % = Bullish signal\nNegative % = Bearish signal\n> 5% = Strong upside potential\n< -5% = Strong downside risk\nBased on historical patterns and technical indicators"
   },
   vol60: {
     title: "60-Day Volatility (Z-Score)",
@@ -97,9 +97,13 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
       <div 
         onClick={(e) => {
           e.stopPropagation();
-          setIsOpen(true);
+          setIsOpen((prev) => !prev);
         }}
-        className={cn("cursor-pointer hover:opacity-80 transition-opacity", className)}
+        className={cn(
+          "cursor-pointer hover:opacity-80 transition-opacity",
+          isOpen && "relative z-[101]",
+          className
+        )}
         data-testid={`indicator-${indicator}`}
       >
         {children}
@@ -121,7 +125,7 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border w-full max-w-sm max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              className="relative z-[102] bg-card border border-border w-full max-w-sm max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col select-none"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex-shrink-0 flex justify-between items-center p-4 border-b border-border bg-secondary/30">
@@ -138,7 +142,7 @@ export function IndicatorTooltip({ indicator, value, children, className }: Indi
                 </button>
               </div>
               
-              <div className="p-4 space-y-4 overflow-y-auto flex-1">
+              <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
                 {value !== undefined && (
                   <div className="text-center p-3 bg-secondary/50 rounded-xl">
                     <div className="text-2xl font-mono font-bold text-foreground">

@@ -22,7 +22,7 @@ const getIndicatorType = (label: string): string => {
   return 'trend';
 };
 
-const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; value?: string }) => {
+const SignalBadge = ({ type, label, value, indicator }: { type: SignalType; label: string; value?: string; indicator?: string }) => {
   const colors = {
     BUY: "bg-positive/10 text-positive border-positive/20",
     SELL: "bg-negative/10 text-negative border-negative/20",
@@ -30,7 +30,7 @@ const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; 
     NEUTRAL: "bg-muted text-muted-foreground border-border",
   };
 
-  const indicatorType = getIndicatorType(label);
+  const indicatorType = indicator || getIndicatorType(label);
 
   return (
     <IndicatorTooltip indicator={indicatorType} value={value}>
@@ -44,6 +44,9 @@ const SignalBadge = ({ type, label, value }: { type: SignalType; label: string; 
 
 export function StockCard({ stock, index, onClick }: StockCardProps) {
   const isPositive = stock.changePercent >= 0;
+  const rsiTag = stock.tags.find((tag) => tag.value?.toLowerCase().includes("rsi"));
+  const trendTag = stock.tags.find((tag) => tag.label.toLowerCase().includes("trend"));
+  const showTrendIndicators = rsiTag || trendTag;
 
   return (
     <motion.div
@@ -81,17 +84,32 @@ export function StockCard({ stock, index, onClick }: StockCardProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="flex flex-wrap gap-2">
-          {stock.tags.slice(0, 4).map((tag, i) => (
-            <SignalBadge key={i} type={tag.type} label={tag.label} value={tag.value} />
-          ))}
-          {stock.tags.length > 4 && (
-            <div className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-mono">
-              +{stock.tags.length - 4}
-            </div>
-          )}
-        </div>
-        {stock.quant && <QuantMetricsDisplay metrics={stock.quant} />}
+        {stock.quant && (
+          <QuantMetricsDisplay
+            metrics={stock.quant}
+            macd={stock.macd}
+            trendIndicators={showTrendIndicators ? (
+              <div className="grid grid-cols-2 gap-2">
+                {rsiTag && (
+                  <SignalBadge
+                    type={rsiTag.type}
+                    label={rsiTag.label}
+                    value={rsiTag.value}
+                    indicator="rsi"
+                  />
+                )}
+                {trendTag && (
+                  <SignalBadge
+                    type={trendTag.type}
+                    label={trendTag.label}
+                    value={trendTag.value}
+                    indicator="trend"
+                  />
+                )}
+              </div>
+            ) : undefined}
+          />
+        )}
       </div>
 
       <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
