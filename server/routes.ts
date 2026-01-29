@@ -3,11 +3,50 @@ import { createServer, type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate } from "./stockService";
 
 const getUiLang = (req: Request) => {
-  const header = req.headers["x-ui-lang"] || req.headers["accept-language"];
-  const lang = Array.isArray(header) ? header[0] : header;
-  if (typeof lang === "string" && lang.toLowerCase().startsWith("zh")) {
-    return "zh";
+  const uiHeader = req.headers["x-ui-lang"];
+  const uiLang = Array.isArray(uiHeader) ? uiHeader[0] : uiHeader;
+  if (typeof uiLang === "string") {
+    if (uiLang.toLowerCase().startsWith("zh")) {
+      return "zh";
+    }
+    return "en";
   }
+
+  const acceptHeader = req.headers["accept-language"];
+  const acceptLang = Array.isArray(acceptHeader) ? acceptHeader[0] : acceptHeader;
+  if (typeof acceptLang === "string") {
+    const entries = acceptLang.split(",").map((part) => part.trim()).filter(Boolean);
+    let bestLang: string | null = null;
+    let bestQ = 0;
+
+    for (const entry of entries) {
+      const segments = entry.split(";").map((segment) => segment.trim()).filter(Boolean);
+      if (segments.length === 0) continue;
+
+      const langRange = segments[0];
+      let q = 1;
+
+      for (let i = 1; i < segments.length; i++) {
+        const [key, value] = segments[i].split("=").map((s) => s.trim());
+        if (key && key.toLowerCase() === "q" && value) {
+          const parsed = parseFloat(value);
+          if (!Number.isNaN(parsed)) {
+            q = parsed;
+          }
+        }
+      }
+
+      if (q > bestQ) {
+        bestQ = q;
+        bestLang = langRange;
+      }
+    }
+
+    if (bestLang && bestLang.toLowerCase().startsWith("zh")) {
+      return "zh";
+    }
+  }
+
   return "en";
 };
 
