@@ -115,7 +115,7 @@ export function getCurrentETTime(): string {
 
 // Get custom watchlists from localStorage or use defaults
 // Performs validation to ensure data integrity:
-// - Checks for valid JSON structure
+// - Validates parsed data has correct object structure
 // - Validates each watchlist has required fields (id, label, tickers)
 // - Clears corrupted localStorage data automatically
 // - Always returns valid watchlists (defaults if storage is corrupted)
