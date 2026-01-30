@@ -56,11 +56,6 @@ export default function Dashboard() {
     }
   }, [availableWatchlists, activeWatchlist]);
 
-  const currentList = useMemo(
-    () => availableWatchlists.find(l => l.id === activeWatchlist),
-    [availableWatchlists, activeWatchlist]
-  );
-
   const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
   const { data: marketData } = useMarketOverview();
 
