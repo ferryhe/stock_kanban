@@ -318,13 +318,18 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
 
 function loadQuantMetrics(): Map<string, QuantMetrics> {
   const now = Date.now();
-  const metricsPath = path.join(process.cwd(), "data", "quant-metrics.json");
+  const metricsPaths = [
+    path.join(process.cwd(), "data", "quant-metrics-cn.json"),
+    path.join(process.cwd(), "data", "quant-metrics-hk.json"),
+    path.join(process.cwd(), "data", "quant-metrics-us.json"),
+  ];
   let fileMtime = 0;
-  if (fs.existsSync(metricsPath)) {
+  for (const p of metricsPaths) {
+    if (!fs.existsSync(p)) continue;
     try {
-      fileMtime = fs.statSync(metricsPath).mtimeMs;
+      fileMtime = Math.max(fileMtime, fs.statSync(p).mtimeMs);
     } catch {
-      fileMtime = 0;
+      // ignore
     }
   }
 
@@ -339,10 +344,15 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
   const metricsMap = new Map<string, QuantMetrics>();
 
   try {
-    if (fs.existsSync(metricsPath)) {
+    const existingPaths = metricsPaths.filter((p) => fs.existsSync(p));
+    if (existingPaths.length === 0) {
+      console.warn("[Quant] Metrics files not found.");
+    }
+
+    for (const metricsPath of existingPaths) {
       const rawData = fs.readFileSync(metricsPath, "utf-8");
       const data = JSON.parse(rawData);
-      
+
       if (Array.isArray(data)) {
         data.forEach((item: any) => {
           if (item.ticker) {
@@ -356,12 +366,14 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
           }
         });
       }
-      console.log(`[Quant] Loaded metrics for ${metricsMap.size} tickers from ${metricsPath}`);
-    } else {
-      console.warn(`[Quant] Metrics file not found at ${metricsPath}`);
+    }
+    if (metricsMap.size > 0) {
+      console.log(
+        `[Quant] Loaded metrics for ${metricsMap.size} tickers from ${existingPaths.length} file(s)`,
+      );
     }
   } catch (error) {
-    console.warn(`[Quant] Failed to load metrics:`, error);
+    console.warn("[Quant] Failed to load metrics:", error);
   }
   
   quantMetricsCache = metricsMap;
