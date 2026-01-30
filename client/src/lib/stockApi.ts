@@ -155,8 +155,9 @@ export const getCustomWatchlists = (): Record<string, Watchlist> => {
         if (Object.keys(validWatchlists).length !== Object.keys(parsed).length) {
           try {
             localStorage.setItem("custom_watchlists", JSON.stringify(validWatchlists));
-          } catch {
-            // Ignore storage errors when saving cleaned data
+          } catch (error) {
+            // Log storage errors for debugging, but do not disrupt user flow
+            console.error("Failed to save cleaned custom_watchlists to localStorage:", error);
           }
         }
         return validWatchlists;
