@@ -26,14 +26,22 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleReset = () => {
     // Clear potentially corrupted localStorage data
+    let clearSuccess = false;
     try {
       localStorage.removeItem("custom_watchlists");
+      clearSuccess = true;
     } catch (e) {
       console.error("Failed to clear localStorage:", e);
     }
     
-    this.setState({ hasError: false, error: undefined });
-    window.location.reload();
+    // Only reload if we successfully cleared the data or can't access localStorage
+    if (clearSuccess || typeof localStorage === "undefined") {
+      this.setState({ hasError: false, error: undefined });
+      window.location.reload();
+    } else {
+      // If we can't clear localStorage, show an error message
+      alert("Failed to clear corrupted data. Please try clearing your browser cache manually.");
+    }
   };
 
   render() {
@@ -43,8 +51,11 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="max-w-md w-full bg-secondary/50 backdrop-blur-md rounded-2xl border border-border/50 p-8 text-center">
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
-            <p className="text-muted-foreground mb-6">
-              The app encountered an unexpected error. This might be caused by corrupted data in your browser storage.
+            <p className="text-muted-foreground mb-2">
+              The app encountered an unexpected error. This might be caused by corrupted watchlist data in your browser storage.
+            </p>
+            <p className="text-muted-foreground text-sm mb-6">
+              Clicking the button below will clear your custom watchlists and reload the page.
             </p>
             <button
               onClick={this.handleReset}

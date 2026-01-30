@@ -114,6 +114,11 @@ export function getCurrentETTime(): string {
 }
 
 // Get custom watchlists from localStorage or use defaults
+// Performs validation to ensure data integrity:
+// - Checks for valid JSON structure
+// - Validates each watchlist has required fields (id, label, tickers)
+// - Clears corrupted localStorage data automatically
+// - Always returns valid watchlists (defaults if storage is corrupted)
 export const getCustomWatchlists = (): Record<string, Watchlist> => {
   if (typeof window === "undefined") {
     return getDefaultWatchlists();
@@ -123,17 +128,40 @@ export const getCustomWatchlists = (): Record<string, Watchlist> => {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      // Validate that parsed data is a non-empty object with valid watchlists
-      if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
-        // Check if at least one watchlist has valid structure
-        const hasValidWatchlist = Object.values(parsed).some(
-          (w: any) => w && typeof w === "object" && w.id && typeof w.label === "string" && Array.isArray(w.tickers)
-        );
-        if (hasValidWatchlist) {
-          return parsed;
-        }
+      // Validate that parsed data is a non-empty object
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        localStorage.removeItem("custom_watchlists");
+        return getDefaultWatchlists();
       }
-      // If validation fails, return defaults and clear corrupted data
+
+      // Filter to keep only valid watchlists
+      const validWatchlists = Object.entries(parsed).reduce((acc, [key, w]: [string, any]) => {
+        if (
+          w && 
+          typeof w === "object" && 
+          typeof w.id === "string" && 
+          typeof w.label === "string" && 
+          Array.isArray(w.tickers)
+        ) {
+          acc[key] = w as Watchlist;
+        }
+        return acc;
+      }, {} as Record<string, Watchlist>);
+
+      // Return valid watchlists if we have at least one
+      if (Object.keys(validWatchlists).length > 0) {
+        // If we filtered out some invalid watchlists, save the cleaned version
+        if (Object.keys(validWatchlists).length !== Object.keys(parsed).length) {
+          try {
+            localStorage.setItem("custom_watchlists", JSON.stringify(validWatchlists));
+          } catch {
+            // Ignore storage errors when saving cleaned data
+          }
+        }
+        return validWatchlists;
+      }
+
+      // No valid watchlists found, clear storage and return defaults
       localStorage.removeItem("custom_watchlists");
       return getDefaultWatchlists();
     } catch {
@@ -276,25 +304,23 @@ export const reorderWatchlists = (orderedIds: string[]) => {
   saveAndRefresh(reordered);
 };
 
-export const getWatchlistsArray = () => Object.values(WATCHLISTS);
+export const getWatchlistsArray = () => Object.values(getCustomWatchlists());
 
 export const useStockData = (watchlistId: string) => {
-  // Ensure WATCHLISTS is always refreshed from localStorage
-  const currentWatchlists = getCustomWatchlists();
-  const watchlist = Object.values(currentWatchlists).find((w) => w.id === watchlistId);
-  const customTickers = watchlist?.tickers.join(",") || "";
-
   return useQuery<StockData[]>({
-    queryKey: ["stocks", watchlistId, customTickers],
+    queryKey: ["stocks", watchlistId],
     queryFn: async () => {
-      // If no watchlist found, return empty array
-      if (!watchlist || !customTickers) {
+      // Get fresh watchlist data to find the current watchlist
+      const currentWatchlists = getCustomWatchlists();
+      const watchlist = Object.values(currentWatchlists).find((w) => w.id === watchlistId);
+      
+      // If no watchlist found or no tickers, return empty array
+      if (!watchlist || watchlist.tickers.length === 0) {
         return [];
       }
 
-      const url = customTickers
-        ? `/api/stocks/${watchlistId}?tickers=${encodeURIComponent(customTickers)}`
-        : `/api/stocks/${watchlistId}`;
+      const customTickers = watchlist.tickers.join(",");
+      const url = `/api/stocks/${watchlistId}?tickers=${encodeURIComponent(customTickers)}`;
 
       const res = await fetch(url, withUiLang());
       if (!res.ok) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useStockData, useMarketOverview, isMarketOpen, getCurrentETTime, StockData, subscribeToWatchlistChanges, getWatchlistsArray } from "@/lib/stockApi";
 import { StockCard } from "@/components/StockCard";
 import { StockDetailModal } from "@/components/StockDetailModal";
@@ -37,22 +37,32 @@ const MarketTicker = ({ symbol, label, price, change }: MarketTickerProps) => {
 };
 
 export default function Dashboard() {
-  // Get fresh watchlist data and ensure we have a valid active watchlist
-  const availableWatchlists = getWatchlistsArray();
-  const defaultWatchlistId = availableWatchlists[0]?.id || "ai_chips";
-  
-  const [activeWatchlist, setActiveWatchlist] = useState<string>(defaultWatchlistId);
-  const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
-  const { data: marketData } = useMarketOverview();
-  const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
+  const [activeWatchlist, setActiveWatchlist] = useState<string>("");
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
   const [currentTime, setCurrentTime] = useState(getCurrentETTime());
-  const [, forceUpdate] = useState(0);
+  const [watchlistVersion, forceUpdate] = useState(0);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
 
-  const currentList = availableWatchlists.find(l => l.id === activeWatchlist);
+  // Get fresh watchlist data, recomputed when watchlistVersion changes
+  const availableWatchlists = useMemo(() => getWatchlistsArray(), [watchlistVersion]);
+  
+  // Initialize activeWatchlist once we have the watchlists
+  useEffect(() => {
+    if (!activeWatchlist && availableWatchlists.length > 0) {
+      setActiveWatchlist(availableWatchlists[0].id);
+    }
+  }, [availableWatchlists, activeWatchlist]);
+
+  const currentList = useMemo(
+    () => availableWatchlists.find(l => l.id === activeWatchlist),
+    [availableWatchlists, activeWatchlist]
+  );
+
+  const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
+  const { data: marketData } = useMarketOverview();
 
   const refreshWatchlists = useCallback(() => {
     const currentWatchlists = getWatchlistsArray();
