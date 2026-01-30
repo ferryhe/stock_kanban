@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { X, Plus, Trash2, Search, Loader2, GripVertical, Check } from "lucide-react";
 import { 
-  WATCHLISTS, 
+  getWatchlistsArray,
   Watchlist, 
   createWatchlist, 
   deleteWatchlist, 
@@ -127,13 +127,13 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
   const [newWatchlistName, setNewWatchlistName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [editLabel, setEditLabel] = useState("");
-  const [watchlistsArray, setWatchlistsArray] = useState<Watchlist[]>(Object.values(WATCHLISTS));
+  const [watchlistsArray, setWatchlistsArray] = useState<Watchlist[]>(getWatchlistsArray());
   const { t, watchlistLabel } = useI18n();
   
   const { data: searchResults, isLoading: isSearching } = useStockSearch(searchQuery);
 
   const refreshWatchlists = useCallback(() => {
-    const updated = Object.values(WATCHLISTS);
+    const updated = getWatchlistsArray();
     setWatchlistsArray(updated);
     setSelectedWatchlist(prev => {
       if (prev) {

@@ -122,8 +122,23 @@ export const getCustomWatchlists = (): Record<string, Watchlist> => {
   const saved = localStorage.getItem("custom_watchlists");
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Validate that parsed data is a non-empty object with valid watchlists
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+        // Check if at least one watchlist has valid structure
+        const hasValidWatchlist = Object.values(parsed).some(
+          (w: any) => w && typeof w === "object" && w.id && typeof w.label === "string" && Array.isArray(w.tickers)
+        );
+        if (hasValidWatchlist) {
+          return parsed;
+        }
+      }
+      // If validation fails, return defaults and clear corrupted data
+      localStorage.removeItem("custom_watchlists");
+      return getDefaultWatchlists();
     } catch {
+      // If parsing fails, clear corrupted data and return defaults
+      localStorage.removeItem("custom_watchlists");
       return getDefaultWatchlists();
     }
   }
@@ -264,12 +279,19 @@ export const reorderWatchlists = (orderedIds: string[]) => {
 export const getWatchlistsArray = () => Object.values(WATCHLISTS);
 
 export const useStockData = (watchlistId: string) => {
-  const watchlist = Object.values(WATCHLISTS).find((w) => w.id === watchlistId);
+  // Ensure WATCHLISTS is always refreshed from localStorage
+  const currentWatchlists = getCustomWatchlists();
+  const watchlist = Object.values(currentWatchlists).find((w) => w.id === watchlistId);
   const customTickers = watchlist?.tickers.join(",") || "";
 
   return useQuery<StockData[]>({
     queryKey: ["stocks", watchlistId, customTickers],
     queryFn: async () => {
+      // If no watchlist found, return empty array
+      if (!watchlist || !customTickers) {
+        return [];
+      }
+
       const url = customTickers
         ? `/api/stocks/${watchlistId}?tickers=${encodeURIComponent(customTickers)}`
         : `/api/stocks/${watchlistId}`;
