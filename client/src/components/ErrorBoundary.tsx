@@ -36,7 +36,6 @@ export class ErrorBoundary extends Component<Props, State> {
     
     // Only reload if we successfully cleared the data or can't access localStorage
     if (clearSuccess || typeof localStorage === "undefined") {
-      this.setState({ hasError: false, error: undefined });
       window.location.reload();
     } else {
       // If we can't clear localStorage, show an error message
