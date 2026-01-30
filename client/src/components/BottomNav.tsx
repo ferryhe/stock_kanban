@@ -1,4 +1,4 @@
-import { WATCHLISTS } from "@/lib/stockApi";
+import { getWatchlistsArray } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
@@ -12,10 +12,12 @@ interface BottomNavProps {
 
 export function BottomNav({ currentWatchlist, onSelect, onManage }: BottomNavProps) {
   const { t, watchlistLabel } = useI18n();
+  const watchlists = getWatchlistsArray();
+  
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-6 bg-gradient-to-t from-background via-background/95 to-transparent">
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-md mx-auto p-1 bg-secondary/50 backdrop-blur-md rounded-2xl border border-white/5 shadow-xl">
-        {Object.values(WATCHLISTS).map((list) => {
+        {watchlists.map((list) => {
             const isActive = list.id === currentWatchlist;
             return (
               <button
