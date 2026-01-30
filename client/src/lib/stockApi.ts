@@ -137,11 +137,12 @@ export const getCustomWatchlists = (): Record<string, Watchlist> => {
       // Filter to keep only valid watchlists
       const validWatchlists = Object.entries(parsed).reduce((acc, [key, w]: [string, any]) => {
         if (
-          w && 
-          typeof w === "object" && 
-          typeof w.id === "string" && 
-          typeof w.label === "string" && 
-          Array.isArray(w.tickers)
+          w &&
+          typeof w === "object" &&
+          typeof w.id === "string" &&
+          typeof w.label === "string" &&
+          Array.isArray(w.tickers) &&
+          w.tickers.every((t: unknown) => typeof t === "string")
         ) {
           acc[key] = w as Watchlist;
         }
