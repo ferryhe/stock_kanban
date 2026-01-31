@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+data/quant-metrics-cn.json
+data/quant-metrics-hk.json
+data/quant-metrics-us.json
