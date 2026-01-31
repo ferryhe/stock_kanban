@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 
+const LEADERBOARD_ID = "__leaderboard__";
+
 interface MarketTickerProps {
   symbol: string;
   label: string;
@@ -38,7 +40,6 @@ const MarketTicker = ({ symbol, label, price, change }: MarketTickerProps) => {
 };
 
 export default function Dashboard() {
-  const LEADERBOARD_ID = "__leaderboard__";
   const [activeWatchlist, setActiveWatchlist] = useState<string>("");
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
   const [currentTime, setCurrentTime] = useState(getCurrentETTime());
@@ -75,7 +76,7 @@ export default function Dashboard() {
     }
     forceUpdate(n => n + 1);
     refetch();
-  }, [refetch, activeWatchlist, LEADERBOARD_ID]);
+  }, [refetch, activeWatchlist]);
 
   useEffect(() => {
     const unsubscribe = subscribeToWatchlistChanges(refreshWatchlists);

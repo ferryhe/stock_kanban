@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAvailableLeaderboards, useLeaderboardData } from "@/lib/stockApi";
 import { useI18n } from "@/lib/i18n";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,9 +28,11 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
   const [selectedMarket, setSelectedMarket] = useState<string>("");
 
   // Set initial market when data loads
-  if (!selectedMarket && availableMarkets && availableMarkets.length > 0) {
-    setSelectedMarket(availableMarkets[0]);
-  }
+  useEffect(() => {
+    if (!selectedMarket && availableMarkets && availableMarkets.length > 0) {
+      setSelectedMarket(availableMarkets[0]);
+    }
+  }, [availableMarkets, selectedMarket]);
 
   const { data: leaderboardData, isLoading: dataLoading } = useLeaderboardData(
     selectedMarket,

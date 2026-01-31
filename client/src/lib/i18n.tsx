@@ -294,9 +294,9 @@ type I18nContextValue = {
   lang: Language;
   setLang: (lang: Language) => void;
   t: (key: StringKeys, vars?: Vars) => string;
-  indicator: typeof translations.en.indicator | typeof translations.zh.indicator;
+  indicator: typeof translations.en.indicator;
   watchlistLabel: (id: string, fallback: string) => string;
-  leaderboard: typeof translations.en.leaderboard | typeof translations.zh.leaderboard;
+  leaderboard: typeof translations.en.leaderboard;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -334,9 +334,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       lang,
       setLang,
       t: (key, vars) => format(bundle[key], vars),
-      indicator: bundle.indicator,
+      indicator: bundle.indicator as typeof translations.en.indicator,
       watchlistLabel: (id, fallback) => bundle.watchlistLabels[id as keyof typeof bundle.watchlistLabels] || fallback,
-      leaderboard: bundle.leaderboard,
+      leaderboard: bundle.leaderboard as typeof translations.en.leaderboard,
     };
   }, [lang]);
 
