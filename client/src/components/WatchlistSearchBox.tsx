@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Search, Loader2, Plus } from "lucide-react";
 import { useStockSearch, addTickerToWatchlist } from "@/lib/stockApi";
-import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 
