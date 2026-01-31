@@ -1,0 +1,35 @@
+[
+  {
+    "ticker": "600519.SS",
+    "score": 0.18,
+    "rank": 1,
+    "predictedReturn": 0.075,
+    "signal": "BUY",
+    "risk": {
+      "vol60": -0.22,
+      "maxdd252": 0.20
+    }
+  },
+  {
+    "ticker": "000858.SZ",
+    "score": 0.25,
+    "rank": 2,
+    "predictedReturn": 0.062,
+    "signal": "BUY",
+    "risk": {
+      "vol60": -0.15,
+      "maxdd252": 0.18
+    }
+  },
+  {
+    "ticker": "601318.SS",
+    "score": 0.32,
+    "rank": 3,
+    "predictedReturn": 0.051,
+    "signal": "HOLD",
+    "risk": {
+      "vol60": 0.05,
+      "maxdd252": 0.12
+    }
+  }
+]
