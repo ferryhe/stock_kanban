@@ -78,14 +78,14 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
             className="bg-card border border-border w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto select-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border p-4 flex justify-between items-center">
-              <div>
+            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border p-4 flex justify-between items-start sm:items-center">
+              <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold font-mono">{ticker}</h2>
                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                   {stock?.name || t("loading")}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                 <div className="text-right">
                   <div className="text-lg font-bold font-mono">
                     ${stock?.price.toFixed(2) || "-"}
@@ -106,8 +106,9 @@ export function StockDetailModal({ ticker, isOpen, onClose }: StockDetailModalPr
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-secondary rounded-lg"
+                  className="p-2 hover:bg-secondary rounded-lg flex-shrink-0"
                   data-testid="close-modal"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
