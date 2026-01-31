@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [currentMarketIndex, setCurrentMarketIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
 
@@ -204,7 +205,34 @@ export default function Dashboard() {
       {isLeaderboardView ? (
         <LeaderboardPanel onStockClick={(ticker) => setSelectedStock({ ticker } as StockData)} />
       ) : (
-        <main className="max-w-md mx-auto px-4 py-6 relative z-10">
+        <main 
+          className="max-w-md mx-auto px-4 py-6 relative z-10"
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            setTouchStart({ x: touch.clientX, y: touch.clientY });
+          }}
+          onTouchEnd={(e) => {
+            if (!touchStart) return;
+            
+            const touch = e.changedTouches[0];
+            const deltaX = touch.clientX - touchStart.x;
+            const deltaY = touch.clientY - touchStart.y;
+            
+            // Only trigger swipe if horizontal movement is dominant
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+              const currentIndex = availableWatchlists.findIndex(w => w.id === activeWatchlist);
+              if (deltaX > 0 && currentIndex > 0) {
+                // Swipe right - go to previous tab
+                setActiveWatchlist(availableWatchlists[currentIndex - 1].id);
+              } else if (deltaX < 0 && currentIndex < availableWatchlists.length - 1) {
+                // Swipe left - go to next tab
+                setActiveWatchlist(availableWatchlists[currentIndex + 1].id);
+              }
+            }
+            
+            setTouchStart(null);
+          }}
+        >
           {/* Search Box for Adding Stocks */}
           <div className="mb-4">
             <WatchlistSearchBox 
@@ -251,6 +279,7 @@ export default function Dashboard() {
                                 onClick={() => setSelectedStock(stock)}
                                 watchlistId={activeWatchlist}
                                 onDelete={() => refetch()}
+                                onManage={() => setIsManagerOpen(true)}
                               />
                           ))}
                           {stocks?.length === 0 && (
