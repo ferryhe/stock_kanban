@@ -56,7 +56,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
     touchStartPos.current = { x: clientX, y: clientY };
 
     longPressTimer.current = setTimeout(() => {
-      // Calculate position for context menu centered horizontally and at press location vertically
+      // Calculate position for context menu centered horizontally on viewport and at press location vertically
       if (touchStartPos.current && cardRef.current && typeof window !== "undefined") {
         const rect = cardRef.current.getBoundingClientRect();
 
@@ -74,10 +74,10 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         // Check if there's enough space above the press position for the menu
         const hasSpaceAbove = menuY >= estimatedMenuHeight + margin;
         
-        // If not enough space above, try to position it below the press point
+        // If not enough space above, position below the press point
         if (!hasSpaceAbove) {
-          // Position below, but ensure it doesn't go off the bottom
-          menuY = Math.min(menuY, viewportHeight - margin);
+          // Ensure the menu fits within viewport when positioned below
+          menuY = Math.min(touchStartPos.current.y + margin, viewportHeight - estimatedMenuHeight - margin);
         }
 
         // Clamp horizontal position within viewport bounds
