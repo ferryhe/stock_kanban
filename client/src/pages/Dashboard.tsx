@@ -98,16 +98,6 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Rotate market index every 10 seconds
-  useEffect(() => {
-    if (marketIndices.length === 0) return;
-    
-    const interval = setInterval(() => {
-      setCurrentMarketIndex((prev) => (prev + 1) % marketIndices.length);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [marketIndices.length]);
-
   // Define market indices to rotate through
   const marketIndices = useMemo(() => {
     if (!marketData) return [];
@@ -120,6 +110,16 @@ export default function Dashboard() {
       { symbol: "^HSI", label: lang === "zh" ? "恒生指数" : "Hong Kong HSI", price: marketData.hsi?.price || 0, change: marketData.hsi?.change || 0 },
     ].filter(idx => idx.price > 0); // Only show indices with valid data
   }, [marketData, lang]);
+
+  // Rotate market index every 10 seconds
+  useEffect(() => {
+    if (marketIndices.length === 0) return;
+    
+    const interval = setInterval(() => {
+      setCurrentMarketIndex((prev) => (prev + 1) % marketIndices.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [marketIndices]);
 
   const currentMarketIndexData = marketIndices[currentMarketIndex] || marketIndices[0];
 
