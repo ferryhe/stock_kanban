@@ -44,11 +44,11 @@ export function StockContextMenu({
             transition={{ duration: 0.15 }}
             className="fixed z-50 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
             style={{
-              left: `${position.x}px`,
+              left: "50%",
               top: `${position.y}px`,
               transform: position.placeAbove 
-                ? "translate(-50%, -100%) translateY(-8px)"
-                : "translate(-50%, 0) translateY(8px)",
+                ? "translateX(-50%) translateY(calc(-100% - 8px))"
+                : "translateX(-50%) translateY(8px)",
             }}
             role="menu"
             aria-label="Stock actions menu"
