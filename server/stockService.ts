@@ -1161,7 +1161,7 @@ async function fetchStockNamesWithCache(sortedData: any[], uiLang: UILang): Prom
       if (typeof item.predictedReturn === "number" && Number.isFinite(item.predictedReturn)) {
         predictedReturn = item.predictedReturn;
       } else if (typeof item.predictedReturn === "string") {
-        const parsed = Number(item.predictedReturn);
+        const parsed = parseFloat(item.predictedReturn);
         if (Number.isFinite(parsed)) {
           predictedReturn = parsed;
         }
