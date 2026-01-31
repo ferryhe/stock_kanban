@@ -68,6 +68,10 @@ interface CacheEntry {
 interface MarketOverview {
   spy: { price: number; change: number };
   vix: { price: number; change: number };
+  nasdaq?: { price: number; change: number };
+  shanghaiA?: { price: number; change: number };
+  shenzhenA?: { price: number; change: number };
+  hsi?: { price: number; change: number };
 }
 
 interface MarketCacheEntry {
@@ -710,19 +714,55 @@ export async function getMarketOverview(): Promise<MarketOverview> {
   }
 
   try {
-    const spyQuote = await yf.quote("SPY");
-    const vixQuote = await yf.quote("^VIX");
+    // Fetch all market indices in parallel
+    const [spyQuote, vixQuote, nasdaqQuote, shanghaiQuote, shenzhenQuote, hsiQuote] = await Promise.allSettled([
+      yf.quote("SPY"),
+      yf.quote("^VIX"),
+      yf.quote("^IXIC"), // NASDAQ Composite
+      yf.quote("000001.SS"), // Shanghai Composite
+      yf.quote("399001.SZ"), // Shenzhen Component
+      yf.quote("^HSI"), // Hang Seng Index
+    ]);
 
     const result: MarketOverview = {
       spy: {
-        price: spyQuote.regularMarketPrice || 0,
-        change: spyQuote.regularMarketChangePercent || 0,
+        price: spyQuote.status === "fulfilled" ? (spyQuote.value.regularMarketPrice || 0) : 0,
+        change: spyQuote.status === "fulfilled" ? (spyQuote.value.regularMarketChangePercent || 0) : 0,
       },
       vix: {
-        price: vixQuote.regularMarketPrice || 0,
-        change: vixQuote.regularMarketChangePercent || 0,
+        price: vixQuote.status === "fulfilled" ? (vixQuote.value.regularMarketPrice || 0) : 0,
+        change: vixQuote.status === "fulfilled" ? (vixQuote.value.regularMarketChangePercent || 0) : 0,
       },
     };
+
+    // Add optional indices only if successfully fetched
+    if (nasdaqQuote.status === "fulfilled" && nasdaqQuote.value.regularMarketPrice) {
+      result.nasdaq = {
+        price: nasdaqQuote.value.regularMarketPrice,
+        change: nasdaqQuote.value.regularMarketChangePercent || 0,
+      };
+    }
+
+    if (shanghaiQuote.status === "fulfilled" && shanghaiQuote.value.regularMarketPrice) {
+      result.shanghaiA = {
+        price: shanghaiQuote.value.regularMarketPrice,
+        change: shanghaiQuote.value.regularMarketChangePercent || 0,
+      };
+    }
+
+    if (shenzhenQuote.status === "fulfilled" && shenzhenQuote.value.regularMarketPrice) {
+      result.shenzhenA = {
+        price: shenzhenQuote.value.regularMarketPrice,
+        change: shenzhenQuote.value.regularMarketChangePercent || 0,
+      };
+    }
+
+    if (hsiQuote.status === "fulfilled" && hsiQuote.value.regularMarketPrice) {
+      result.hsi = {
+        price: hsiQuote.value.regularMarketPrice,
+        change: hsiQuote.value.regularMarketChangePercent || 0,
+      };
+    }
 
     marketCache.set(cacheKey, { data: result, timestamp: Date.now() });
     return result;
