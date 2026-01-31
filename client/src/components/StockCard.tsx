@@ -35,7 +35,6 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
   const handleLongPressStart = useCallback((event: React.TouchEvent | React.MouseEvent) => {
     if (!watchlistId) return;
 
-    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
     const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
 
     longPressTimer.current = setTimeout(() => {
