@@ -100,11 +100,13 @@ export default function Dashboard() {
 
   // Rotate market index every 10 seconds
   useEffect(() => {
+    if (marketIndices.length === 0) return;
+    
     const interval = setInterval(() => {
-      setCurrentMarketIndex((prev) => (prev + 1) % 5); // 5 indices: SPY, NASDAQ, Shanghai, Shenzhen, HSI
+      setCurrentMarketIndex((prev) => (prev + 1) % marketIndices.length);
     }, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [marketIndices.length]);
 
   // Define market indices to rotate through
   const marketIndices = useMemo(() => {

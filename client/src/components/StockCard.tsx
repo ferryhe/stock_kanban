@@ -177,6 +177,8 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete }: Stoc
           onClick={handleDelete}
           className="absolute right-4 top-1/2 -translate-y-1/2 bg-negative text-white p-3 rounded-lg z-0 pointer-events-auto"
           data-testid={`delete-${stock.ticker}`}
+          tabIndex={showDelete ? 0 : -1}
+          aria-hidden={!showDelete}
         >
           <Trash2 className="w-5 h-5" />
         </motion.button>

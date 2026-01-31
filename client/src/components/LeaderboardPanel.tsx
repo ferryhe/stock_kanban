@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAvailableLeaderboards, useLeaderboardData } from "@/lib/stockApi";
 import { useI18n } from "@/lib/i18n";
 import { motion, AnimatePresence, PanInfo, useMotionValue, animate } from "framer-motion";
-import { Trophy, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeaderboardPanelProps {
@@ -46,7 +46,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
   };
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = 50;
+    const threshold = 40; // Use threshold smaller than constraint
     if (info.offset.x > threshold && selectedMarketIndex > 0) {
       // Swipe right - go to previous market
       handleSwipe(selectedMarketIndex - 1);
