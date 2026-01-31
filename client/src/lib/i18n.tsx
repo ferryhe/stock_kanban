@@ -131,6 +131,18 @@ const translations = {
       indices: "📉 Market Indices",
       volatility: "👀 High Volatility",
     },
+    leaderboard: {
+      title: "Leaderboard",
+      usStocks: "US Stocks",
+      cnStocks: "China A-Shares",
+      hkStocks: "Hong Kong Stocks",
+      updated: "Updated",
+      noData: "No leaderboard data available",
+      loading: "Loading leaderboard...",
+      rank: "Rank",
+      ticker: "Ticker",
+      predicted20dReturn: "20D Return",
+    },
   },
   zh: {
     langToggle: "中",
@@ -258,6 +270,18 @@ const translations = {
       indices: "📉 市场指数",
       volatility: "👀 高波动",
     },
+    leaderboard: {
+      title: "排行榜",
+      usStocks: "美股",
+      cnStocks: "A股",
+      hkStocks: "港股",
+      updated: "更新时间",
+      noData: "暂无排行榜数据",
+      loading: "加载中...",
+      rank: "排名",
+      ticker: "代码",
+      predicted20dReturn: "20日预测",
+    },
   },
 } as const;
 
@@ -270,8 +294,9 @@ type I18nContextValue = {
   lang: Language;
   setLang: (lang: Language) => void;
   t: (key: StringKeys, vars?: Vars) => string;
-  indicator: Translations["indicator"];
+  indicator: typeof translations.en.indicator | typeof translations.zh.indicator;
   watchlistLabel: (id: string, fallback: string) => string;
+  leaderboard: typeof translations.en.leaderboard | typeof translations.zh.leaderboard;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -311,6 +336,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       t: (key, vars) => format(bundle[key], vars),
       indicator: bundle.indicator,
       watchlistLabel: (id, fallback) => bundle.watchlistLabels[id as keyof typeof bundle.watchlistLabels] || fallback,
+      leaderboard: bundle.leaderboard,
     };
   }, [lang]);
 

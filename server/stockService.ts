@@ -334,10 +334,10 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
   }
 
   const cacheFresh =
-    quantMetricsCache && now - quantMetricsCacheTime < QUANT_CACHE_TTL;
+    quantMetricsCache !== null && now - quantMetricsCacheTime < QUANT_CACHE_TTL;
   const fileUnchanged = fileMtime > 0 ? fileMtime <= quantMetricsCacheMtime : quantMetricsCacheMtime === 0;
 
-  if (cacheFresh && fileUnchanged) {
+  if (cacheFresh && fileUnchanged && quantMetricsCache) {
     return quantMetricsCache;
   }
 
@@ -985,8 +985,11 @@ export async function getStockChart(
 
 export async function searchStocks(query: string, uiLang: UILang = "en"): Promise<SearchResult[]> {
   try {
-    const results = await yf.search(query, { quotesCount: 10 }, { validateResult: false });
-    return (results.quotes || [])
+    const results: any = await yf.search(query, { quotesCount: 10 }, { validateResult: false });
+    if (!results || !results.quotes) {
+      return [];
+    }
+    return results.quotes
       .filter((q: any) => q.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF"))
       .map((q: any) => ({
         symbol: q.symbol,
@@ -997,5 +1000,108 @@ export async function searchStocks(query: string, uiLang: UILang = "en"): Promis
   } catch (error) {
     console.error("Error searching stocks:", error);
     return [];
+  }
+}
+
+export interface LeaderboardEntry {
+  ticker: string;
+  longName: string;
+  rank: number;
+  predictedReturn: number;
+  score?: number;
+  signal?: string;
+}
+
+export interface LeaderboardData {
+  market: string;
+  entries: LeaderboardEntry[];
+  updateTime: string;
+}
+
+export function getAvailableLeaderboards(): string[] {
+  const markets: string[] = [];
+  const metricsPaths = [
+    { market: "us", path: path.join(process.cwd(), "data", "quant-metrics-us.json") },
+    { market: "cn", path: path.join(process.cwd(), "data", "quant-metrics-cn.json") },
+    { market: "hk", path: path.join(process.cwd(), "data", "quant-metrics-hk.json") },
+  ];
+
+  for (const { market, path: filePath } of metricsPaths) {
+    if (fs.existsSync(filePath)) {
+      markets.push(market);
+    }
+  }
+
+  return markets;
+}
+
+export async function getLeaderboardData(market: string, uiLang: UILang = "en"): Promise<LeaderboardData | null> {
+  const validMarkets = ["us", "cn", "hk"];
+  if (!validMarkets.includes(market)) {
+    return null;
+  }
+
+  const metricsPath = path.join(process.cwd(), "data", `quant-metrics-${market}.json`);
+  
+  if (!fs.existsSync(metricsPath)) {
+    return null;
+  }
+
+  try {
+    const stats = fs.statSync(metricsPath);
+    const updateTime = stats.mtime.toISOString();
+
+    const rawData = fs.readFileSync(metricsPath, "utf-8");
+    const data = JSON.parse(rawData);
+
+    if (!Array.isArray(data)) {
+      return null;
+    }
+
+    // Sort by rank (ascending)
+    const sortedData = data
+      .filter((item: any) => item.ticker && typeof item.rank === "number")
+      .sort((a: any, b: any) => a.rank - b.rank);
+
+    // Get tickers for name lookup
+    const tickers = sortedData.map((item: any) => item.ticker.toUpperCase());
+    scheduleZhNameUpdate(tickers, uiLang);
+
+    const entries: LeaderboardEntry[] = [];
+    
+    for (const item of sortedData) {
+      const ticker = item.ticker.toUpperCase();
+      
+      // Try to get long name from various sources
+      let longName: string = getLocalZhName(ticker, uiLang) || "";
+      
+      // If no Chinese name available, try to fetch from Yahoo Finance (with cache)
+      if (!longName) {
+        try {
+          const quote = await yf.quoteSummary(ticker, { modules: ["price"] });
+          longName = quote?.price?.longName || quote?.price?.shortName || ticker;
+        } catch {
+          longName = ticker;
+        }
+      }
+
+      entries.push({
+        ticker,
+        longName,
+        rank: item.rank,
+        predictedReturn: item.predictedReturn || 0,
+        score: item.score,
+        signal: item.signal,
+      });
+    }
+
+    return {
+      market,
+      entries,
+      updateTime,
+    };
+  } catch (error) {
+    console.error(`Error loading leaderboard for ${market}:`, error);
+    return null;
   }
 }
