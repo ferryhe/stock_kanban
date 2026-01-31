@@ -219,6 +219,17 @@ export function WatchlistManager({ isOpen, onClose, activeWatchlist }: Watchlist
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={onClose}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+            }
+          }}
+          onWheel={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+            }
+          }}
+          style={{ touchAction: 'none' }}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
