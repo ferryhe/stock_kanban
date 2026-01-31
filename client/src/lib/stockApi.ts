@@ -284,6 +284,26 @@ export const reorderTickersInWatchlist = (watchlistId: string, orderedTickers: s
   }
 };
 
+export const pinTickerToTop = (watchlistId: string, ticker: string) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key) {
+    const tickers = current[key].tickers.filter(t => t !== ticker.toUpperCase());
+    current[key].tickers = [ticker.toUpperCase(), ...tickers];
+    saveAndRefresh(current);
+  }
+};
+
+export const moveTickerToBottom = (watchlistId: string, ticker: string) => {
+  const current = getCustomWatchlists();
+  const key = Object.keys(current).find((k) => current[k].id === watchlistId);
+  if (key) {
+    const tickers = current[key].tickers.filter(t => t !== ticker.toUpperCase());
+    current[key].tickers = [...tickers, ticker.toUpperCase()];
+    saveAndRefresh(current);
+  }
+};
+
 export const reorderWatchlists = (orderedIds: string[]) => {
   const current = getCustomWatchlists();
   const entries = Object.entries(current);

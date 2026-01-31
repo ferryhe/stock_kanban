@@ -1,12 +1,13 @@
-import { StockData, removeTickerFromWatchlist } from "@/lib/stockApi";
-import { ArrowUp, ArrowDown, ChevronRight, Trash2 } from "lucide-react";
+import { StockData, removeTickerFromWatchlist, pinTickerToTop, moveTickerToBottom } from "@/lib/stockApi";
+import { ArrowUp, ArrowDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion } from "framer-motion";
 import { IndicatorTooltip } from "./IndicatorTooltip";
 import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
 import { SignalBadge } from "./SignalBadge";
 import { useI18n } from "@/lib/i18n";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import { StockContextMenu } from "./StockContextMenu";
 
 interface StockCardProps {
   stock: StockData;
@@ -14,9 +15,10 @@ interface StockCardProps {
   onClick?: () => void;
   watchlistId?: string; // Add watchlist ID for deletion
   onDelete?: () => void; // Callback after deletion
+  onManage?: () => void; // Callback to open watchlist manager
 }
 
-export function StockCard({ stock, index, onClick, watchlistId, onDelete }: StockCardProps) {
+export function StockCard({ stock, index, onClick, watchlistId, onDelete, onManage }: StockCardProps) {
   const isPositive = stock.changePercent >= 0;
   const rsiTag = stock.tags.find((tag) => tag.value?.toLowerCase().includes("rsi"));
   const trendTag = stock.tags.find((tag) => tag.label.toLowerCase().includes("trend"));
@@ -24,21 +26,37 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete }: Stoc
   const tagBadges = stock.tags.slice(0, 4);
   const { t } = useI18n();
 
-  // Swipe-to-delete state
-  const [showDelete, setShowDelete] = useState(false);
-  const x = useMotionValue(0);
-  const deleteButtonOpacity = useTransform(x, [-100, -50, 0], [1, 0.5, 0]);
+  // Context menu state
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = -80;
-    if (info.offset.x < threshold) {
-      setShowDelete(true);
-      animate(x, -100);
-    } else {
-      setShowDelete(false);
-      animate(x, 0);
+  const handleLongPressStart = useCallback((event: React.TouchEvent | React.MouseEvent) => {
+    if (!watchlistId) return;
+
+    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+
+    longPressTimer.current = setTimeout(() => {
+      // Calculate position for context menu (center horizontally, above the card)
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        setMenuPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top,
+        });
+        setShowContextMenu(true);
+      }
+    }, 500); // 500ms long press
+  }, [watchlistId]);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
-  };
+  }, []);
 
   const handleDelete = () => {
     if (watchlistId) {
@@ -51,28 +69,52 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete }: Stoc
     }
   };
 
+  const handlePinToTop = () => {
+    if (watchlistId) {
+      try {
+        pinTickerToTop(watchlistId, stock.ticker);
+        onDelete?.(); // Trigger refresh
+      } catch (error) {
+        console.error("Failed to pin stock:", error);
+      }
+    }
+  };
+
+  const handleMoveToBottom = () => {
+    if (watchlistId) {
+      try {
+        moveTickerToBottom(watchlistId, stock.ticker);
+        onDelete?.(); // Trigger refresh
+      } catch (error) {
+        console.error("Failed to move stock:", error);
+      }
+    }
+  };
+
   const handleCardClick = () => {
-    if (!showDelete && onClick) {
+    if (!showContextMenu && onClick) {
       onClick();
     }
   };
 
   return (
-    <div className="relative">
+    <>
       <motion.div
+        ref={cardRef}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.05 }}
-        style={{ x }}
-        drag={watchlistId ? "x" : false}
-        dragConstraints={{ left: -100, right: 0 }}
-        dragElastic={0.1}
-        onDragEnd={handleDragEnd}
         className={cn(
-          "bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-xl shadow-sm transition-all relative z-10",
+          "bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-xl shadow-sm transition-all",
           onClick && "cursor-pointer hover:border-primary/40 hover:bg-card/70 active:scale-[0.99]"
         )}
         onClick={handleCardClick}
+        onTouchStart={handleLongPressStart}
+        onTouchEnd={handleLongPressEnd}
+        onTouchCancel={handleLongPressEnd}
+        onMouseDown={handleLongPressStart}
+        onMouseUp={handleLongPressEnd}
+        onMouseLeave={handleLongPressEnd}
         data-testid={`stock-card-${stock.ticker}`}
       >
       <div className="flex justify-between items-start mb-4">
@@ -170,19 +212,19 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete }: Stoc
       </div>
     </motion.div>
 
-      {/* Delete Button */}
-      {watchlistId && (
-        <motion.button
-          style={{ opacity: deleteButtonOpacity }}
-          onClick={handleDelete}
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-negative text-white p-3 rounded-lg z-0 pointer-events-auto"
-          data-testid={`delete-${stock.ticker}`}
-          tabIndex={showDelete ? 0 : -1}
-          aria-hidden={!showDelete}
-        >
-          <Trash2 className="w-5 h-5" />
-        </motion.button>
-      )}
-    </div>
+      {/* Context Menu */}
+      <StockContextMenu
+        isOpen={showContextMenu}
+        onClose={() => setShowContextMenu(false)}
+        onDelete={handleDelete}
+        onPinToTop={handlePinToTop}
+        onMoveToBottom={handleMoveToBottom}
+        onMore={() => {
+          setShowContextMenu(false);
+          onManage?.();
+        }}
+        position={menuPosition}
+      />
+    </>
   );
 }

@@ -143,6 +143,10 @@ const translations = {
       ticker: "Ticker",
       predicted20dReturn: "20D Return",
     },
+    delete: "Delete",
+    pinTop: "Pin Top",
+    moveBottom: "Move Bottom",
+    more: "More",
   },
   zh: {
     langToggle: "中",
@@ -282,6 +286,10 @@ const translations = {
       ticker: "代码",
       predicted20dReturn: "20日预测",
     },
+    delete: "删除",
+    pinTop: "置顶",
+    moveBottom: "置底",
+    more: "更多",
   },
 } as const;
 
