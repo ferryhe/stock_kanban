@@ -81,6 +81,24 @@ export default function Dashboard() {
     refetch();
   }, [refetch, activeWatchlist]);
 
+  // Handle swipe navigation between tabs
+  const handleSwipeNavigation = useCallback((deltaX: number) => {
+    // Create array of all tabs including leaderboard if available
+    const allTabs = hasLeaderboards 
+      ? [...availableWatchlists.map(w => w.id), LEADERBOARD_ID]
+      : availableWatchlists.map(w => w.id);
+    
+    const currentIndex = allTabs.findIndex(id => id === activeWatchlist);
+    
+    if (deltaX > 0 && currentIndex > 0) {
+      // Swipe right - go to previous tab
+      setActiveWatchlist(allTabs[currentIndex - 1]);
+    } else if (deltaX < 0 && currentIndex < allTabs.length - 1) {
+      // Swipe left - go to next tab
+      setActiveWatchlist(allTabs[currentIndex + 1]);
+    }
+  }, [hasLeaderboards, availableWatchlists, activeWatchlist]);
+
   useEffect(() => {
     const unsubscribe = subscribeToWatchlistChanges(refreshWatchlists);
     return unsubscribe;
@@ -217,20 +235,7 @@ export default function Dashboard() {
             
             // Only trigger swipe if horizontal movement is dominant
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-              // Create array of all tabs including leaderboard if available
-              const allTabs = hasLeaderboards 
-                ? [...availableWatchlists.map(w => w.id), LEADERBOARD_ID]
-                : availableWatchlists.map(w => w.id);
-              
-              const currentIndex = allTabs.findIndex(id => id === activeWatchlist);
-              
-              if (deltaX > 0 && currentIndex > 0) {
-                // Swipe right - go to previous tab
-                setActiveWatchlist(allTabs[currentIndex - 1]);
-              } else if (deltaX < 0 && currentIndex < allTabs.length - 1) {
-                // Swipe left - go to next tab (disabled for leaderboard as it's last)
-                setActiveWatchlist(allTabs[currentIndex + 1]);
-              }
+              handleSwipeNavigation(deltaX);
             }
             
             setTouchStart(null);
@@ -254,20 +259,7 @@ export default function Dashboard() {
             
             // Only trigger swipe if horizontal movement is dominant
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-              // Create array of all tabs including leaderboard if available
-              const allTabs = hasLeaderboards 
-                ? [...availableWatchlists.map(w => w.id), LEADERBOARD_ID]
-                : availableWatchlists.map(w => w.id);
-              
-              const currentIndex = allTabs.findIndex(id => id === activeWatchlist);
-              
-              if (deltaX > 0 && currentIndex > 0) {
-                // Swipe right - go to previous tab
-                setActiveWatchlist(allTabs[currentIndex - 1]);
-              } else if (deltaX < 0 && currentIndex < allTabs.length - 1) {
-                // Swipe left - go to next tab
-                setActiveWatchlist(allTabs[currentIndex + 1]);
-              }
+              handleSwipeNavigation(deltaX);
             }
             
             setTouchStart(null);
