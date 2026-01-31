@@ -1072,7 +1072,7 @@ export async function getLeaderboardData(market: string, uiLang: UILang = "en"):
     const cached = leaderboardCache.get(market);
     if (cached) {
       const cacheFresh = now - cached.timestamp < LEADERBOARD_CACHE_TTL;
-      const fileUnchanged = fileMtime <= cached.mtime;
+      const fileUnchanged = fileMtime === cached.mtime;
       if (cacheFresh && fileUnchanged) {
         // Return cached data but with fresh updateTime from file stats
         return {
