@@ -60,7 +60,8 @@ export function WatchlistSearchBox({ watchlistId, onStockAdded }: WatchlistSearc
               searchResults.map((result) => (
                 <button
                   key={result.symbol}
-                  onMouseDown={() => handleAddStock(result.symbol)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => handleAddStock(result.symbol)}
                   className="w-full flex items-center justify-between p-3 hover:bg-secondary/50 border-b border-border last:border-0 text-left transition-colors"
                   data-testid={`add-${result.symbol}`}
                 >
