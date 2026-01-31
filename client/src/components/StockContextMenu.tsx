@@ -47,7 +47,7 @@ export function StockContextMenu({
               left: "50%",
               top: `${position.y}px`,
               transform: position.placeAbove 
-                ? "translateX(-50%) translateY(-100%) translateY(-8px)"
+                ? "translateX(-50%) translateY(calc(-100% - 8px))"
                 : "translateX(-50%) translateY(8px)",
             }}
             role="menu"
