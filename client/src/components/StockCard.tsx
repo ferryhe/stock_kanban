@@ -40,11 +40,32 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
 
     longPressTimer.current = setTimeout(() => {
       // Calculate position for context menu (center horizontally, above the card)
-      if (cardRef.current) {
+      if (cardRef.current && typeof window !== "undefined") {
         const rect = cardRef.current.getBoundingClientRect();
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 8; // minimum distance from viewport edges
+        const estimatedMenuHeight = 200; // rough estimate to decide above/below placement
+
+        // Start with ideal position: centered horizontally, above the card
+        let menuX = rect.left + rect.width / 2;
+        let menuY = rect.top;
+
+        // If there's not enough space above the card, place the menu below it instead
+        const hasSpaceAbove = rect.top >= estimatedMenuHeight + margin;
+        if (!hasSpaceAbove) {
+          menuY = Math.min(rect.bottom, viewportHeight - margin);
+        }
+
+        // Clamp horizontal position within viewport bounds
+        menuX = Math.min(Math.max(menuX, margin), viewportWidth - margin);
+        // Clamp vertical position within viewport bounds
+        menuY = Math.min(Math.max(menuY, margin), viewportHeight - margin);
+
         setMenuPosition({
-          x: rect.left + rect.width / 2,
-          y: rect.top,
+          x: menuX,
+          y: menuY,
         });
         setShowContextMenu(true);
       }
