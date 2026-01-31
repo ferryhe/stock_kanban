@@ -1,6 +1,7 @@
 import YahooFinance from "yahoo-finance2";
 import { spawn } from "child_process";
 import * as fs from "fs";
+import { promises as fsPromises } from "fs";
 import * as path from "path";
 
 // Initialize yahoo-finance2 instance with suppressed warnings
@@ -176,6 +177,23 @@ let zhNameCache: Map<string, string> | null = null;
 let zhNameCacheTime = 0;
 let zhNameCacheMtime = 0;
 const zhNamePath = path.join(process.cwd(), "data", "zh-name-map-all.json");
+
+// Leaderboard data cache
+interface LeaderboardCacheEntry {
+  data: LeaderboardData;
+  timestamp: number;
+  mtime: number;
+}
+const leaderboardCache: Map<string, LeaderboardCacheEntry> = new Map();
+const LEADERBOARD_CACHE_TTL = 60 * 60 * 1000; // 1 hour cache for leaderboard data
+
+// Stock name cache for leaderboard
+interface StockNameCacheEntry {
+  name: string;
+  expiresAt: number;
+}
+const stockNameCache: Map<string, StockNameCacheEntry> = new Map();
+const STOCK_NAME_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours cache for stock names
 
 function loadZhNameMap(): Map<string, string> {
   const now = Date.now();
@@ -1042,16 +1060,26 @@ export async function getLeaderboardData(market: string, uiLang: UILang = "en"):
   }
 
   const metricsPath = path.join(process.cwd(), "data", `quant-metrics-${market}.json`);
-  
-  if (!fs.existsSync(metricsPath)) {
-    return null;
-  }
+  const now = Date.now();
 
   try {
-    const stats = fs.statSync(metricsPath);
+    // Check if file exists using async
+    const stats = await fsPromises.stat(metricsPath);
+    const fileMtime = stats.mtimeMs;
     const updateTime = stats.mtime.toISOString();
 
-    const rawData = fs.readFileSync(metricsPath, "utf-8");
+    // Check cache: fresh and file unchanged
+    const cached = leaderboardCache.get(market);
+    if (cached) {
+      const cacheFresh = now - cached.timestamp < LEADERBOARD_CACHE_TTL;
+      const fileUnchanged = fileMtime <= cached.mtime;
+      if (cacheFresh && fileUnchanged) {
+        return cached.data;
+      }
+    }
+
+    // Read file asynchronously
+    const rawData = await fsPromises.readFile(metricsPath, "utf-8");
     const data = JSON.parse(rawData);
 
     if (!Array.isArray(data)) {
@@ -1063,45 +1091,95 @@ export async function getLeaderboardData(market: string, uiLang: UILang = "en"):
       .filter((item: any) => item.ticker && typeof item.rank === "number")
       .sort((a: any, b: any) => a.rank - b.rank);
 
-    // Get tickers for name lookup
+    // Get tickers for Chinese name lookup
     const tickers = sortedData.map((item: any) => item.ticker.toUpperCase());
     scheduleZhNameUpdate(tickers, uiLang);
 
-    const entries: LeaderboardEntry[] = [];
-    
-    for (const item of sortedData) {
-      const ticker = item.ticker.toUpperCase();
-      
-      // Try to get long name from various sources
-      let longName: string = getLocalZhName(ticker, uiLang) || "";
-      
-      // If no Chinese name available, try to fetch from Yahoo Finance (with cache)
-      if (!longName) {
-        try {
-          const quote = await yf.quoteSummary(ticker, { modules: ["price"] });
-          longName = quote?.price?.longName || quote?.price?.shortName || ticker;
-        } catch {
-          longName = ticker;
-        }
-      }
+    // Fetch stock names with bounded concurrency and caching
+    const entries: LeaderboardEntry[] = await fetchStockNamesWithCache(sortedData, uiLang);
 
-      entries.push({
-        ticker,
-        longName,
-        rank: item.rank,
-        predictedReturn: item.predictedReturn || 0,
-        score: item.score,
-        signal: item.signal,
-      });
-    }
-
-    return {
+    const leaderboardData: LeaderboardData = {
       market,
       entries,
       updateTime,
     };
+
+    // Update cache
+    leaderboardCache.set(market, {
+      data: leaderboardData,
+      timestamp: now,
+      mtime: fileMtime,
+    });
+
+    return leaderboardData;
   } catch (error) {
     console.error(`Error loading leaderboard for ${market}:`, error);
     return null;
   }
+}
+
+// Helper function to fetch stock names with caching and bounded concurrency
+async function fetchStockNamesWithCache(sortedData: any[], uiLang: UILang): Promise<LeaderboardEntry[]> {
+  const entries: LeaderboardEntry[] = [];
+  const now = Date.now();
+  const CONCURRENCY_LIMIT = 5;
+
+  // Process in batches to avoid overwhelming the API
+  for (let i = 0; i < sortedData.length; i += CONCURRENCY_LIMIT) {
+    const batch = sortedData.slice(i, i + CONCURRENCY_LIMIT);
+    
+    const batchPromises = batch.map(async (item) => {
+      const ticker = item.ticker.toUpperCase();
+      
+      // Try to get Chinese name first
+      let longName: string = getLocalZhName(ticker, uiLang) || "";
+      
+      // If no Chinese name, check cache or fetch from Yahoo Finance
+      if (!longName) {
+        const cached = stockNameCache.get(ticker);
+        if (cached && cached.expiresAt > now) {
+          longName = cached.name;
+        } else {
+          // Fetch from Yahoo Finance with error handling
+          try {
+            const quote = await yf.quoteSummary(ticker, { modules: ["price"] });
+            longName = quote?.price?.longName || quote?.price?.shortName || ticker;
+            
+            // Cache the result
+            stockNameCache.set(ticker, {
+              name: longName,
+              expiresAt: now + STOCK_NAME_CACHE_TTL,
+            });
+          } catch {
+            longName = ticker;
+          }
+        }
+      }
+
+      // Validate and normalize predictedReturn
+      let predictedReturn = 0;
+      if (typeof item.predictedReturn === "number" && Number.isFinite(item.predictedReturn)) {
+        predictedReturn = item.predictedReturn;
+      } else if (typeof item.predictedReturn === "string") {
+        const parsed = Number(item.predictedReturn);
+        if (Number.isFinite(parsed)) {
+          predictedReturn = parsed;
+        }
+      }
+
+      return {
+        ticker,
+        longName,
+        rank: item.rank,
+        predictedReturn,
+        score: item.score,
+        signal: item.signal,
+      };
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    entries.push(...batchResults);
+  }
+
+  return entries;
 }

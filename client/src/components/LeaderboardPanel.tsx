@@ -23,7 +23,7 @@ const MedalIcon = ({ rank }: { rank: number }) => {
 };
 
 export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
-  const { t, lang } = useI18n();
+  const { leaderboard, lang } = useI18n();
   const { data: availableMarkets, isLoading: marketsLoading } = useAvailableLeaderboards();
   const [selectedMarket, setSelectedMarket] = useState<string>("");
 
@@ -40,9 +40,9 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
   );
 
   const getMarketLabel = (market: string) => {
-    if (market === "us") return lang === "zh" ? "美股" : "US Stocks";
-    if (market === "cn") return lang === "zh" ? "A股" : "China A-Shares";
-    if (market === "hk") return lang === "zh" ? "港股" : "Hong Kong Stocks";
+    if (market === "us") return leaderboard.usStocks;
+    if (market === "cn") return leaderboard.cnStocks;
+    if (market === "hk") return leaderboard.hkStocks;
     return market.toUpperCase();
   };
 
@@ -61,19 +61,12 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
     return value >= 0 ? `+${percentage}%` : `${percentage}%`;
   };
 
-  const text = {
-    title: lang === "zh" ? "排行榜" : "Leaderboard",
-    loading: lang === "zh" ? "加载中..." : "Loading...",
-    noData: lang === "zh" ? "暂无排行榜数据" : "No data available",
-    updated: lang === "zh" ? "更新时间" : "Updated",
-  };
-
   if (marketsLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground pb-32 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">{text.loading}</p>
+          <p className="text-sm text-muted-foreground">{leaderboard.loading}</p>
         </div>
       </div>
     );
@@ -82,7 +75,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
   if (!availableMarkets || availableMarkets.length === 0) {
     return (
       <div className="min-h-screen bg-background text-foreground pb-32 flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">{text.noData}</p>
+        <p className="text-sm text-muted-foreground">{leaderboard.noData}</p>
       </div>
     );
   }
@@ -101,7 +94,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
         <div className="max-w-md mx-auto">
           <h1 className="text-lg font-bold tracking-tight mb-3">
-            {text.title}
+            {leaderboard.title}
           </h1>
           
           {/* Market Switcher */}
@@ -126,7 +119,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
           {leaderboardData && (
             <div className="mt-2 text-right">
               <span className="text-xs text-muted-foreground">
-                {text.updated}: {formatUpdateTime(leaderboardData.updateTime)}
+                {leaderboard.updated}: {formatUpdateTime(leaderboardData.updateTime)}
               </span>
             </div>
           )}
@@ -144,7 +137,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
               className="flex flex-col items-center justify-center py-20 text-muted-foreground"
             >
               <Loader2 className="w-8 h-8 animate-spin mb-2" />
-              <p className="text-sm font-mono">{text.loading}</p>
+              <p className="text-sm font-mono">{leaderboard.loading}</p>
             </motion.div>
           ) : leaderboardData && leaderboardData.entries.length > 0 ? (
             <motion.div
@@ -206,7 +199,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-20 text-muted-foreground"
             >
-              <p className="text-sm">{text.noData}</p>
+              <p className="text-sm">{leaderboard.noData}</p>
             </motion.div>
           )}
         </AnimatePresence>

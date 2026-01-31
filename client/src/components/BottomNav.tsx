@@ -13,7 +13,7 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ currentWatchlist, onSelect, onManage, hasLeaderboard = false, leaderboardId = "__leaderboard__" }: BottomNavProps) {
-  const { t, watchlistLabel, lang } = useI18n();
+  const { t, watchlistLabel, leaderboard } = useI18n();
   const watchlists = getWatchlistsArray();
   
   return (
@@ -61,7 +61,7 @@ export function BottomNav({ currentWatchlist, onSelect, onManage, hasLeaderboard
                 />
             )}
             <Trophy className="w-4 h-4 relative z-10" />
-            <span className="relative z-10 font-semibold">{lang === "zh" ? "排行" : "Rank"}</span>
+            <span className="relative z-10 font-semibold">{leaderboard.rank}</span>
           </button>
         )}
         
