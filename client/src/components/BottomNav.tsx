@@ -1,17 +1,19 @@
 import { getWatchlistsArray } from "@/lib/stockApi";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Trophy } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 interface BottomNavProps {
   currentWatchlist: string;
   onSelect: (id: string) => void;
   onManage: () => void;
+  hasLeaderboard?: boolean;
+  leaderboardId?: string;
 }
 
-export function BottomNav({ currentWatchlist, onSelect, onManage }: BottomNavProps) {
-  const { t, watchlistLabel } = useI18n();
+export function BottomNav({ currentWatchlist, onSelect, onManage, hasLeaderboard = false, leaderboardId = "__leaderboard__" }: BottomNavProps) {
+  const { t, watchlistLabel, leaderboard } = useI18n();
   const watchlists = getWatchlistsArray();
   
   return (
@@ -40,6 +42,29 @@ export function BottomNav({ currentWatchlist, onSelect, onManage }: BottomNavPro
               </button>
             );
         })}
+        
+        {/* Leaderboard Tab - only show if data exists */}
+        {hasLeaderboard && (
+          <button
+            onClick={() => onSelect(leaderboardId)}
+            className={cn(
+              "relative flex-shrink-0 whitespace-nowrap px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-1",
+              currentWatchlist === leaderboardId ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+            data-testid="leaderboard-tab"
+          >
+            {currentWatchlist === leaderboardId && (
+                <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-primary rounded-xl shadow-lg"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+            )}
+            <Trophy className="w-4 h-4 relative z-10" />
+            <span className="relative z-10 font-semibold">{leaderboard.rank}</span>
+          </button>
+        )}
+        
         <button
           onClick={onManage}
           className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"

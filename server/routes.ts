@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { type Server } from "http";
-import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate } from "./stockService";
+import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate, getAvailableLeaderboards, getLeaderboardData } from "./stockService";
 
 const getUiLang = (req: Request) => {
   const uiHeader = req.headers["x-ui-lang"];
@@ -163,6 +163,33 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in /api/stock:", error);
       res.status(500).json({ error: "Failed to fetch stock data" });
+    }
+  });
+
+  // Get available leaderboards
+  app.get("/api/leaderboards", (_req, res) => {
+    try {
+      const markets = getAvailableLeaderboards();
+      res.json(markets);
+    } catch (error) {
+      console.error("Error in /api/leaderboards:", error);
+      res.status(500).json({ error: "Failed to fetch leaderboards" });
+    }
+  });
+
+  // Get leaderboard data for a specific market
+  app.get("/api/leaderboard/:market", async (req, res) => {
+    try {
+      const { market } = req.params;
+      const uiLang = getUiLang(req);
+      const data = await getLeaderboardData(market, uiLang);
+      if (!data) {
+        return res.status(404).json({ error: "Leaderboard not found" });
+      }
+      res.json(data);
+    } catch (error) {
+      console.error("Error in /api/leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch leaderboard data" });
     }
   });
 

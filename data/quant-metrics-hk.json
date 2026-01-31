@@ -1,0 +1,35 @@
+[
+  {
+    "ticker": "0700.HK",
+    "score": 0.20,
+    "rank": 1,
+    "predictedReturn": 0.068,
+    "signal": "BUY",
+    "risk": {
+      "vol60": -0.18,
+      "maxdd252": 0.15
+    }
+  },
+  {
+    "ticker": "9988.HK",
+    "score": 0.28,
+    "rank": 2,
+    "predictedReturn": 0.055,
+    "signal": "BUY",
+    "risk": {
+      "vol60": -0.12,
+      "maxdd252": 0.14
+    }
+  },
+  {
+    "ticker": "9999.HK",
+    "score": 0.35,
+    "rank": 3,
+    "predictedReturn": 0.042,
+    "signal": "HOLD",
+    "risk": {
+      "vol60": 0.08,
+      "maxdd252": 0.10
+    }
+  }
+]

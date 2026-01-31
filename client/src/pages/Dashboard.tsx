@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useStockData, useMarketOverview, isMarketOpen, getCurrentETTime, StockData, subscribeToWatchlistChanges, getWatchlistsArray } from "@/lib/stockApi";
+import { useStockData, useMarketOverview, isMarketOpen, getCurrentETTime, StockData, subscribeToWatchlistChanges, getWatchlistsArray, useAvailableLeaderboards } from "@/lib/stockApi";
 import { StockCard } from "@/components/StockCard";
 import { StockDetailModal } from "@/components/StockDetailModal";
 import { WatchlistManager } from "@/components/WatchlistManager";
 import { BottomNav } from "@/components/BottomNav";
+import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 // import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
 import { Loader2, Settings2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
+
+const LEADERBOARD_ID = "__leaderboard__";
 
 interface MarketTickerProps {
   symbol: string;
@@ -46,6 +49,10 @@ export default function Dashboard() {
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
 
+  // Check if leaderboards are available
+  const { data: availableLeaderboards } = useAvailableLeaderboards();
+  const hasLeaderboards = availableLeaderboards && availableLeaderboards.length > 0;
+
   // Get fresh watchlist data, recomputed when watchlistVersion changes
   const availableWatchlists = useMemo(() => getWatchlistsArray(), [watchlistVersion]);
   
@@ -59,10 +66,12 @@ export default function Dashboard() {
   const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
   const { data: marketData } = useMarketOverview();
 
+  const isLeaderboardView = activeWatchlist === LEADERBOARD_ID;
+
   const refreshWatchlists = useCallback(() => {
     const currentWatchlists = getWatchlistsArray();
     const activeExists = currentWatchlists.some(w => w.id === activeWatchlist);
-    if (!activeExists && currentWatchlists.length > 0) {
+    if (!activeExists && currentWatchlists.length > 0 && activeWatchlist !== LEADERBOARD_ID) {
       setActiveWatchlist(currentWatchlists[0].id);
     }
     forceUpdate(n => n + 1);
@@ -98,62 +107,64 @@ export default function Dashboard() {
         }}
       />
       
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
-        <div className="max-w-md mx-auto flex justify-between items-center gap-4">
-            <div className="flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setLang(lang === "en" ? "zh" : "en")}
-                    className="px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                    data-testid="lang-toggle"
+      {!isLeaderboardView && (
+        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
+          <div className="max-w-md mx-auto flex justify-between items-center gap-4">
+              <div className="flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setLang(lang === "en" ? "zh" : "en")}
+                      className="px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      data-testid="lang-toggle"
+                    >
+                      {t("langToggle")}
+                    </button>
+                    <h1 className="text-lg font-bold tracking-tight">Quant<span className="text-primary/60">Dash</span></h1>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                      <div className={cn("w-1.5 h-1.5 rounded-full", 
+                        isFetching ? "bg-warning animate-pulse" : marketOpen ? "bg-positive" : "bg-muted-foreground"
+                      )} />
+                      <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
+                        {currentTime} ET
+                      </span>
+                  </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                  <div className="flex gap-6 border-l border-border/50 pl-6 overflow-x-auto no-scrollbar">
+                      <MarketTicker 
+                        symbol="SPY" 
+                        label="S&P 500" 
+                        price={marketData?.spy.price || 0}
+                        change={marketData?.spy.change || 0}
+                      />
+                      <MarketTicker 
+                        symbol="VIX" 
+                        label={t("volatility")} 
+                        price={marketData?.vix.price || 0}
+                        change={marketData?.vix.change || 0}
+                      />
+                  </div>
+                  <button 
+                    onClick={() => refetch()}
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    disabled={isFetching}
+                    data-testid="refresh-button"
                   >
-                    {t("langToggle")}
+                    <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
                   </button>
-                  <h1 className="text-lg font-bold tracking-tight">Quant<span className="text-primary/60">Dash</span></h1>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <div className={cn("w-1.5 h-1.5 rounded-full", 
-                      isFetching ? "bg-warning animate-pulse" : marketOpen ? "bg-positive" : "bg-muted-foreground"
-                    )} />
-                    <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
-                      {currentTime} ET
-                    </span>
-                </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-                <div className="flex gap-6 border-l border-border/50 pl-6 overflow-x-auto no-scrollbar">
-                    <MarketTicker 
-                      symbol="SPY" 
-                      label="S&P 500" 
-                      price={marketData?.spy.price || 0}
-                      change={marketData?.spy.change || 0}
-                    />
-                    <MarketTicker 
-                      symbol="VIX" 
-                      label={t("volatility")} 
-                      price={marketData?.vix.price || 0}
-                      change={marketData?.vix.change || 0}
-                    />
-                </div>
-                <button 
-                  onClick={() => refetch()}
-                  className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                  disabled={isFetching}
-                  data-testid="refresh-button"
-                >
-                  <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
-                </button>
-                <button 
-                  onClick={() => setIsManagerOpen(true)}
-                  className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                  data-testid="settings-button"
-                >
-                  <Settings2 className="w-5 h-5" />
-                </button>
-            </div>
-        </div>
-      </header>
+                  <button 
+                    onClick={() => setIsManagerOpen(true)}
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    data-testid="settings-button"
+                  >
+                    <Settings2 className="w-5 h-5" />
+                  </button>
+              </div>
+          </div>
+        </header>
+      )}
 
       <WatchlistManager
         isOpen={isManagerOpen}
@@ -161,66 +172,72 @@ export default function Dashboard() {
         activeWatchlist={activeWatchlist}
       />
 
-      <main className="max-w-md mx-auto px-4 py-6 relative z-10">
-        <div className="space-y-4">
-            <AnimatePresence mode="wait">
-                {isLoading ? (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        className="flex flex-col items-center justify-center py-20 text-muted-foreground"
-                    >
-                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                        <p className="text-sm font-mono">{t("fetchingRealData")}</p>
-                    </motion.div>
-                ) : error ? (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        className="flex flex-col items-center justify-center py-20 text-negative"
-                    >
-                        <p className="text-sm font-mono mb-2">{t("failedLoad")}</p>
-                        <button 
-                          onClick={() => refetch()}
-                          className="text-xs bg-secondary px-4 py-2 rounded-lg hover:bg-secondary/80"
-                          data-testid="retry-button"
-                        >
-                          {t("retry")}
-                        </button>
-                    </motion.div>
-                ) : (
-                    <div className="grid gap-4">
-                        {stocks?.map((stock, idx) => (
-                            <StockCard 
-                              key={stock.ticker} 
-                              stock={stock} 
-                              index={idx} 
-                              onClick={() => setSelectedStock(stock)}
-                            />
-                        ))}
-                        {stocks?.length === 0 && (
-                          <div className="text-center text-muted-foreground py-10">
-                            <p className="text-sm">{t("emptyWatchlist")}</p>
-                            <button
-                              onClick={() => setIsManagerOpen(true)}
-                              className="text-primary text-sm mt-2 hover:underline"
-                            >
-                              {t("addStocks")}
-                            </button>
-                          </div>
-                        )}
-                    </div>
-                )}
-            </AnimatePresence>
-        </div>
-      </main>
+      {isLeaderboardView ? (
+        <LeaderboardPanel onStockClick={(ticker) => setSelectedStock({ ticker } as StockData)} />
+      ) : (
+        <main className="max-w-md mx-auto px-4 py-6 relative z-10">
+          <div className="space-y-4">
+              <AnimatePresence mode="wait">
+                  {isLoading ? (
+                      <motion.div 
+                          initial={{ opacity: 0 }} 
+                          animate={{ opacity: 1 }} 
+                          exit={{ opacity: 0 }}
+                          className="flex flex-col items-center justify-center py-20 text-muted-foreground"
+                      >
+                          <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                          <p className="text-sm font-mono">{t("fetchingRealData")}</p>
+                      </motion.div>
+                  ) : error ? (
+                      <motion.div 
+                          initial={{ opacity: 0 }} 
+                          animate={{ opacity: 1 }} 
+                          exit={{ opacity: 0 }}
+                          className="flex flex-col items-center justify-center py-20 text-negative"
+                      >
+                          <p className="text-sm font-mono mb-2">{t("failedLoad")}</p>
+                          <button 
+                            onClick={() => refetch()}
+                            className="text-xs bg-secondary px-4 py-2 rounded-lg hover:bg-secondary/80"
+                            data-testid="retry-button"
+                          >
+                            {t("retry")}
+                          </button>
+                      </motion.div>
+                  ) : (
+                      <div className="grid gap-4">
+                          {stocks?.map((stock, idx) => (
+                              <StockCard 
+                                key={stock.ticker} 
+                                stock={stock} 
+                                index={idx} 
+                                onClick={() => setSelectedStock(stock)}
+                              />
+                          ))}
+                          {stocks?.length === 0 && (
+                            <div className="text-center text-muted-foreground py-10">
+                              <p className="text-sm">{t("emptyWatchlist")}</p>
+                              <button
+                                onClick={() => setIsManagerOpen(true)}
+                                className="text-primary text-sm mt-2 hover:underline"
+                              >
+                                {t("addStocks")}
+                              </button>
+                            </div>
+                          )}
+                      </div>
+                  )}
+              </AnimatePresence>
+          </div>
+        </main>
+      )}
 
       <BottomNav 
         currentWatchlist={activeWatchlist} 
         onSelect={setActiveWatchlist}
         onManage={() => setIsManagerOpen(true)}
+        hasLeaderboard={hasLeaderboards}
+        leaderboardId={LEADERBOARD_ID}
       />
 
       {selectedStock && (

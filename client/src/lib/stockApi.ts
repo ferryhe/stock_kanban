@@ -400,3 +400,51 @@ export const useSingleStock = (ticker: string, enabled: boolean = true) => {
     staleTime: 1000,
   });
 };
+
+export interface LeaderboardEntry {
+  ticker: string;
+  longName: string;
+  rank: number;
+  predictedReturn: number;
+  score?: number;
+  signal?: string;
+}
+
+export interface LeaderboardData {
+  market: string;
+  entries: LeaderboardEntry[];
+  updateTime: string;
+}
+
+// Hook to fetch available leaderboards
+export const useAvailableLeaderboards = () => {
+  return useQuery<string[]>({
+    queryKey: ["leaderboards"],
+    queryFn: async () => {
+      const res = await fetch("/api/leaderboards");
+      if (!res.ok) {
+        throw new Error("Failed to fetch leaderboards");
+      }
+      return res.json();
+    },
+    staleTime: 60000, // 1 minute
+    refetchInterval: 60000,
+  });
+};
+
+// Hook to fetch leaderboard data for a specific market
+export const useLeaderboardData = (market: string, enabled: boolean = true) => {
+  return useQuery<LeaderboardData>({
+    queryKey: ["leaderboard", market],
+    queryFn: async () => {
+      const res = await fetch(`/api/leaderboard/${market}`, withUiLang());
+      if (!res.ok) {
+        throw new Error("Failed to fetch leaderboard data");
+      }
+      return res.json();
+    },
+    enabled,
+    staleTime: 60000, // 1 minute
+    refetchInterval: 60000,
+  });
+};
