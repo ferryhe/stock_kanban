@@ -55,6 +55,10 @@ export interface Watchlist {
 export interface MarketOverview {
   spy: { price: number; change: number };
   vix: { price: number; change: number };
+  nasdaq?: { price: number; change: number };
+  shanghaiA?: { price: number; change: number };
+  shenzhenA?: { price: number; change: number };
+  hsi?: { price: number; change: number };
 }
 
 export interface SearchResult {

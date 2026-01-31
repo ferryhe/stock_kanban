@@ -3,6 +3,7 @@ import { useStockData, useMarketOverview, isMarketOpen, getCurrentETTime, StockD
 import { StockCard } from "@/components/StockCard";
 import { StockDetailModal } from "@/components/StockDetailModal";
 import { WatchlistManager } from "@/components/WatchlistManager";
+import { WatchlistSearchBox } from "@/components/WatchlistSearchBox";
 import { BottomNav } from "@/components/BottomNav";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 // import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const [watchlistVersion, forceUpdate] = useState(0);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
+  const [currentMarketIndex, setCurrentMarketIndex] = useState(0);
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
 
@@ -96,6 +98,29 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Rotate market index every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentMarketIndex((prev) => (prev + 1) % 5); // 5 indices: SPY, NASDAQ, Shanghai, Shenzhen, HSI
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Define market indices to rotate through
+  const marketIndices = useMemo(() => {
+    if (!marketData) return [];
+    
+    return [
+      { symbol: "SPY", label: "S&P 500", price: marketData.spy.price, change: marketData.spy.change },
+      { symbol: "QQQ", label: "NASDAQ", price: marketData.nasdaq?.price || 0, change: marketData.nasdaq?.change || 0 },
+      { symbol: "000001.SS", label: lang === "zh" ? "上证指数" : "Shanghai A", price: marketData.shanghaiA?.price || 0, change: marketData.shanghaiA?.change || 0 },
+      { symbol: "399001.SZ", label: lang === "zh" ? "深证成指" : "Shenzhen A", price: marketData.shenzhenA?.price || 0, change: marketData.shenzhenA?.change || 0 },
+      { symbol: "^HSI", label: lang === "zh" ? "恒生指数" : "Hong Kong HSI", price: marketData.hsi?.price || 0, change: marketData.hsi?.change || 0 },
+    ].filter(idx => idx.price > 0); // Only show indices with valid data
+  }, [marketData, lang]);
+
+  const currentMarketIndexData = marketIndices[currentMarketIndex] || marketIndices[0];
+
   return (
     <div className="min-h-screen bg-background text-foreground pb-32 relative overflow-hidden font-sans">
       <div 
@@ -133,12 +158,14 @@ export default function Dashboard() {
               
               <div className="flex items-center gap-4">
                   <div className="flex gap-6 border-l border-border/50 pl-6 overflow-x-auto no-scrollbar">
-                      <MarketTicker 
-                        symbol="SPY" 
-                        label="S&P 500" 
-                        price={marketData?.spy.price || 0}
-                        change={marketData?.spy.change || 0}
-                      />
+                      {currentMarketIndexData && (
+                        <MarketTicker 
+                          symbol={currentMarketIndexData.symbol} 
+                          label={currentMarketIndexData.label} 
+                          price={currentMarketIndexData.price}
+                          change={currentMarketIndexData.change}
+                        />
+                      )}
                       <MarketTicker 
                         symbol="VIX" 
                         label={t("volatility")} 
@@ -176,6 +203,14 @@ export default function Dashboard() {
         <LeaderboardPanel onStockClick={(ticker) => setSelectedStock({ ticker } as StockData)} />
       ) : (
         <main className="max-w-md mx-auto px-4 py-6 relative z-10">
+          {/* Search Box for Adding Stocks */}
+          <div className="mb-4">
+            <WatchlistSearchBox 
+              watchlistId={activeWatchlist} 
+              onStockAdded={() => refetch()} 
+            />
+          </div>
+          
           <div className="space-y-4">
               <AnimatePresence mode="wait">
                   {isLoading ? (
@@ -212,6 +247,8 @@ export default function Dashboard() {
                                 stock={stock} 
                                 index={idx} 
                                 onClick={() => setSelectedStock(stock)}
+                                watchlistId={activeWatchlist}
+                                onDelete={() => refetch()}
                               />
                           ))}
                           {stocks?.length === 0 && (

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAvailableLeaderboards, useLeaderboardData } from "@/lib/stockApi";
 import { useI18n } from "@/lib/i18n";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Loader2 } from "lucide-react";
+import { motion, AnimatePresence, PanInfo, useMotionValue, animate } from "framer-motion";
+import { Trophy, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeaderboardPanelProps {
@@ -26,13 +26,37 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
   const { leaderboard, lang } = useI18n();
   const { data: availableMarkets, isLoading: marketsLoading } = useAvailableLeaderboards();
   const [selectedMarket, setSelectedMarket] = useState<string>("");
+  const [selectedMarketIndex, setSelectedMarketIndex] = useState(0);
+  const x = useMotionValue(0);
 
   // Set initial market when data loads
   useEffect(() => {
     if (!selectedMarket && availableMarkets && availableMarkets.length > 0) {
       setSelectedMarket(availableMarkets[0]);
+      setSelectedMarketIndex(0);
     }
   }, [availableMarkets, selectedMarket]);
+
+  const handleSwipe = (marketIndex: number) => {
+    if (availableMarkets && marketIndex >= 0 && marketIndex < availableMarkets.length) {
+      setSelectedMarket(availableMarkets[marketIndex]);
+      setSelectedMarketIndex(marketIndex);
+      animate(x, 0);
+    }
+  };
+
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const threshold = 50;
+    if (info.offset.x > threshold && selectedMarketIndex > 0) {
+      // Swipe right - go to previous market
+      handleSwipe(selectedMarketIndex - 1);
+    } else if (info.offset.x < -threshold && availableMarkets && selectedMarketIndex < availableMarkets.length - 1) {
+      // Swipe left - go to next market
+      handleSwipe(selectedMarketIndex + 1);
+    } else {
+      animate(x, 0);
+    }
+  };
 
   const { data: leaderboardData, isLoading: dataLoading } = useLeaderboardData(
     selectedMarket,
@@ -99,10 +123,10 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
           
           {/* Market Switcher */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {availableMarkets.map((market) => (
+            {availableMarkets.map((market, index) => (
               <button
                 key={market}
-                onClick={() => setSelectedMarket(market)}
+                onClick={() => handleSwipe(index)}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                   selectedMarket === market
@@ -127,8 +151,15 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 relative z-10">
-        <AnimatePresence mode="wait">
-          {dataLoading ? (
+        <motion.div
+          style={{ x }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={handleDragEnd}
+        >
+          <AnimatePresence mode="wait">
+            {dataLoading ? (
             <motion.div
               key="loading"
               initial={{ opacity: 0 }}
@@ -203,6 +234,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
             </motion.div>
           )}
         </AnimatePresence>
+        </motion.div>
       </main>
     </div>
   );
