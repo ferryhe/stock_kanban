@@ -119,7 +119,7 @@ export default function Dashboard() {
       setCurrentMarketIndex((prev) => (prev + 1) % marketIndices.length);
     }, 10000);
     return () => clearInterval(interval);
-  }, [marketIndices.length]);
+  }, [marketIndices]);
 
   const currentMarketIndexData = marketIndices[currentMarketIndex] || marketIndices[0];
 
