@@ -32,7 +32,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
 
   // Context menu state
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0, placeAbove: true });
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -56,7 +56,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
     touchStartPos.current = { x: clientX, y: clientY };
 
     longPressTimer.current = setTimeout(() => {
-      // Calculate position for context menu centered horizontally
+      // Calculate position for context menu centered horizontally on viewport and at press location vertically
       if (touchStartPos.current && cardRef.current && typeof window !== "undefined") {
         const rect = cardRef.current.getBoundingClientRect();
 
@@ -65,14 +65,19 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         const margin = 8; // minimum distance from viewport edges
         const estimatedMenuHeight = 200; // rough estimate to decide above/below placement
 
-        // Center the menu horizontally on the card
-        let menuX = rect.left + rect.width / 2;
-        let menuY = rect.top;
+        // Center the menu horizontally on the viewport for better visibility
+        let menuX = viewportWidth / 2;
+        
+        // Position menu vertically at the press location
+        let menuY = touchStartPos.current.y;
 
-        // If there's not enough space above the card, place the menu below it instead
-        const hasSpaceAbove = rect.top >= estimatedMenuHeight + margin;
+        // Check if there's enough space above the press position for the menu
+        const hasSpaceAbove = menuY >= estimatedMenuHeight + margin;
+        
+        // If not enough space above, position below the press point
         if (!hasSpaceAbove) {
-          menuY = Math.min(rect.bottom, viewportHeight - margin);
+          // Ensure the menu fits within viewport when positioned below
+          menuY = Math.min(touchStartPos.current.y + margin, viewportHeight - estimatedMenuHeight - margin);
         }
 
         // Clamp horizontal position within viewport bounds
@@ -83,6 +88,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         setMenuPosition({
           x: menuX,
           y: menuY,
+          placeAbove: hasSpaceAbove,
         });
         setShowContextMenu(true);
       }

@@ -9,7 +9,7 @@ interface StockContextMenuProps {
   onPinToTop: () => void;
   onMoveToBottom: () => void;
   onMore: () => void;
-  position: { x: number; y: number };
+  position: { x: number; y: number; placeAbove: boolean };
 }
 
 export function StockContextMenu({
@@ -46,7 +46,9 @@ export function StockContextMenu({
             style={{
               left: `${position.x}px`,
               top: `${position.y}px`,
-              transform: "translate(-50%, -100%) translateY(-8px)",
+              transform: position.placeAbove 
+                ? "translate(-50%, -100%) translateY(-8px)"
+                : "translate(-50%, 0) translateY(8px)",
             }}
             role="menu"
             aria-label="Stock actions menu"
