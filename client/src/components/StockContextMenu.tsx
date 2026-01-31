@@ -23,32 +23,33 @@ export function StockContextMenu({
 }: StockContextMenuProps) {
   const { t } = useI18n();
 
-  if (!isOpen) return null;
-
   return (
     <>
       {/* Backdrop to close menu */}
-      <div
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-        data-testid="context-menu-backdrop"
-      />
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={onClose}
+          data-testid="context-menu-backdrop"
+        />
+      )}
       
       {/* Context Menu */}
       <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.15 }}
-          className="fixed z-50 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
-          style={{
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            transform: "translate(-50%, -100%) translateY(-8px)",
-          }}
-          data-testid="stock-context-menu"
-        >
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="fixed z-50 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+            style={{
+              left: `${position.x}px`,
+              top: `${position.y}px`,
+              transform: "translate(-50%, -100%) translateY(-8px)",
+            }}
+            data-testid="stock-context-menu"
+          >
           <div className="flex items-center gap-2 p-2">
             <button
               onClick={() => {
@@ -105,6 +106,7 @@ export function StockContextMenu({
             </button>
           </div>
         </motion.div>
+        )}
       </AnimatePresence>
     </>
   );

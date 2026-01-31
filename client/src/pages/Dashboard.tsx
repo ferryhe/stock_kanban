@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [currentMarketIndex, setCurrentMarketIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
 
@@ -208,16 +209,14 @@ export default function Dashboard() {
           className="max-w-md mx-auto px-4 py-6 relative z-10"
           onTouchStart={(e) => {
             const touch = e.touches[0];
-            (e.currentTarget as any)._touchStartX = touch.clientX;
-            (e.currentTarget as any)._touchStartY = touch.clientY;
+            setTouchStart({ x: touch.clientX, y: touch.clientY });
           }}
           onTouchEnd={(e) => {
-            const target = e.currentTarget as any;
-            if (!target._touchStartX || !target._touchStartY) return;
+            if (!touchStart) return;
             
             const touch = e.changedTouches[0];
-            const deltaX = touch.clientX - target._touchStartX;
-            const deltaY = touch.clientY - target._touchStartY;
+            const deltaX = touch.clientX - touchStart.x;
+            const deltaY = touch.clientY - touchStart.y;
             
             // Only trigger swipe if horizontal movement is dominant
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
@@ -231,8 +230,7 @@ export default function Dashboard() {
               }
             }
             
-            delete target._touchStartX;
-            delete target._touchStartY;
+            setTouchStart(null);
           }}
         >
           {/* Search Box for Adding Stocks */}
