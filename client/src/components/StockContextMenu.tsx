@@ -44,7 +44,7 @@ export function StockContextMenu({
             transition={{ duration: 0.15 }}
             className="fixed z-50 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
             style={{
-              left: "50%",
+              left: `${position.x}px`,
               top: `${position.y}px`,
               transform: "translate(-50%, -100%) translateY(-8px)",
             }}
