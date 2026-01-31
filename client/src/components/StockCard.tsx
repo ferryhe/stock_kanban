@@ -56,7 +56,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
     touchStartPos.current = { x: clientX, y: clientY };
 
     longPressTimer.current = setTimeout(() => {
-      // Calculate position for context menu using the stored touch position
+      // Calculate position for context menu centered horizontally
       if (touchStartPos.current && cardRef.current && typeof window !== "undefined") {
         const rect = cardRef.current.getBoundingClientRect();
 
@@ -65,8 +65,8 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         const margin = 8; // minimum distance from viewport edges
         const estimatedMenuHeight = 200; // rough estimate to decide above/below placement
 
-        // Use the touch position horizontally, but place above the card
-        let menuX = touchStartPos.current.x;
+        // Center the menu horizontally on the card
+        let menuX = rect.left + rect.width / 2;
         let menuY = rect.top;
 
         // If there's not enough space above the card, place the menu below it instead
@@ -167,7 +167,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.05 }}
         className={cn(
-          "bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-xl shadow-sm transition-all",
+          "bg-card/50 backdrop-blur-sm border border-border/50 p-4 rounded-xl shadow-sm transition-all select-none",
           onClick && "cursor-pointer hover:border-primary/40 hover:bg-card/70 active:scale-[0.99]"
         )}
         onClick={handleCardClick}

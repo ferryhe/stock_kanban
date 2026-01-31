@@ -203,7 +203,41 @@ export default function Dashboard() {
       />
 
       {isLeaderboardView ? (
-        <LeaderboardPanel onStockClick={(ticker) => setSelectedStock({ ticker } as StockData)} />
+        <div
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            setTouchStart({ x: touch.clientX, y: touch.clientY });
+          }}
+          onTouchEnd={(e) => {
+            if (!touchStart) return;
+            
+            const touch = e.changedTouches[0];
+            const deltaX = touch.clientX - touchStart.x;
+            const deltaY = touch.clientY - touchStart.y;
+            
+            // Only trigger swipe if horizontal movement is dominant
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+              // Create array of all tabs including leaderboard if available
+              const allTabs = hasLeaderboards 
+                ? [...availableWatchlists.map(w => w.id), LEADERBOARD_ID]
+                : availableWatchlists.map(w => w.id);
+              
+              const currentIndex = allTabs.findIndex(id => id === activeWatchlist);
+              
+              if (deltaX > 0 && currentIndex > 0) {
+                // Swipe right - go to previous tab
+                setActiveWatchlist(allTabs[currentIndex - 1]);
+              } else if (deltaX < 0 && currentIndex < allTabs.length - 1) {
+                // Swipe left - go to next tab (disabled for leaderboard as it's last)
+                setActiveWatchlist(allTabs[currentIndex + 1]);
+              }
+            }
+            
+            setTouchStart(null);
+          }}
+        >
+          <LeaderboardPanel onStockClick={(ticker) => setSelectedStock({ ticker } as StockData)} />
+        </div>
       ) : (
         <main 
           className="max-w-md mx-auto px-4 py-6 relative z-10"
@@ -220,13 +254,19 @@ export default function Dashboard() {
             
             // Only trigger swipe if horizontal movement is dominant
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-              const currentIndex = availableWatchlists.findIndex(w => w.id === activeWatchlist);
+              // Create array of all tabs including leaderboard if available
+              const allTabs = hasLeaderboards 
+                ? [...availableWatchlists.map(w => w.id), LEADERBOARD_ID]
+                : availableWatchlists.map(w => w.id);
+              
+              const currentIndex = allTabs.findIndex(id => id === activeWatchlist);
+              
               if (deltaX > 0 && currentIndex > 0) {
                 // Swipe right - go to previous tab
-                setActiveWatchlist(availableWatchlists[currentIndex - 1].id);
-              } else if (deltaX < 0 && currentIndex < availableWatchlists.length - 1) {
+                setActiveWatchlist(allTabs[currentIndex - 1]);
+              } else if (deltaX < 0 && currentIndex < allTabs.length - 1) {
                 // Swipe left - go to next tab
-                setActiveWatchlist(availableWatchlists[currentIndex + 1].id);
+                setActiveWatchlist(allTabs[currentIndex + 1]);
               }
             }
             
