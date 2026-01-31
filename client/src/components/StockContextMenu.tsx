@@ -48,6 +48,8 @@ export function StockContextMenu({
               top: `${position.y}px`,
               transform: "translate(-50%, -100%) translateY(-8px)",
             }}
+            role="menu"
+            aria-label="Stock actions menu"
             data-testid="stock-context-menu"
           >
           <div className="flex items-center gap-2 p-2">
@@ -57,6 +59,8 @@ export function StockContextMenu({
                 onClose();
               }}
               className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-secondary rounded-xl transition-colors min-w-[70px]"
+              role="menuitem"
+              aria-label="Delete stock from watchlist"
               data-testid="context-delete-btn"
             >
               <Trash2 className="w-5 h-5 text-negative" />
@@ -71,6 +75,8 @@ export function StockContextMenu({
                 onClose();
               }}
               className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-secondary rounded-xl transition-colors min-w-[70px]"
+              role="menuitem"
+              aria-label="Pin stock to top of list"
               data-testid="context-pin-top-btn"
             >
               <ArrowUp className="w-5 h-5 text-primary" />
@@ -85,6 +91,8 @@ export function StockContextMenu({
                 onClose();
               }}
               className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-secondary rounded-xl transition-colors min-w-[70px]"
+              role="menuitem"
+              aria-label="Move stock to bottom of list"
               data-testid="context-move-bottom-btn"
             >
               <ArrowDown className="w-5 h-5 text-primary" />
@@ -99,6 +107,8 @@ export function StockContextMenu({
                 onClose();
               }}
               className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-secondary rounded-xl transition-colors min-w-[70px]"
+              role="menuitem"
+              aria-label="More options - open watchlist manager"
               data-testid="context-more-btn"
             >
               <MoreHorizontal className="w-5 h-5 text-primary" />

@@ -6,7 +6,7 @@ import { IndicatorTooltip } from "./IndicatorTooltip";
 import { QuantMetricsDisplay } from "./QuantMetricsDisplay";
 import { SignalBadge } from "./SignalBadge";
 import { useI18n } from "@/lib/i18n";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { StockContextMenu } from "./StockContextMenu";
 
 interface StockCardProps {
@@ -31,14 +31,29 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
 
   const handleLongPressStart = useCallback((event: React.TouchEvent | React.MouseEvent) => {
     if (!watchlistId) return;
 
+    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+
+    // Store the initial touch position
+    touchStartPos.current = { x: clientX, y: clientY };
 
     longPressTimer.current = setTimeout(() => {
-      // Calculate position for context menu (center horizontally, above the card)
-      if (cardRef.current && typeof window !== "undefined") {
+      // Calculate position for context menu using the stored touch position
+      if (touchStartPos.current && cardRef.current && typeof window !== "undefined") {
         const rect = cardRef.current.getBoundingClientRect();
 
         const viewportWidth = window.innerWidth;
@@ -46,8 +61,8 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         const margin = 8; // minimum distance from viewport edges
         const estimatedMenuHeight = 200; // rough estimate to decide above/below placement
 
-        // Start with ideal position: centered horizontally, above the card
-        let menuX = rect.left + rect.width / 2;
+        // Use the touch position horizontally, but place above the card
+        let menuX = touchStartPos.current.x;
         let menuY = rect.top;
 
         // If there's not enough space above the card, place the menu below it instead
@@ -74,6 +89,23 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+    }
+    touchStartPos.current = null;
+  }, []);
+
+  const handleTouchMove = useCallback((event: React.TouchEvent) => {
+    // If user moves finger significantly during long press, cancel the long press
+    if (touchStartPos.current && longPressTimer.current) {
+      const touch = event.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
+      
+      // Cancel long press if moved more than 10px in any direction
+      if (deltaX > 10 || deltaY > 10) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+        touchStartPos.current = null;
+      }
     }
   }, []);
 
@@ -111,6 +143,13 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
   };
 
   const handleCardClick = () => {
+    // Clear long press timer to prevent race condition
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    touchStartPos.current = null;
+    
     if (!showContextMenu && onClick) {
       onClick();
     }
@@ -129,6 +168,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         )}
         onClick={handleCardClick}
         onTouchStart={handleLongPressStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleLongPressEnd}
         onTouchCancel={handleLongPressEnd}
         onMouseDown={handleLongPressStart}
