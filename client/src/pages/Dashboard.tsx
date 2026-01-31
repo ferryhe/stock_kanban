@@ -112,7 +112,7 @@ export default function Dashboard() {
     
     return [
       { symbol: "SPY", label: "S&P 500", price: marketData.spy.price, change: marketData.spy.change },
-      { symbol: "QQQ", label: "NASDAQ", price: marketData.nasdaq?.price || 0, change: marketData.nasdaq?.change || 0 },
+      { symbol: "^IXIC", label: "NASDAQ", price: marketData.nasdaq?.price || 0, change: marketData.nasdaq?.change || 0 },
       { symbol: "000001.SS", label: lang === "zh" ? "上证指数" : "Shanghai A", price: marketData.shanghaiA?.price || 0, change: marketData.shanghaiA?.change || 0 },
       { symbol: "399001.SZ", label: lang === "zh" ? "深证成指" : "Shenzhen A", price: marketData.shenzhenA?.price || 0, change: marketData.shenzhenA?.change || 0 },
       { symbol: "^HSI", label: lang === "zh" ? "恒生指数" : "Hong Kong HSI", price: marketData.hsi?.price || 0, change: marketData.hsi?.change || 0 },

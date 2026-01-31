@@ -17,10 +17,14 @@ export function WatchlistSearchBox({ watchlistId, onStockAdded }: WatchlistSearc
   const { t } = useI18n();
 
   const handleAddStock = (ticker: string) => {
-    addTickerToWatchlist(watchlistId, ticker);
-    setSearchQuery("");
-    setIsFocused(false);
-    onStockAdded?.();
+    try {
+      addTickerToWatchlist(watchlistId, ticker);
+      setSearchQuery("");
+      setIsFocused(false);
+      onStockAdded?.();
+    } catch (error) {
+      console.error("Failed to add stock:", error);
+    }
   };
 
   const showResults = isFocused && searchQuery.length > 0;

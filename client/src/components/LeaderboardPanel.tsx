@@ -154,7 +154,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
         <motion.div
           style={{ x }}
           drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
+          dragConstraints={{ left: -50, right: 50 }}
           dragElastic={0.2}
           onDragEnd={handleDragEnd}
         >

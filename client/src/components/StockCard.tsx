@@ -42,8 +42,12 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete }: Stoc
 
   const handleDelete = () => {
     if (watchlistId) {
-      removeTickerFromWatchlist(watchlistId, stock.ticker);
-      onDelete?.();
+      try {
+        removeTickerFromWatchlist(watchlistId, stock.ticker);
+        onDelete?.();
+      } catch (error) {
+        console.error("Failed to delete stock:", error);
+      }
     }
   };
 
