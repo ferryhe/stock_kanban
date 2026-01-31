@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popup Menu Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #0a0a0a;
+            color: white;
+        }
+        
+        .test-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .popup-menu {
+            position: fixed;
+            left: 50%;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .popup-menu.active {
+            display: block;
+        }
+        
+        .menu-content {
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+        }
+        
+        .menu-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            min-width: 70px;
+            transition: background 0.2s;
+        }
+        
+        .menu-button:hover {
+            background: #3a3a3a;
+        }
+        
+        .menu-separator {
+            width: 1px;
+            height: 32px;
+            background: #444;
+        }
+        
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .label {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            display: none;
+            z-index: 999;
+        }
+        
+        .backdrop.active {
+            display: block;
+        }
+        
+        .instruction {
+            background: #1a3a5a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instruction">
+        <strong>Instructions:</strong> Long-press (or click and hold) on any card below to see the popup menu. 
+        The menu should be centered horizontally on the screen and show all 4 buttons.
+    </div>
+    
+    <div class="test-card" data-id="1">
+        <h3>AAPL - Apple Inc.</h3>
+        <p>$175.50 +2.5%</p>
+        <small>Long press to open menu</small>
+    </div>
+    
+    <div class="test-card" data-id="2">
+        <h3>MSFT - Microsoft Corp.</h3>
+        <p>$380.20 +1.8%</p>
+        <small>Long press to open menu</small>
+    </div>
+    
+    <div class="test-card" data-id="3">
+        <h3>GOOGL - Alphabet Inc.</h3>
+        <p>$140.60 -0.5%</p>
+        <small>Long press to open menu</small>
+    </div>
+    
+    <div class="backdrop"></div>
+    <div class="popup-menu">
+        <div class="menu-content">
+            <button class="menu-button">
+                <div class="icon">🗑️</div>
+                <div class="label">Delete</div>
+            </button>
+            <div class="menu-separator"></div>
+            <button class="menu-button">
+                <div class="icon">⬆️</div>
+                <div class="label">Pin Top</div>
+            </button>
+            <div class="menu-separator"></div>
+            <button class="menu-button">
+                <div class="icon">⬇️</div>
+                <div class="label">Move Bottom</div>
+            </button>
+            <div class="menu-separator"></div>
+            <button class="menu-button">
+                <div class="icon">⋯</div>
+                <div class="label">More</div>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const cards = document.querySelectorAll('.test-card');
+        const menu = document.querySelector('.popup-menu');
+        const backdrop = document.querySelector('.backdrop');
+        let longPressTimer = null;
+        
+        function showMenu(y) {
+            const menuHeight = 100;
+            const margin = 8;
+            const viewportHeight = window.innerHeight;
+            
+            // Position menu vertically
+            let menuY = y;
+            const placeAbove = y >= menuHeight + margin;
+            
+            if (placeAbove) {
+                menu.style.transform = 'translateX(-50%) translateY(-100%) translateY(-8px)';
+                menu.style.top = menuY + 'px';
+            } else {
+                menu.style.transform = 'translateX(-50%) translateY(8px)';
+                menu.style.top = menuY + 'px';
+            }
+            
+            menu.classList.add('active');
+            backdrop.classList.add('active');
+        }
+        
+        function hideMenu() {
+            menu.classList.remove('active');
+            backdrop.classList.remove('active');
+        }
+        
+        backdrop.addEventListener('click', hideMenu);
+        
+        cards.forEach(card => {
+            card.addEventListener('mousedown', (e) => {
+                longPressTimer = setTimeout(() => {
+                    showMenu(e.clientY);
+                }, 500);
+            });
+            
+            card.addEventListener('mouseup', () => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                }
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                }
+            });
+            
+            card.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                longPressTimer = setTimeout(() => {
+                    showMenu(touch.clientY);
+                }, 500);
+            });
+            
+            card.addEventListener('touchend', () => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
