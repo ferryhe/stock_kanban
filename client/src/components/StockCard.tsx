@@ -9,6 +9,10 @@ import { useI18n } from "@/lib/i18n";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { StockContextMenu } from "./StockContextMenu";
 
+// Long press configuration constants
+const LONG_PRESS_DURATION_MS = 500; // Duration to trigger long press
+const LONG_PRESS_MOVE_THRESHOLD = 10; // Maximum movement (px) before cancelling long press
+
 interface StockCardProps {
   stock: StockData;
   index: number;
@@ -82,7 +86,7 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
         });
         setShowContextMenu(true);
       }
-    }, 500); // 500ms long press
+    }, LONG_PRESS_DURATION_MS);
   }, [watchlistId]);
 
   const handleLongPressEnd = useCallback(() => {
@@ -100,8 +104,8 @@ export function StockCard({ stock, index, onClick, watchlistId, onDelete, onMana
       const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
       const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
       
-      // Cancel long press if moved more than 10px in any direction
-      if (deltaX > 10 || deltaY > 10) {
+      // Cancel long press if moved more than threshold in any direction
+      if (deltaX > LONG_PRESS_MOVE_THRESHOLD || deltaY > LONG_PRESS_MOVE_THRESHOLD) {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
         touchStartPos.current = null;
