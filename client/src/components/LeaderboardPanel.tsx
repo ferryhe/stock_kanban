@@ -9,7 +9,7 @@ interface LeaderboardPanelProps {
   onStockClick: (ticker: string) => void;
 }
 
-const MedalIcon = ({ rank }: { rank: number }) => {
+const MedalIcon = ({ rank }: { rank?: number | null }) => {
   if (rank === 1) {
     return <Trophy className="w-4 h-4 text-yellow-500" fill="currentColor" />;
   }
@@ -23,7 +23,7 @@ const MedalIcon = ({ rank }: { rank: number }) => {
 };
 
 export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
-  const { leaderboard, lang } = useI18n();
+  const { leaderboard, lang, t, setLang } = useI18n();
   const { data: availableMarkets, isLoading: marketsLoading } = useAvailableLeaderboards();
   const [selectedMarket, setSelectedMarket] = useState<string>("");
   const [selectedMarketIndex, setSelectedMarketIndex] = useState(0);
@@ -70,8 +70,23 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
     return market.toUpperCase();
   };
 
-  const formatUpdateTime = (isoString: string) => {
-    const date = new Date(isoString);
+  const normalizeIsoString = (value: string) => {
+    const match = value.match(
+      /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.(\d+))?(Z|[+-]\d{2}:\d{2})$/,
+    );
+    if (!match) return value;
+    const base = match[1];
+    const fraction = match[3];
+    const tz = match[4];
+    if (!fraction) return `${base}${tz}`;
+    const ms = fraction.slice(0, 3).padEnd(3, "0");
+    return `${base}.${ms}${tz}`;
+  };
+
+  const formatUpdateTime = (isoString?: string) => {
+    if (!isoString) return "";
+    const date = new Date(normalizeIsoString(isoString));
+    if (Number.isNaN(date.getTime())) return "";
     return date.toLocaleString(lang === "zh" ? "zh-CN" : "en-US", {
       month: "short",
       day: "numeric",
@@ -79,10 +94,28 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
       minute: "2-digit",
     });
   };
+  const updatedAtLabel = leaderboardData
+    ? formatUpdateTime(leaderboardData.generatedAtUtc || leaderboardData.updateTime)
+    : "";
 
-  const formatReturn = (value: number) => {
-    const percentage = (value * 100).toFixed(2);
-    return value >= 0 ? `+${percentage}%` : `${percentage}%`;
+  const formatSignal = (value?: string) => {
+    if (!value) return "—";
+    return value;
+  };
+
+  const getSignalClasses = (value?: string) => {
+    switch (value) {
+      case "BUY":
+        return "text-positive bg-positive/10";
+      case "SELL":
+        return "text-negative bg-negative/10";
+      case "RISK_ALERT":
+        return "text-warning bg-warning/10";
+      case "HOLD":
+        return "text-muted-foreground bg-muted/40";
+      default:
+        return "text-muted-foreground bg-muted/30";
+    }
   };
 
   if (marketsLoading) {
@@ -117,9 +150,18 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
       
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
         <div className="max-w-md mx-auto">
-          <h1 className="text-lg font-bold tracking-tight mb-3">
-            {leaderboard.title}
-          </h1>
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={() => setLang(lang === "en" ? "zh" : "en")}
+              className="px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              data-testid="lang-toggle"
+            >
+              {t("langToggle")}
+            </button>
+            <h1 className="text-lg font-bold tracking-tight">
+              {leaderboard.title}
+            </h1>
+          </div>
           
           {/* Market Switcher */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
@@ -140,10 +182,10 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
           </div>
           
           {/* Update Time */}
-          {leaderboardData && (
+          {leaderboardData && updatedAtLabel && (
             <div className="mt-2 text-right">
               <span className="text-xs text-muted-foreground">
-                {leaderboard.updated}: {formatUpdateTime(leaderboardData.updateTime)}
+                {leaderboard.updated}: {updatedAtLabel}
               </span>
             </div>
           )}
@@ -178,7 +220,12 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
               exit={{ opacity: 0 }}
               className="space-y-2"
             >
-              {leaderboardData.entries.map((entry, index) => (
+              {(() => {
+                const rankedEntries = leaderboardData.entries.filter((entry) => typeof entry.rank === "number");
+                const unrankedEntries = leaderboardData.entries.filter((entry) => typeof entry.rank !== "number");
+                return (
+                  <>
+                    {rankedEntries.map((entry, index) => (
                 <motion.button
                   key={entry.ticker}
                   initial={{ opacity: 0, y: 20 }}
@@ -192,9 +239,9 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
                     <MedalIcon rank={entry.rank} />
                     <span className={cn(
                       "font-mono font-bold text-sm",
-                      entry.rank <= 3 ? "text-foreground" : "text-muted-foreground"
+                      typeof entry.rank === "number" && entry.rank <= 3 ? "text-foreground" : "text-muted-foreground"
                     )}>
-                      {entry.rank}
+                      {typeof entry.rank === "number" ? entry.rank : "—"}
                     </span>
                   </div>
 
@@ -208,19 +255,63 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
                     </div>
                   </div>
 
-                  {/* Predicted Return */}
+                  {/* Signal */}
                   <div className="flex-shrink-0">
                     <div className={cn(
                       "font-mono font-bold text-sm px-2 py-1 rounded",
-                      entry.predictedReturn >= 0
-                        ? "text-positive bg-positive/10"
-                        : "text-negative bg-negative/10"
+                      getSignalClasses(entry.signal)
                     )}>
-                      {formatReturn(entry.predictedReturn)}
+                      {formatSignal(entry.signal)}
                     </div>
                   </div>
                 </motion.button>
-              ))}
+                    ))}
+                    {unrankedEntries.length > 0 && (
+                      <div className="pt-4 pb-1 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                        {leaderboard.unranked}
+                      </div>
+                    )}
+                    {unrankedEntries.map((entry, index) => (
+                      <motion.button
+                        key={entry.ticker}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: (rankedEntries.length + index) * 0.03 }}
+                        onClick={() => onStockClick(entry.ticker)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/60 border border-border/30 hover:border-border transition-all group"
+                      >
+                        <div className="flex items-center gap-2 w-12 flex-shrink-0">
+                          <MedalIcon rank={entry.rank} />
+                          <span className={cn(
+                            "font-mono font-bold text-sm",
+                            typeof entry.rank === "number" && entry.rank <= 3 ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            {typeof entry.rank === "number" ? entry.rank : "—"}
+                          </span>
+                        </div>
+
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="font-mono font-bold text-sm text-foreground">
+                            {entry.ticker}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {entry.longName}
+                          </div>
+                        </div>
+
+                        <div className="flex-shrink-0">
+                          <div className={cn(
+                            "font-mono font-bold text-sm px-2 py-1 rounded",
+                            getSignalClasses(entry.signal)
+                          )}>
+                            {formatSignal(entry.signal)}
+                          </div>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </>
+                );
+              })()}
             </motion.div>
           ) : (
             <motion.div

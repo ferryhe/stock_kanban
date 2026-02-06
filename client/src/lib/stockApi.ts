@@ -440,7 +440,7 @@ export const useSingleStock = (ticker: string, enabled: boolean = true) => {
 export interface LeaderboardEntry {
   ticker: string;
   longName: string;
-  rank: number;
+  rank?: number | null;
   predictedReturn: number;
   score?: number;
   signal?: string;
@@ -450,6 +450,7 @@ export interface LeaderboardData {
   market: string;
   entries: LeaderboardEntry[];
   updateTime: string;
+  generatedAtUtc?: string;
 }
 
 // Hook to fetch available leaderboards

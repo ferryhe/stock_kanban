@@ -41,7 +41,7 @@ const MarketTicker = ({ symbol, label, price, change }: MarketTickerProps) => {
 };
 
 export default function Dashboard() {
-  const [activeWatchlist, setActiveWatchlist] = useState<string>("");
+  const [activeWatchlist, setActiveWatchlist] = useState<string>(LEADERBOARD_ID);
   const [marketOpen, setMarketOpen] = useState(isMarketOpen());
   const [currentTime, setCurrentTime] = useState(getCurrentETTime());
   const [watchlistVersion, forceUpdate] = useState(0);
@@ -61,10 +61,14 @@ export default function Dashboard() {
   
   // Initialize activeWatchlist once we have the watchlists
   useEffect(() => {
-    if (!activeWatchlist && availableWatchlists.length > 0) {
+    // Wait for leaderboards to finish loading before deciding fallback
+    if (availableLeaderboards === undefined) return;
+    if (hasLeaderboards) return;
+
+    if (activeWatchlist === LEADERBOARD_ID && availableWatchlists.length > 0) {
       setActiveWatchlist(availableWatchlists[0].id);
     }
-  }, [availableWatchlists, activeWatchlist]);
+  }, [availableWatchlists, activeWatchlist, availableLeaderboards, hasLeaderboards]);
 
   const { data: stocks, isLoading, refetch, isFetching, error } = useStockData(activeWatchlist);
   const { data: marketData } = useMarketOverview();
@@ -85,7 +89,7 @@ export default function Dashboard() {
   const handleSwipeNavigation = useCallback((deltaX: number) => {
     // Create array of all tabs including leaderboard if available
     const allTabs = hasLeaderboards 
-      ? [...availableWatchlists.map(w => w.id), LEADERBOARD_ID]
+      ? [LEADERBOARD_ID, ...availableWatchlists.map(w => w.id)]
       : availableWatchlists.map(w => w.id);
     
     const currentIndex = allTabs.findIndex(id => id === activeWatchlist);

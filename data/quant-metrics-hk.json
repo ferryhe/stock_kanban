@@ -1,35 +1,155 @@
-[
-  {
-    "ticker": "0700.HK",
-    "score": 0.20,
-    "rank": 1,
-    "predictedReturn": 0.068,
-    "signal": "BUY",
-    "risk": {
-      "vol60": -0.18,
-      "maxdd252": 0.15
-    }
+{
+  "metadata": {
+    "generated_at_utc": "2026-02-06T02:30:32.082669+00:00",
+    "generated_at_local": "2026-02-05T21:30:32.082669-05:00",
+    "timezone": "America/New_York",
+    "data_date": "2026-02-05T01:30:00",
+    "config_file": "config_hk.yaml",
+    "total_stocks": 13
   },
-  {
-    "ticker": "9988.HK",
-    "score": 0.28,
-    "rank": 2,
-    "predictedReturn": 0.055,
-    "signal": "BUY",
-    "risk": {
-      "vol60": -0.12,
-      "maxdd252": 0.14
+  "data": [
+    {
+      "ticker": "0696.HK",
+      "score": 0.6923076923076923,
+      "rank": 9.0,
+      "predictedReturn": 0.03982298577993727,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -1.4711972648141873,
+        "maxdd252": 0.975180955602974
+      }
+    },
+    {
+      "ticker": "0700.HK",
+      "score": 0.07692307692307693,
+      "rank": 1.0,
+      "predictedReturn": 0.1663626881923042,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -1.3019849263852448,
+        "maxdd252": 1.7760522375722019
+      }
+    },
+    {
+      "ticker": "1211.HK",
+      "score": 0.7692307692307693,
+      "rank": 10.0,
+      "predictedReturn": 0.005787360606897706,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -0.24250113280821547,
+        "maxdd252": -0.1389366136358448
+      }
+    },
+    {
+      "ticker": "1336.HK",
+      "score": 0.23076923076923078,
+      "rank": 3.0,
+      "predictedReturn": 0.11600295880757991,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": 0.19758459572077655,
+        "maxdd252": 0.7988492991586954
+      }
+    },
+    {
+      "ticker": "1810.HK",
+      "score": 0.38461538461538464,
+      "rank": 5.0,
+      "predictedReturn": 0.07145624920766025,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -0.38003528739552417,
+        "maxdd252": -0.34595211527636616
+      }
+    },
+    {
+      "ticker": "2318.HK",
+      "score": 0.46153846153846156,
+      "rank": 6.0,
+      "predictedReturn": 0.06919678277022985,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -0.654592703259445,
+        "maxdd252": 0.7610047202178083
+      }
+    },
+    {
+      "ticker": "2628.HK",
+      "score": 0.8461538461538461,
+      "rank": 11.0,
+      "predictedReturn": -0.013562843064473286,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": 0.6397905574080084,
+        "maxdd252": 0.2381329768891781
+      }
+    },
+    {
+      "ticker": "3690.HK",
+      "score": 0.3076923076923077,
+      "rank": 4.0,
+      "predictedReturn": 0.08907742751047318,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -0.5612729227964365,
+        "maxdd252": -1.3819358428533246
+      }
+    },
+    {
+      "ticker": "3896.HK",
+      "score": 0.6153846153846154,
+      "rank": 8.0,
+      "predictedReturn": 0.04565960577271561,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": 2.0795717499885966,
+        "maxdd252": -1.0223549574042448
+      }
+    },
+    {
+      "ticker": "6066.HK",
+      "score": 0.15384615384615385,
+      "rank": 2.0,
+      "predictedReturn": 0.14259659710750203,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": -0.9215768003876313,
+        "maxdd252": -1.3175937789310448
+      }
+    },
+    {
+      "ticker": "6160.HK",
+      "score": 0.5384615384615384,
+      "rank": 7.0,
+      "predictedReturn": 0.056685705214650405,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": 0.5479293573370243,
+        "maxdd252": 1.2303529275839844
+      }
+    },
+    {
+      "ticker": "9626.HK",
+      "score": 0.9230769230769231,
+      "rank": 12.0,
+      "predictedReturn": -0.0520061235354601,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": 0.7770045789920452,
+        "maxdd252": -0.9279113140184186
+      }
+    },
+    {
+      "ticker": "9992.HK",
+      "score": 1.0,
+      "rank": 13.0,
+      "predictedReturn": -0.13249534550033415,
+      "signal": "HOLD",
+      "risk": {
+        "vol60": 1.291280198400229,
+        "maxdd252": -0.6448884949055972
+      }
     }
-  },
-  {
-    "ticker": "9999.HK",
-    "score": 0.35,
-    "rank": 3,
-    "predictedReturn": 0.042,
-    "signal": "HOLD",
-    "risk": {
-      "vol60": 0.08,
-      "maxdd252": 0.10
-    }
-  }
-]
+  ]
+}

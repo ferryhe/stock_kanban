@@ -373,21 +373,24 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
 
     for (const metricsPath of existingPaths) {
       const rawData = fs.readFileSync(metricsPath, "utf-8");
-      const data = JSON.parse(rawData);
+      const parsed = JSON.parse(rawData);
+      const metricsArray = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.data)
+          ? parsed.data
+          : [];
 
-      if (Array.isArray(data)) {
-        data.forEach((item: any) => {
-          if (item.ticker) {
-            metricsMap.set(item.ticker.toUpperCase(), {
-              score: item.score,
-              rank: item.rank,
-              predictedReturn: item.predictedReturn,
-              risk: item.risk,
-              signal: item.signal,
-            });
-          }
-        });
-      }
+      metricsArray.forEach((item: any) => {
+        if (item.ticker) {
+          metricsMap.set(item.ticker.toUpperCase(), {
+            score: item.score,
+            rank: item.rank,
+            predictedReturn: item.predictedReturn,
+            risk: item.risk,
+            signal: item.signal,
+          });
+        }
+      });
     }
     if (metricsMap.size > 0) {
       console.log(
@@ -1064,7 +1067,7 @@ export async function searchStocks(query: string, uiLang: UILang = "en"): Promis
 export interface LeaderboardEntry {
   ticker: string;
   longName: string;
-  rank: number;
+  rank?: number | null;
   predictedReturn: number;
   score?: number;
   signal?: string;
@@ -1074,6 +1077,7 @@ export interface LeaderboardData {
   market: string;
   entries: LeaderboardEntry[];
   updateTime: string;
+  generatedAtUtc?: string;
 }
 
 export function getAvailableLeaderboards(): string[] {
@@ -1106,7 +1110,6 @@ export async function getLeaderboardData(market: string, uiLang: UILang = "en"):
     // Check if file exists using async
     const stats = await fsPromises.stat(metricsPath);
     const fileMtime = stats.mtimeMs;
-    const updateTime = stats.mtime.toISOString();
 
     // Check cache: fresh and file unchanged
     const cached = leaderboardCache.get(market);
@@ -1114,26 +1117,34 @@ export async function getLeaderboardData(market: string, uiLang: UILang = "en"):
       const cacheFresh = now - cached.timestamp < LEADERBOARD_CACHE_TTL;
       const fileUnchanged = fileMtime === cached.mtime;
       if (cacheFresh && fileUnchanged) {
-        // Return cached data but with fresh updateTime from file stats
-        return {
-          ...cached.data,
-          updateTime,
-        };
+        return cached.data;
       }
     }
 
     // Read file asynchronously
     const rawData = await fsPromises.readFile(metricsPath, "utf-8");
-    const data = JSON.parse(rawData);
+    const parsed = JSON.parse(rawData);
 
-    if (!Array.isArray(data)) {
+    const metricsArray = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.data)
+        ? parsed.data
+        : null;
+
+    if (!metricsArray) {
       return null;
     }
 
-    // Sort by rank (ascending)
-    const sortedData = data
-      .filter((item: any) => item.ticker && typeof item.rank === "number")
+    const hasTicker = (item: any) => item && item.ticker;
+    const withRank = metricsArray
+      .filter((item: any) => hasTicker(item) && typeof item.rank === "number")
       .sort((a: any, b: any) => a.rank - b.rank);
+    const withoutRank = metricsArray
+      .filter((item: any) => hasTicker(item) && typeof item.rank !== "number")
+      .sort((a: any, b: any) =>
+        (a.ticker || "").toString().localeCompare((b.ticker || "").toString()),
+      );
+    const sortedData = [...withRank, ...withoutRank];
 
     // Get tickers for Chinese name lookup
     const tickers = sortedData.map((item: any) => item.ticker.toUpperCase());
@@ -1142,10 +1153,17 @@ export async function getLeaderboardData(market: string, uiLang: UILang = "en"):
     // Fetch stock names with bounded concurrency and caching
     const entries: LeaderboardEntry[] = await fetchStockNamesWithCache(sortedData, uiLang);
 
+    const generatedAtUtc =
+      typeof parsed?.metadata?.generated_at_utc === "string"
+        ? parsed.metadata.generated_at_utc
+        : undefined;
+    const updateTime = generatedAtUtc || stats.mtime.toISOString();
+
     const leaderboardData: LeaderboardData = {
       market,
       entries,
       updateTime,
+      generatedAtUtc,
     };
 
     // Update cache
@@ -1214,7 +1232,7 @@ async function fetchStockNamesWithCache(sortedData: any[], uiLang: UILang): Prom
       return {
         ticker,
         longName,
-        rank: item.rank,
+        rank: typeof item.rank === "number" ? item.rank : null,
         predictedReturn,
         score: item.score,
         signal: item.signal,
