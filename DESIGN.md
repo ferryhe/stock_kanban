@@ -48,9 +48,7 @@ stock_trading_sim/  (新建独立仓库)
 │   │   └── performance.ts      # 收益计算
 │   ├── strategies/       # 策略实现
 │   │   ├── base.ts       # 基础策略类
-│   │   ├── signal_follow.ts    # 信号跟随策略
-│   │   ├── momentum.ts         # 动量策略
-│   │   └── mean_reversion.ts  # 均值回归策略
+│   │   └── signal_follow.ts    # 统一信号跟随策略（支持多算法）
 │   ├── api/              # API接口
 │   │   ├── routes.ts
 │   │   └── controllers.ts
@@ -83,23 +81,41 @@ interface TradingStrategy {
 }
 ```
 
-#### 预设策略方案
+#### 策略方案：基于多算法信号
 
-1. **信号跟随策略（Signal Following）**
-   - 直接执行量化信号（BUY/SELL/HOLD）
-   - 参数：仓位比例、最大持仓数
+**核心设计理念：**
+- 统一使用信号跟随策略框架
+- 后端（stock_quant_work）提供多种不同的量化算法
+- 每种算法生成独立的信号数据集
+- 每个算法对应前端展示的一个策略
 
-2. **趋势跟踪策略（Trend Following）**
-   - 基于信号 + 技术指标确认
-   - 参数：RSI阈值、MACD确认
+**算法-策略映射：**
 
-3. **均值回归策略（Mean Reversion）**
-   - 反向操作，超卖买入、超买卖出
-   - 参数：偏离度阈值
+1. **算法A策略（Algorithm A Strategy）**
+   - 信号来源：`quant-metrics-algorithm-a.json`
+   - 执行规则：直接跟随算法A生成的BUY/SELL/HOLD信号
+   - 参数：仓位比例、最大持仓数、现金储备比例
 
-4. **组合优化策略（Portfolio Optimization）**
-   - 基于风险调整后收益优化配置
-   - 参数：最大风险、目标收益
+2. **算法B策略（Algorithm B Strategy）**
+   - 信号来源：`quant-metrics-algorithm-b.json`
+   - 执行规则：直接跟随算法B生成的BUY/SELL/HOLD信号
+   - 参数：仓位比例、最大持仓数、现金储备比例
+
+3. **算法C策略（Algorithm C Strategy）**
+   - 信号来源：`quant-metrics-algorithm-c.json`
+   - 执行规则：直接跟随算法C生成的BUY/SELL/HOLD信号
+   - 参数：仓位比例、最大持仓数、现金储备比例
+
+4. **更多算法策略...**
+   - 后端可动态添加新的量化算法
+   - 前端自动发现并支持新策略
+
+**策略实现统一化：**
+所有策略使用相同的信号跟随引擎，仅信号数据源不同。这样设计的优势：
+- 代码复用性高，维护成本低
+- 新增算法无需修改交易引擎
+- 算法开发与交易执行解耦
+- 便于A/B测试和算法对比
 
 ### 2.2 策略对比维度
 
@@ -652,8 +668,8 @@ async function dailySettlement() {
 - [ ] 创建 stock_trading_sim 项目
 - [ ] 数据库设计与迁移
 - [ ] 基础 API 框架搭建
-- [ ] 信号读取服务
-- [ ] 简单策略实现（信号跟随）
+- [ ] 信号读取服务（支持多算法信号数据源）
+- [ ] 统一信号跟随策略引擎
 
 **Week 2-3: 前端集成**
 - [ ] stock_kanban 添加投资组合页面
@@ -667,10 +683,11 @@ async function dailySettlement() {
 - [ ] 性能优化
 - [ ] 部署上线
 
-### Phase 2: 多策略支持（2-3周）
+### Phase 2: 多算法支持（2-3周）
 
-- [ ] 实现3-5个预设策略
-- [ ] 策略对比功能
+- [ ] 后端支持读取多个算法的信号数据
+- [ ] 实现算法策略配置管理
+- [ ] 算法策略对比功能
 - [ ] 性能指标完善
 - [ ] 回测历史数据
 
@@ -861,12 +878,13 @@ interface DisasterRecovery {
 
 **高优先级（立即实施）：**
 1. 创建独立的 trading_sim 后端
-2. 实现基础信号跟随策略
+2. 实现统一信号跟随策略引擎
 3. 完成核心数据库设计
 4. 前端基础展示页面
+5. 支持多算法信号数据源读取
 
 **中优先级（后续迭代）：**
-1. 多策略实现与对比
+1. 多算法策略对比功能
 2. 性能指标完善
 3. 历史数据回测
 
@@ -895,9 +913,27 @@ interface DisasterRecovery {
 
 ### A. 参考资料
 
-- [Backtrader Documentation](https://www.backtrader.com/)
-- [Zipline Algorithmic Trading](https://github.com/quantopian/zipline)
-- [QuantConnect LEAN Engine](https://github.com/QuantConnect/Lean)
+本项目设计参考了以下三个成熟的量化交易框架。每个框架都有详细的介绍文档：
+
+1. **[Backtrader](./docs/REFERENCE_Backtrader.md)** - Python量化回测框架
+   - 易于学习的 Pythonic API
+   - 丰富的技术指标库（100+）
+   - 完整的交易模拟和性能分析
+   - 适合策略快速原型开发
+
+2. **[Zipline](./docs/REFERENCE_Zipline.md)** - 机构级Python量化引擎
+   - 严格的时间点数据管理（Point-in-Time）
+   - 强大的 Pipeline API 用于因子计算
+   - 防止前视偏差和幸存者偏差
+   - Quantopian 的核心技术（已开源）
+
+3. **[QuantConnect LEAN](./docs/REFERENCE_QuantConnect.md)** - 云端量化交易平台
+   - 多资产类别支持（股票、期货、期权、外汇、加密货币）
+   - 回测与实盘统一接口
+   - 模块化的 Alpha Framework
+   - 分钟级和 Tick 级数据支持
+
+**详细内容请查看各自的文档文件。**
 
 ### B. 技术决策记录
 
