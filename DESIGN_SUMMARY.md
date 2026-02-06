@@ -1,180 +1,292 @@
 # 虚拟交易系统设计方案 - 快速导读
 
-> **完整设计文档：** [CONSOLIDATED_DESIGN.md](./CONSOLIDATED_DESIGN.md)
+> **最新：集成架构版本** - 将虚拟交易功能集成到 stock_kanban 项目中
 
-## 文档结构说明
+## ⭐ 主文档
 
-本项目现有三个设计文档：
+**[INTEGRATED_ARCHITECTURE.md](./INTEGRATED_ARCHITECTURE.md)** - 集成架构设计（v3.0）
 
-1. **CONSOLIDATED_DESIGN.md** ⭐ **主文档** - 整合了所有设计内容，推荐阅读
-2. **DESIGN.md** - 原有的整体架构设计（已整合到主文档）
-3. **IMPLEMENTATION_PLAN.md** - 原有的详细实施计划（已整合到主文档）
-
-**推荐：** 直接阅读 CONSOLIDATED_DESIGN.md，内容更完整、结构更清晰。
+**重大架构变更：** 基于项目重合度考虑（指标数据、前端展示、用户管理），决定将虚拟交易功能直接集成到现有 stock_kanban 项目中，而非创建独立服务。
 
 ---
 
-## 核心决策
+## 核心变更
 
-### 1️⃣ 在哪里做？
+### 架构决策：集成 vs 独立
 
-**推荐：创建独立的 `stock_trading_sim` 后端服务**
+| 方面 | 独立服务 (v1.0) | 集成方案 (v3.0 ⭐ 当前) |
+|------|----------------|-------------------|
+| 部署 | 需要独立部署 | 单一服务 |
+| 用户管理 | 需要同步 | 共享现有users表 |
+| 指标计算 | 重复开发 | 复用stockService |
+| 前端组件 | 重复开发 | 复用现有组件 |
+| 数据库 | 需要数据同步 | 同一数据库 |
+| 运维复杂度 | 高 | 低 |
+
+**结论：** 集成方案更合适，降低复杂度，提高代码复用率。
+
+---
+
+## 项目结构（更新）
 
 ```
-stock_kanban (前端)  ←→  stock_trading_sim (交易后端-新)  ←→  stock_quant_work (量化引擎)
-    展示数据              虚拟交易/回测/结算                    生成信号
+stock_kanban/  (现有项目扩展)
+├── client/src/
+│   ├── components/
+│   │   ├── backtest/        # 新增：回测组件
+│   │   ├── portfolio/       # 新增：投资组合组件
+│   │   └── ... (现有组件复用)
+│   ├── pages/
+│   │   ├── Backtest.tsx     # 新增
+│   │   ├── Portfolio.tsx    # 新增
+│   │   └── Compare.tsx      # 新增
+│   └── lib/
+│       ├── backtestApi.ts   # 新增
+│       └── portfolioApi.ts  # 新增
+│
+├── server/
+│   ├── stockService.ts      # 现有：复用
+│   ├── backtestService.ts   # 新增：回测引擎
+│   ├── portfolioService.ts  # 新增
+│   ├── tradingEngine.ts     # 新增
+│   └── historicalDataService.ts  # 新增
+│
+├── shared/
+│   ├── schema.ts            # 扩展：添加回测表
+│   ├── types/               # 新增：类型定义
+│   └── indicators/          # 新增：指标库（提取自stockService）
+│
+└── data/
+    ├── quant-metrics-*.json  # 现有：单时间点
+    └── historical-signals/   # 新增：历史信号数据
+        ├── us/
+        │   ├── algorithm-a/
+        │   │   └── 2024-01.json  # 按月分片
+        │   ├── algorithm-b/
+        │   └── algorithm-c/
+        ├── cn/
+        └── hk/
 ```
 
-**理由：**
-- ✅ 职责清晰分离
-- ✅ 独立扩展和部署
-- ✅ 便于未来功能迭代
+---
 
-### 2️⃣ 先做什么？
+## 历史信号数据接口（新增）
 
-**Phase 1 优先：回测功能（3-4周）**
+### 问题
 
-回测是核心需求，包含：
-- 完整的回测引擎（逐日模拟）
-- 交易成本模拟（佣金+滑点）
-- 性能指标计算
-- 资产曲线展示
+**现状：** 现有信号数据（quant-metrics-*.json）只包含单个时间点
+**需求：** 回测需要连续的历史信号数据
 
-**为什么先做回测？**
-1. 用户核心需求
-2. 技术基础（包含大部分交易逻辑）
-3. 数据准备（历史信号已存在）
-4. 快速验证算法效果
-5. 为实盘交易铺路
+### 解决方案
 
-### 3️⃣ 多策略支持
+#### 1. 数据格式：按月分片
 
-**设计理念：基于多算法信号**
-- 统一使用信号跟随策略框架
-- 后端提供多种量化算法（Algorithm A/B/C...）
-- 每个算法生成独立的信号数据集
-- 每个算法对应一个策略供前端选择
-
-**对比维度：**
-- 收益率、年化收益、夏普比率
-- 最大回撤、波动率、胜率
-- 资产曲线对比图
-
-### 4️⃣ 数据存储
-
-**数据库：PostgreSQL（统一管理）**
-
-**核心表：**
-- `strategies` - 策略定义
-- `portfolios` - 投资组合（区分回测/实时）
-- `holdings` - 当前持仓
-- `trades` - 交易记录
-- `daily_settlements` - 每日结算
-- `strategy_performance` - 性能指标
-
-**原则：** 所有虚拟交易数据统一在一个数据库中管理。
-
-### 5️⃣ 技术指标
-
-**现有实现（stock_kanban）：**
-- RSI (14)
-- SMA
-- EMA
-- MACD
-- Bollinger Bands
-
-**策略：** 提取为共享库，避免重复开发。新系统直接复用。
-
-**可扩展指标（参考 Backtrader）：**
-- 趋势指标：ADX、Parabolic SAR
-- 动量指标：Stochastic、CCI
-- 成交量指标：OBV、VWAP
-- 波动率指标：ATR、Keltner Channels
-
-### 6️⃣ 前端页面
-
-**新增页面：**
-1. `/backtest` - 回测中心（配置和启动回测）
-2. `/backtest/:id/results` - 回测结果展示
-3. `/compare` - 算法对比
-
-**可视化功能（借鉴 Backtrader）：**
-- 价格走势与指标叠加
-- 买卖信号标记
-- 资产曲线图（Recharts）
-- 回撤曲线图
-- 性能指标卡片
-
-## 实施路线图
-
-### Phase 1 (3-4周) - 回测核心 ⭐ **优先**
-- 创建后端项目 + 数据库
-- 实现回测引擎（逐日模拟）
-- 交易成本模拟（佣金+滑点）
-- 前端基础展示页面
-- 性能指标计算
-
-**完成目标：** 运行单一算法回测，查看资产曲线和指标
-
-### Phase 2 (2-3周) - 多算法对比
-- 支持多算法并行回测
-- 算法对比页面
-- 相关性分析
-- 更多图表类型
-
-**完成目标：** 对比多个算法的表现
-
-### Phase 3 (2-3周) - 实时交易与用户
-- 实时虚拟交易（非回测）
-- 每日自动结算
-- 用户系统（注册/登录）
-- 风险管理模块
-
-### Phase 4 (持续) - 高级功能
-- 更多技术指标
-- 策略参数优化
-- 移动端适配
-- 社区功能
-
-## 关键问题解答
-
-### Q1: 回测和实时交易分开吗？
-A: 使用同一套系统和数据库，通过 `type` 字段区分（'backtest' 或 'live'）。
-
-### Q2: 现有指标需要重写吗？
-A: 不需要。stock_kanban 已实现核心指标，提取为共享库复用。
-
-### Q3: 数据怎么统一管理？
-A: 所有虚拟交易数据在 PostgreSQL 统一管理，信号数据继续用 JSON。
-
-### Q4: Phase 1 完成后能用吗？
-A: 可以。能配置并运行回测，查看完整的性能分析。
-
-### Q5: 需要大改前端吗？
-A: 不需要。新增几个页面，复用现有组件和图表库。
-
-## 技术栈
-
-**后端 (stock_trading_sim - 新建):**
 ```
-Node.js 20 + Express 5 + TypeScript 5
-PostgreSQL 16 + Drizzle ORM
-Yahoo Finance API (价格数据)
+data/historical-signals/{market}/{algorithm}/{YYYY-MM}.json
 ```
 
-**前端 (stock_kanban - 扩展):**
+**示例：** `data/historical-signals/us/algorithm-a/2024-01.json`
+
+```json
+{
+  "metadata": {
+    "market": "us",
+    "algorithm": "algorithm-a",
+    "year": 2024,
+    "month": 1,
+    "trading_days": 21,
+    "generated_at": "2024-02-01T00:00:00Z"
+  },
+  "signals": [
+    {
+      "date": "2024-01-02",
+      "tickers": [
+        {
+          "ticker": "AAPL",
+          "signal": "BUY",
+          "score": 0.25,
+          "rank": 8,
+          "predictedReturn": 0.072,
+          "confidence": 0.85,
+          "risk": {
+            "vol60": -1.196,
+            "maxdd252": 0.683
+          }
+        }
+      ]
+    }
+  ]
+}
 ```
-React + TypeScript + Tailwind (现有)
-Recharts (图表库 - 已有)
+
+#### 2. TypeScript 接口
+
+```typescript
+// shared/types/signal.ts
+
+export interface StockSignal {
+  ticker: string;
+  signal: 'BUY' | 'SELL' | 'HOLD' | 'RISK_ALERT';
+  score?: number;
+  rank?: number;
+  predictedReturn?: number;
+  confidence?: number;
+  risk?: {
+    vol60?: number;
+    maxdd252?: number;
+  };
+}
+
+export interface DailySignals {
+  date: string;  // YYYY-MM-DD
+  tickers: StockSignal[];
+}
+
+export interface HistoricalSignalFile {
+  metadata: HistoricalSignalMetadata;
+  signals: DailySignals[];
+}
 ```
+
+#### 3. 服务接口
+
+```typescript
+// server/historicalDataService.ts
+
+class HistoricalSignalService {
+  // 查询历史信号数据
+  async getHistoricalSignals(query: {
+    market: string;
+    algorithm: string;
+    startDate: Date;
+    endDate: Date;
+  }): Promise<HistoricalSignalResult>;
+  
+  // 获取指定日期的信号
+  async getSignalsByDate(
+    market: string, 
+    algorithm: string, 
+    date: Date
+  ): Promise<DailySignals | null>;
+  
+  // 获取可用算法列表
+  async getAvailableAlgorithms(market: string): Promise<string[]>;
+}
+```
+
+#### 4. API 端点
+
+```typescript
+GET  /api/signals/algorithms?market=us
+GET  /api/signals/range/:algorithm?market=us
+POST /api/signals/query
+     Body: { market, algorithm, startDate, endDate }
+```
+
+---
+
+## 与 stock_quant_work 协作
+
+### stock_quant_work 需要的改动
+
+1. **保持现有输出**
+   - 继续生成 quant-metrics-*.json（单时间点）
+
+2. **新增历史数据输出**
+   - 按月生成历史信号JSON文件
+   - 输出到 ../stock_kanban/data/historical-signals/
+
+3. **建议命令行参数**
+   ```bash
+   # 生成历史数据
+   python main.py --export-historical --market us --algorithm algorithm-a --year 2024 --month 1
+   
+   # 生成当前数据（现有）
+   python main.py --export-current
+   ```
+
+### 初始数据准备
+
+**选项1：** 回填历史数据（如果有历史计算结果）  
+**选项2：** 重新计算（使用历史价格数据）  
+**选项3：** 模拟数据（开发测试用）
+
+---
+
+## 实施路线图（更新）
+
+### Phase 1: 历史数据基础设施（1-2周）⭐ **优先**
+
+**目标：** 建立历史信号数据的存储、查询和API
+
+- [ ] 定义TypeScript类型（shared/types/signal.ts）
+- [ ] 实现HistoricalSignalService
+- [ ] 创建数据目录结构
+- [ ] 添加API端点
+- [ ] 准备测试数据（1-3个月）
+
+**完成标志：** 能够查询和获取历史信号数据
+
+### Phase 2: 回测引擎核心（2-3周）
+
+- [ ] 扩展数据库schema（回测相关表）
+- [ ] 提取指标库（shared/indicators/）
+- [ ] 实现BacktestService
+- [ ] 实现TradingEngine
+- [ ] 前端回测页面
+
+**完成标志：** 运行单一算法的完整回测
+
+### Phase 3: 多算法对比（2周）
+
+- [ ] 多算法并行回测
+- [ ] 对比页面
+- [ ] 性能优化
+
+### Phase 4: 实时虚拟交易（2-3周）
+
+- [ ] 实时投资组合
+- [ ] 每日自动结算
+- [ ] 用户权限
+
+---
+
+## 集成优势
+
+1. ✅ **共享用户管理** - 复用现有users表和认证
+2. ✅ **共享指标计算** - 复用stockService中的指标
+3. ✅ **共享前端组件** - 复用StockCard、图表等
+4. ✅ **统一部署** - 单一服务，降低运维
+5. ✅ **数据一致性** - 同一数据库，避免同步
+
+---
+
+## 文档索引
+
+**主要文档：**
+- ⭐ **INTEGRATED_ARCHITECTURE.md** - 集成架构设计（当前版本）
+- 📚 INDICATOR_ANALYSIS.md - 指标分析
+
+**参考文档：**
+- 📦 CONSOLIDATED_DESIGN.md - 原独立服务设计（归档）
+- 📦 DESIGN.md - 原始设计（归档）
+- 📦 IMPLEMENTATION_PLAN.md - 原实施计划（归档）
+
+**框架参考：**
+- docs/REFERENCE_Backtrader.md
+- docs/REFERENCE_Zipline.md
+- docs/REFERENCE_QuantConnect.md
+
+---
 
 ## 下一步行动
 
-1. ✅ 评审整合后的设计文档
-2. ⬜ 创建 `stock_trading_sim` 仓库
-3. ⬜ 数据库 Schema 实施
-4. ⬜ 开始 Phase 1 开发（回测引擎）
+1. ✅ 评审集成架构设计
+2. ⬜ 与 stock_quant_work 协调历史数据输出
+3. ⬜ 准备测试数据（1-3个月）
+4. ⬜ 开始 Phase 1 实施
 
 ---
 
-**详细内容请查看：** [CONSOLIDATED_DESIGN.md](./CONSOLIDATED_DESIGN.md)
+**文档版本：** v3.0（集成架构）  
+**最后更新：** 2026-02-06
