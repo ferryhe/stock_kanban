@@ -901,11 +901,22 @@ interface DisasterRecovery {
 
 ### 10.4 下一步行动
 
-1. **评审本设计文档**
-2. **确定实施范围**（MVP vs. 完整方案）
-3. **创建 stock_trading_sim 仓库**
-4. **数据库迁移脚本编写**
-5. **开始 Phase 1 开发**
+1. ✅ **评审本设计文档**
+2. ✅ **学习参考框架**（Backtrader, Zipline, QuantConnect）
+3. ✅ **制定详细实施计划** - 见 [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)
+4. ⬜ **创建 stock_trading_sim 仓库**
+5. ⬜ **数据库迁移脚本编写**
+6. ⬜ **开始 Phase 1 开发**
+
+**详细实施计划请查看：** [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)
+
+该文档包含：
+- 模块化架构设计（减少代码量）
+- 回测功能详细设计
+- 交易成本模拟（佣金+滑点）
+- 技术指标库（可复用）
+- 性能指标计算
+- 调整后的实施路线图
 
 ---
 

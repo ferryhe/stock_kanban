@@ -137,11 +137,14 @@ POST   /api/compare/strategies
 ## 下一步行动
 
 1. ✅ 评审 DESIGN.md
-2. ⬜ 确定 MVP 范围
-3. ⬜ 创建 `stock_trading_sim` 仓库
-4. ⬜ 数据库 Schema 实施
-5. ⬜ 开始 Phase 1 开发
+2. ✅ 学习参考框架
+3. ✅ 制定详细实施计划
+4. ⬜ 创建 `stock_trading_sim` 仓库
+5. ⬜ 数据库 Schema 实施
+6. ⬜ 开始 Phase 1 开发
 
 ---
 
-**详细内容请查看：** [DESIGN.md](./DESIGN.md) (924行完整设计文档)
+**详细内容请查看：**
+- [DESIGN.md](./DESIGN.md) - 924行完整设计文档
+- [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - 详细实施计划（包含模块化设计、回测引擎、技术指标库等）
