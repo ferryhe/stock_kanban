@@ -85,3 +85,9 @@ bash deploy/docker-deploy-simple.sh
 ## 许可
 
 MIT License
+
+## Backtest Persistence (PostgreSQL)
+
+- Backtest results are persisted when \\DATABASE_URL\\ is configured.
+- Without \\DATABASE_URL\\, the app falls back to in-memory backtest storage.
+- Linux deployment guide: \\LINUX_FRONTEND_PGSQL_CONFIG.md\\`n
