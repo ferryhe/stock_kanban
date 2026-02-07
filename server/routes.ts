@@ -234,10 +234,10 @@ export async function registerRoutes(
   });
 
   // Get single backtest result
-  app.get("/api/backtests/:id", (req, res) => {
+  app.get("/api/backtests/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = getBacktestResult(id);
+      const result = await getBacktestResult(id);
       if (!result) {
         return res.status(404).json({ error: "Backtest result not found" });
       }

@@ -11,6 +11,7 @@ import {
 import { runBacktestEngine } from "./engine";
 import { loadHistoricalPrices } from "./priceProvider";
 import { getAvailableBacktestAlgorithms, loadSignalSnapshot } from "./signalProvider";
+import { getBacktestResultFromDb, saveBacktestResultToDb } from "./repository";
 
 const MAX_RESULT_CACHE = 100;
 
@@ -201,11 +202,25 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
   });
 
   putResult(result);
+  try {
+    await saveBacktestResultToDb(result);
+  } catch (error) {
+    console.error("[Backtest] Failed to persist result to PostgreSQL:", error);
+  }
   return result;
 }
 
-export function getBacktestResult(id: string): BacktestResult | null {
-  return resultStore.get(id) ?? null;
+export async function getBacktestResult(id: string): Promise<BacktestResult | null> {
+  const cached = resultStore.get(id);
+  if (cached) {
+    return cached;
+  }
+
+  const fromDb = await getBacktestResultFromDb(id);
+  if (fromDb) {
+    putResult(fromDb);
+  }
+  return fromDb;
 }
 
 export async function runBacktestCompare(
