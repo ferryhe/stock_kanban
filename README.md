@@ -88,6 +88,7 @@ MIT License
 
 ## Backtest Persistence (PostgreSQL)
 
-- Backtest results are persisted when \\DATABASE_URL\\ is configured.
-- Without \\DATABASE_URL\\, the app falls back to in-memory backtest storage.
-- Linux deployment guide: \\LINUX_FRONTEND_PGSQL_CONFIG.md\\`n
+- Backtest results are persisted when `DATABASE_URL` is configured.
+- Without `DATABASE_URL`, the app falls back to in-memory backtest storage.
+- Run `npm run db:prepare` before `npm run db:push` on a fresh PostgreSQL database.
+- Linux deployment guide: `LINUX_FRONTEND_PGSQL_CONFIG.md`

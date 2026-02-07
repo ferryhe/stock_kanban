@@ -18,6 +18,7 @@ set +a
 
 echo "[Start] Running DB schema sync (if DATABASE_URL is set)"
 if [ -n "$DATABASE_URL" ]; then
+  npm run db:prepare
   npm run db:push
 else
   echo "[Start] DATABASE_URL is empty, skip db:push"

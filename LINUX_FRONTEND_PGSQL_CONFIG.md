@@ -42,6 +42,7 @@ Notes:
 
 ```bash
 npm install
+npm run db:prepare
 npm run db:push
 ```
 
