@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
+import BacktestCenter from "@/pages/BacktestCenter";
+import BacktestResultsPage from "@/pages/BacktestResultsPage";
+import ComparePage from "@/pages/ComparePage";
 import { useEffect } from "react";
 import { LanguageProvider } from "./lib/i18n";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -13,6 +16,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/backtest" component={BacktestCenter} />
+      <Route path="/backtest/:id/results" component={BacktestResultsPage} />
+      <Route path="/compare" component={ComparePage} />
       <Route component={NotFound} />
     </Switch>
   );

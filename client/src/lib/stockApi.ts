@@ -1,4 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  type BacktestAlgorithm,
+  type BacktestConfig,
+  type BacktestResult,
+} from "@shared/backtest";
 
 export type SignalType = "BUY" | "SELL" | "NEUTRAL" | "WARNING";
 
@@ -484,4 +489,93 @@ export const useLeaderboardData = (market: string, enabled: boolean = true) => {
     staleTime: 60000, // 1 minute
     refetchInterval: 60000,
   });
+};
+
+export const useBacktestAlgorithms = () => {
+  return useQuery<BacktestAlgorithm[]>({
+    queryKey: ["backtests", "algorithms"],
+    queryFn: async () => {
+      const res = await fetch("/api/backtests/algorithms");
+      if (!res.ok) {
+        throw new Error("Failed to fetch backtest algorithms");
+      }
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+};
+
+export const runBacktestRequest = async (
+  config: BacktestConfig,
+): Promise<BacktestResult> => {
+  const res = await fetch("/api/backtests", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...withUiLang().headers,
+    },
+    body: JSON.stringify(config),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run backtest";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const useBacktestResult = (id: string, enabled: boolean = true) => {
+  return useQuery<BacktestResult>({
+    queryKey: ["backtests", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/backtests/${id}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch backtest result");
+      }
+      return res.json();
+    },
+    enabled: enabled && id.length > 0,
+    staleTime: 60_000,
+  });
+};
+
+export const runBacktestCompareRequest = async (
+  algorithms: BacktestAlgorithm[],
+  config: Omit<BacktestConfig, "algorithm">,
+): Promise<BacktestResult[]> => {
+  const res = await fetch("/api/backtests/compare", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...withUiLang().headers,
+    },
+    body: JSON.stringify({
+      algorithms,
+      config,
+    }),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run backtest compare";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
 };
