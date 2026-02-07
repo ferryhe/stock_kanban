@@ -1,6 +1,14 @@
 import type { Express, Request } from "express";
 import { type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate, getAvailableLeaderboards, getLeaderboardData } from "./stockService";
+import {
+  getBacktestAlgorithms,
+  getBacktestResult,
+  normalizeBacktestConfig,
+  runBacktest,
+  runBacktestCompare,
+} from "./backtest/service";
+import { type BacktestAlgorithm } from "../shared/backtest";
 
 const getUiLang = (req: Request) => {
   const uiHeader = req.headers["x-ui-lang"];
@@ -190,6 +198,90 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in /api/leaderboard:", error);
       res.status(500).json({ error: "Failed to fetch leaderboard data" });
+    }
+  });
+
+  // Get available algorithms for backtesting
+  app.get("/api/backtests/algorithms", (_req, res) => {
+    try {
+      const algorithms = getBacktestAlgorithms();
+      res.json(algorithms);
+    } catch (error) {
+      console.error("Error in /api/backtests/algorithms:", error);
+      res.status(500).json({ error: "Failed to fetch backtest algorithms" });
+    }
+  });
+
+  // Run a single backtest
+  app.post("/api/backtests", async (req, res) => {
+    try {
+      const config = normalizeBacktestConfig(req.body);
+      const available = getBacktestAlgorithms();
+      if (!available.includes(config.algorithm)) {
+        return res.status(400).json({
+          error: `Algorithm not available: ${config.algorithm}`,
+        });
+      }
+
+      const result = await runBacktest(config);
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/backtests:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run backtest";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get single backtest result
+  app.get("/api/backtests/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = getBacktestResult(id);
+      if (!result) {
+        return res.status(404).json({ error: "Backtest result not found" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/backtests/:id:", error);
+      res.status(500).json({ error: "Failed to fetch backtest result" });
+    }
+  });
+
+  // Run multiple algorithms for compare view
+  app.post("/api/backtests/compare", async (req, res) => {
+    try {
+      const rawAlgorithms = Array.isArray(req.body?.algorithms)
+        ? req.body.algorithms
+        : [];
+      const algorithms = rawAlgorithms
+        .filter((item: unknown): item is string => typeof item === "string")
+        .map((item: string) => item.toLowerCase())
+        .filter(
+          (item: string): item is BacktestAlgorithm =>
+            item === "us" || item === "cn" || item === "hk",
+        );
+
+      if (algorithms.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "At least one algorithm is required" });
+      }
+
+      const firstConfig = normalizeBacktestConfig({
+        ...(req.body?.config ?? {}),
+        algorithm: algorithms[0],
+      });
+      const { algorithm: _ignored, ...baseConfig } = firstConfig;
+
+      const results = await runBacktestCompare(algorithms, baseConfig);
+      res.json(results);
+    } catch (error) {
+      console.error("Error in /api/backtests/compare:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run backtest compare";
+      res.status(400).json({ error: message });
     }
   });
 
