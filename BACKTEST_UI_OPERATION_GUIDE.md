@@ -13,6 +13,7 @@ You can enter the new flow in two ways:
 
 2. Direct routes
 - Backtest center: `/backtest`
+- Backtest history: `/backtest/history`
 - Backtest result: `/backtest/:id/results`
 - Compare page: `/compare`
 
@@ -66,8 +67,34 @@ What to check:
 Operation tips:
 - Use `New Backtest` to rerun with changed parameters.
 - Use `Compare` to switch to multi-algorithm view.
+- Use `History` to return to the historical run list.
 
-## 4. Compare Page (`/compare`)
+## 4. Backtest History Page (`/backtest/history`)
+
+Main purpose:
+- Query previous runs from PostgreSQL-backed history records.
+
+Filters:
+- `Algorithm`: `All` / `US` / `CN` / `HK`
+- `Run Date From`
+- `Run Date To`
+
+Operation steps:
+1. Open `/backtest/history`
+2. Set algorithm/date filters
+3. Click `Apply Filters`
+4. Click `View` on any row to open `/backtest/:id/results`
+
+Expected outputs:
+- Rows sorted by latest run time first
+- Key metrics visible in list:
+  - final value
+  - total return
+  - sharpe ratio
+  - max drawdown
+  - total trades
+
+## 5. Compare Page (`/compare`)
 
 Main purpose:
 - Run multiple algorithms under same config and compare outcomes.
@@ -85,16 +112,17 @@ Expected outputs:
 API behind this page:
 - `POST /api/backtests/compare`
 
-## 5. Recommended Test Script (UI)
+## 6. Recommended Test Script (UI)
 
 1. Run one backtest in `/backtest`
 2. Confirm result page loads chart + table
 3. Open `/compare`, run at least two algorithms
 4. Confirm compare chart and summary table update
-5. Refresh result URL directly and confirm data still loads
+5. Open `/backtest/history`, verify list and filters
+6. Refresh result URL directly and confirm data still loads
    - with PostgreSQL configured, result remains queryable after service restart
 
-## 6. Common Issues
+## 7. Common Issues
 
 1. Algorithm list empty
 - check `/api/backtests/algorithms`

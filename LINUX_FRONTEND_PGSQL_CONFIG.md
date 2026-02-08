@@ -50,6 +50,7 @@ npm run db:push
 
 ```bash
 psql "$DATABASE_URL" -f deploy/sql/001_backtest_results.sql
+psql "$DATABASE_URL" -f deploy/sql/002_core_trading_tables.sql
 ```
 
 ## 4. Build and run (PM2)
@@ -136,6 +137,12 @@ curl -X POST http://127.0.0.1:3000/api/backtests \
 psql "$DATABASE_URL" -c "select count(*) from backtest_results;"
 ```
 
+5. Query backtest history API:
+```bash
+curl "http://127.0.0.1:3000/api/backtests/history?limit=10"
+curl "http://127.0.0.1:3000/api/backtests/history?algorithm=us&runDateFrom=2026-02-01&runDateTo=2026-02-08"
+```
+
 ## 8. Frontend integration notes
 
 - Frontend uses relative API paths (`/api/...`), so no frontend env change is required when API and static are served from same domain.
@@ -149,8 +156,11 @@ psql "$DATABASE_URL" -c "select count(*) from backtest_results;"
 2. `relation backtest_results does not exist`
 - Run `npm run db:push` or execute `deploy/sql/001_backtest_results.sql`.
 
-3. SSL connection errors
+3. `relation portfolios/strategies does not exist`
+- Run `npm run db:push` or execute `deploy/sql/002_core_trading_tables.sql`.
+
+4. SSL connection errors
 - Set `PGSSL=true` and verify server CA policy.
 
-4. Backtest ID can be queried immediately but disappears after restart
+5. Backtest ID can be queried immediately but disappears after restart
 - This indicates DB persistence is not active and app is using in-memory fallback.
