@@ -13,6 +13,12 @@ import {
   runBacktestCompare,
 } from "./backtest/service";
 import { type BacktestAlgorithm } from "../shared/backtest";
+import {
+  getLivePortfolioSnapshot,
+  normalizeLiveTradingAlgorithm,
+  runLiveSettlementOnce,
+  runLiveTradingCycle,
+} from "./liveTrading/service";
 
 const getUiLang = (req: Request) => {
   const uiHeader = req.headers["x-ui-lang"];
@@ -75,6 +81,11 @@ const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
     req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).userId) : undefined;
   const raw = headerUserId ?? queryUserId ?? bodyUserId;
   return normalizeBacktestUserId(raw);
+};
+
+const getLiveUserIdFromRequest = (req: Request): string => {
+  const userId = getBacktestUserIdFromRequest(req);
+  return userId ?? "demo-user";
 };
 
 export const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
@@ -338,6 +349,49 @@ export async function registerRoutes(
       console.error("Error in /api/backtests/compare:", error);
       const message =
         error instanceof Error ? error.message : "Failed to run backtest compare";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Run one live paper-trading cycle
+  app.post("/api/live/run", async (req, res) => {
+    try {
+      const userId = getLiveUserIdFromRequest(req);
+      const algorithm = normalizeLiveTradingAlgorithm(req.body?.algorithm ?? "us");
+      const result = await runLiveTradingCycle(userId, algorithm);
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/live/run:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run live trading cycle";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get current live portfolio snapshot
+  app.get("/api/live/portfolio", async (req, res) => {
+    try {
+      const userId = getLiveUserIdFromRequest(req);
+      const algorithm = normalizeLiveTradingAlgorithm(req.query.algorithm ?? "us");
+      const snapshot = await getLivePortfolioSnapshot(userId, algorithm);
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error in /api/live/portfolio:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch live portfolio";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Trigger settlement once (for validation / ops)
+  app.post("/api/live/settle-now", async (_req, res) => {
+    try {
+      const result = await runLiveSettlementOnce();
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/live/settle-now:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run live settlement";
       res.status(400).json({ error: message });
     }
   });

@@ -3,6 +3,7 @@ import { DEFAULT_WATCHLISTS, registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { scheduleZhNameUpdate } from "./stockService";
+import { startLiveSettlementScheduler } from "./liveTrading/service";
 
 const app = express();
 const httpServer = createServer(app);
@@ -66,6 +67,7 @@ app.use((req, res, next) => {
     .flatMap((list) => list.tickers)
     .map((symbol) => symbol.toUpperCase());
   scheduleZhNameUpdate(defaultSymbols, "zh");
+  startLiveSettlementScheduler();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
