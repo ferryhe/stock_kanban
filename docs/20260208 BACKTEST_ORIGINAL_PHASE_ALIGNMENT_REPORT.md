@@ -1,4 +1,4 @@
-# Backtest Original-Phase Alignment Report
+﻿# Backtest Original-Phase Alignment Report
 
 Date: 2026-02-08
 Status: Updated
@@ -24,6 +24,14 @@ This file aligns the two and lists remaining work against the original roadmap.
 3. Internal `BACKTEST_PHASE5`
 - Maps to original `Phase 3` subset
 - Scope delivered: lightweight user-scoped isolation (`x-user-id`), status filtering, pagination.
+
+4. `BACKTEST_ORIGINAL_PHASE2_WAVE1`
+- Maps to original `Phase 2` remaining bundle
+- Scope delivered: compare analytics enhancement + CSV/PDF export + price cache benchmark.
+
+5. `BACKTEST_ORIGINAL_PHASE3_WAVE1`
+- Maps to original `Phase 3` Week 1
+- Scope delivered: live paper trading API/service/scheduler and `/live` frontend page.
 
 ## 3. Original roadmap completion status
 
@@ -60,15 +68,17 @@ Not done:
 
 ### Original Phase 3: 实时虚拟交易与用户系统
 
-Status: Partially started
+Status: Week 1 completed, Week 2-3 pending
 
 Done:
 - lightweight data isolation by `user_id` on backtest paths
 - user-scoped history/result/persistence query checks
+- real-time paper trading endpoint (`/api/live/run`)
+- live portfolio snapshot endpoint (`/api/live/portfolio`)
+- daily settlement scheduler + manual trigger endpoint (`/api/live/settle-now`)
+- frontend live page (`/live`) with holdings/PnL/trades visualization
 
 Not done:
-- real-time paper trading (non-backtest)
-- daily scheduled settlement jobs
 - full auth system (register/login/session/token)
 - user preferences
 - full portfolio management workflow
@@ -92,12 +102,12 @@ To avoid phase naming confusion:
 1. Keep existing files unchanged for history traceability.
 2. In every new phase doc, include explicit mapping section:
 - `Mapping to CONSOLIDATED_DESIGN Phase X`
-3. Treat `BACKTEST_PHASE*` in `docs/` as **execution waves**, not the original product phase IDs.
+3. Treat `BACKTEST_PHASE*` in `docs/` as execution waves, not the original product phase IDs.
 
 ## 5. Next work package suggestion (strictly aligned to original roadmap)
 
-Recommended next package: original `Phase 2` remaining items
+Recommended next package: original `Phase 3` Week 2 (user system)
 
-1. Continue performance optimization with cross-process/shared cache strategy.
-2. Optional: enhance compare UX (advanced heatmap interaction/correlation diagnostics).
-3. Then move to original `Phase 3` core scope (real-time paper trading + auth system).
+1. Add real auth/session binding (replace lightweight `x-user-id` mode).
+2. Add user preference configuration.
+3. Expand portfolio management workflow (multi-live portfolios per user).

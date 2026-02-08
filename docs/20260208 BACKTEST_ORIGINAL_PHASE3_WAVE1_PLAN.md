@@ -1,7 +1,7 @@
 # Backtest Original Phase 3 Wave 1 Plan
 
 Date: 2026-02-08
-Status: In Progress
+Status: Completed
 Mapping: `CONSOLIDATED_DESIGN.md` original `Phase 3` Week 1 (实时交易基础)
 
 ## 1. Goal
@@ -41,17 +41,17 @@ Deliver the first executable slice of original Phase 3 Week 1:
 
 ## 4. Validation checklist
 
-- `npm run check`
-- `npm run build`
-- with PostgreSQL:
-  - run `POST /api/live/run`
-  - verify portfolio/holdings/trades change
-  - run scheduler one-shot and verify `daily_settlements` for today
-- `/live` page shows current value/cash/holdings/trades
+- [x] `npm run check`
+- [x] `npm run build`
+- [x] with PostgreSQL:
+  - [x] run `POST /api/live/run`
+  - [x] verify portfolio/holdings/trades change
+  - [x] run scheduler one-shot and verify `daily_settlements` for today
+- [x] `/live` page shows current value/cash/holdings/trades
 
 ## 5. Commit plan
 
-1. docs: add original phase3 wave1 plan
-2. feat(api): add live paper trading service + scheduler + routes
-3. feat(ui): add live trading dashboard page
-4. docs: add wave1 implementation/testing reports + align original plan checkboxes
+1. [x] docs: add original phase3 wave1 plan
+2. [x] feat(api): add live paper trading service + scheduler + routes
+3. [x] feat(ui): add live trading dashboard page
+4. [x] docs: add wave1 implementation/testing reports + align original plan checkboxes
