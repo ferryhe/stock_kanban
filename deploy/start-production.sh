@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # Production startup script for PM2 (Linux)
 set -e
 

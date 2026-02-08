@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # Stock Kanban Docker deployment script
 # - pull latest code

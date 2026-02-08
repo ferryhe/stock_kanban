@@ -286,6 +286,10 @@ export async function runBacktest(
   config: BacktestConfig,
   context?: BacktestRequestContext,
 ): Promise<BacktestResult> {
+  // NOTE: Current implementation uses a single signal snapshot for the entire backtest period.
+  // The design docs describe a historical signal data interface (daily signals over date range),
+  // but this Phase 1 MVP uses snapshot-only approach for simplicity.
+  // TODO Phase 2: Implement historical signal loading per trading day for more realistic backtests.
   const snapshot = await loadSignalSnapshot(config.algorithm);
   const tickers = getCoreTickers(config, snapshot.entries);
 
@@ -326,7 +330,8 @@ export async function getBacktestResult(
   if (cached) {
     if (context?.userId) {
       const owner = resultUserStore.get(id);
-      if (owner && owner !== context.userId) {
+      // Require exact match: deny access if owner is missing or doesn't match
+      if (!owner || owner !== context.userId) {
         return null;
       }
     }
@@ -384,11 +389,12 @@ export async function getBacktestHistory(
   const allItems = Array.from(resultStore.values())
     .filter((result) => (query.algorithm ? result.config.algorithm === query.algorithm : true))
     .filter((result) => (status ? "completed" === status : true))
-    .filter((result) =>
-      context?.userId
-        ? (resultUserStore.get(result.id) ?? context.userId) === context.userId
-        : true,
-    )
+    .filter((result) => {
+      if (!context?.userId) return true;
+      const owner = resultUserStore.get(result.id);
+      // Require exact match: only show results owned by this user
+      return owner === context.userId;
+    })
     .filter((result) => {
       const runMs = new Date(result.createdAt).getTime();
       if (fromMs !== null && runMs < fromMs) return false;

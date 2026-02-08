@@ -827,7 +827,7 @@ export default function ComparePage() {
                               ),
                             }}
                           >
-                            {typeof value === "number" ? formatPercentNullable(value) : "-"}
+                            {formatPercentNullable(typeof value === "number" ? value : null)}
                           </td>
                         );
                       })}

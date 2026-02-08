@@ -1,4 +1,4 @@
-﻿-- Backtest Phase 2: persistent storage for backtest results
+-- Backtest Phase 2: persistent storage for backtest results
 -- Execute on PostgreSQL 13+
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

@@ -22,7 +22,7 @@ import {
 } from "./backtest";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
 });
@@ -36,7 +36,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export const backtestResults = pgTable("backtest_results", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
   algorithm: varchar("algorithm", { length: 16 }).notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),

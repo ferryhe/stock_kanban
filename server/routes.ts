@@ -75,12 +75,24 @@ const firstString = (value: unknown): string | undefined => {
 };
 
 const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
+  // If ENABLE_USER_ISOLATION is not set or false, allow client-controlled userId (demo mode)
+  // In production with real auth, this should derive from session/JWT
+  const enableUserIsolation = process.env.ENABLE_USER_ISOLATION === "true";
+  
+  if (!enableUserIsolation) {
+    // Demo mode: accept client-provided userId for local testing
+    const headerUserId = firstString(req.headers["x-user-id"]);
+    const queryUserId = firstString(req.query.userId);
+    const bodyUserId =
+      req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).userId) : undefined;
+    const raw = headerUserId ?? queryUserId ?? bodyUserId;
+    return normalizeBacktestUserId(raw);
+  }
+  
+  // Production mode: derive userId from authentication
+  // TODO: Extract from JWT/session instead of client-controlled header
   const headerUserId = firstString(req.headers["x-user-id"]);
-  const queryUserId = firstString(req.query.userId);
-  const bodyUserId =
-    req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).userId) : undefined;
-  const raw = headerUserId ?? queryUserId ?? bodyUserId;
-  return normalizeBacktestUserId(raw);
+  return normalizeBacktestUserId(headerUserId);
 };
 
 const getLiveUserIdFromRequest = (req: Request): string => {
@@ -384,7 +396,15 @@ export async function registerRoutes(
   });
 
   // Trigger settlement once (for validation / ops)
-  app.post("/api/live/settle-now", async (_req, res) => {
+  // Requires ADMIN_SECRET header for security
+  app.post("/api/live/settle-now", async (req, res) => {
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (adminSecret) {
+      const providedSecret = req.headers["x-admin-secret"];
+      if (providedSecret !== adminSecret) {
+        return res.status(403).json({ error: "Forbidden: invalid or missing admin secret" });
+      }
+    }
     try {
       const result = await runLiveSettlementOnce();
       res.json(result);

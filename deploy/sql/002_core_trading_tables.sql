@@ -1,4 +1,4 @@
-﻿-- Backtest Phase 3: normalized trading tables from CONSOLIDATED_DESIGN 3.1
+-- Backtest Phase 3: normalized trading tables from CONSOLIDATED_DESIGN 3.1
 -- Execute on PostgreSQL 13+
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

@@ -1,3 +1,5 @@
+// Note: Currently uses market identifiers (us/cn/hk) as algorithm names
+// TODO: Refactor to support actual algorithm identifiers (algorithm-a/b/c) per market
 export type BacktestAlgorithm = "us" | "cn" | "hk";
 export type BacktestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
