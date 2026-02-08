@@ -6,6 +6,11 @@ import {
   type BacktestHistoryResponse,
   type BacktestResult,
 } from "@shared/backtest";
+import {
+  type LivePortfolioSnapshot,
+  type LiveSettlementRunResult,
+  type LiveTradingRunResult,
+} from "@shared/liveTrading";
 
 export type SignalType = "BUY" | "SELL" | "NEUTRAL" | "WARNING";
 
@@ -664,6 +669,85 @@ export const runBacktestCompareRequest = async (
 
   if (!res.ok) {
     let message = "Failed to run backtest compare";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const useLivePortfolio = (
+  algorithm: BacktestAlgorithm,
+  enabled: boolean = true,
+) => {
+  return useQuery<LivePortfolioSnapshot>({
+    queryKey: ["live", "portfolio", getBacktestUserId(), algorithm],
+    queryFn: async () => {
+      const res = await fetch(`/api/live/portfolio?algorithm=${algorithm}`, {
+        headers: withBacktestUserHeaders(),
+      });
+      if (!res.ok) {
+        let message = "Failed to fetch live portfolio";
+        try {
+          const body = await res.json();
+          if (body?.error && typeof body.error === "string") {
+            message = body.error;
+          }
+        } catch {
+          // ignore non-json body
+        }
+        throw new Error(message);
+      }
+      return res.json();
+    },
+    enabled,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+};
+
+export const runLiveTradingRequest = async (
+  algorithm: BacktestAlgorithm,
+): Promise<LiveTradingRunResult> => {
+  const res = await fetch("/api/live/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...withBacktestUserHeaders(),
+    },
+    body: JSON.stringify({ algorithm }),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run live trading";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const runLiveSettlementNowRequest = async (): Promise<LiveSettlementRunResult> => {
+  const res = await fetch("/api/live/settle-now", {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run live settlement";
     try {
       const body = await res.json();
       if (body?.error && typeof body.error === "string") {
