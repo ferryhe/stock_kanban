@@ -25,7 +25,7 @@ import {
 
 const MAX_RESULT_CACHE = 100;
 const resultStore = new Map<string, BacktestResult>();
-const resultUserStore = new Map<string, string | undefined>();
+const resultUserStore = new Map<string, string>();
 
 const DEFAULT_POSITION_PARAMS: BacktestPositionParams = {
   maxPositionPerStock: 0.1,
@@ -261,7 +261,9 @@ export function normalizeBacktestConfig(input: unknown): BacktestConfig {
 
 function putResult(result: BacktestResult, userId?: string): void {
   resultStore.set(result.id, result);
-  resultUserStore.set(result.id, userId);
+  if (userId) {
+    resultUserStore.set(result.id, userId);
+  }
 
   if (resultStore.size > MAX_RESULT_CACHE) {
     const firstKey = resultStore.keys().next().value;
@@ -330,9 +332,17 @@ export async function getBacktestResult(
   if (cached) {
     if (context?.userId) {
       const owner = resultUserStore.get(id);
-      // Require exact match: deny access if owner is missing or doesn't match
-      if (!owner || owner !== context.userId) {
+      if (owner && owner !== context.userId) {
         return null;
+      }
+      if (!owner) {
+        // Owner unknown in cache, verify against DB using caller identity.
+        const fromDb = await getBacktestResultFromDb(id, context.userId);
+        if (!fromDb) {
+          return null;
+        }
+        putResult(fromDb, context.userId);
+        return fromDb;
       }
     }
     return cached;
@@ -431,7 +441,7 @@ export async function getBacktestPersistenceSummary(
   }
   if (context?.userId) {
     const owner = resultUserStore.get(id);
-    if (owner && owner !== context.userId) {
+    if (!owner || owner !== context.userId) {
       return null;
     }
   }

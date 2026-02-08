@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response } from "express";
 import { type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate, getAvailableLeaderboards, getLeaderboardData } from "./stockService";
 import {
@@ -74,10 +74,13 @@ const firstString = (value: unknown): string | undefined => {
   return undefined;
 };
 
+const isUserIsolationEnabled = (): boolean =>
+  process.env.ENABLE_USER_ISOLATION === "true";
+
 const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
   // If ENABLE_USER_ISOLATION is not set or false, allow client-controlled userId (demo mode)
   // In production with real auth, this should derive from session/JWT
-  const enableUserIsolation = process.env.ENABLE_USER_ISOLATION === "true";
+  const enableUserIsolation = isUserIsolationEnabled();
   
   if (!enableUserIsolation) {
     // Demo mode: accept client-provided userId for local testing
@@ -95,9 +98,23 @@ const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
   return normalizeBacktestUserId(headerUserId);
 };
 
-const getLiveUserIdFromRequest = (req: Request): string => {
+const resolveBacktestUserIdOrReject = (
+  req: Request,
+  res: Response,
+): string | undefined => {
   const userId = getBacktestUserIdFromRequest(req);
-  return userId ?? "demo-user";
+  if (isUserIsolationEnabled() && !userId) {
+    res.status(401).json({ error: "Unauthorized: missing user identity" });
+    return undefined;
+  }
+  return userId;
+};
+
+const getLiveUserIdFromRequest = (req: Request): string | undefined => {
+  const userId = getBacktestUserIdFromRequest(req);
+  if (userId) return userId;
+  if (isUserIsolationEnabled()) return undefined;
+  return "demo-user";
 };
 
 export const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
@@ -258,7 +275,10 @@ export async function registerRoutes(
   app.post("/api/backtests", async (req, res) => {
     try {
       const config = normalizeBacktestConfig(req.body);
-      const userId = getBacktestUserIdFromRequest(req);
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
       const available = getBacktestAlgorithms();
       if (!available.includes(config.algorithm)) {
         return res.status(400).json({
@@ -279,7 +299,10 @@ export async function registerRoutes(
   // Get backtest history list with filters
   app.get("/api/backtests/history", async (req, res) => {
     try {
-      const userId = getBacktestUserIdFromRequest(req);
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
       const query = normalizeBacktestHistoryQuery(req.query);
       const response = await getBacktestHistory(query, { userId });
       res.json(response);
@@ -295,7 +318,10 @@ export async function registerRoutes(
   app.get("/api/backtests/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = getBacktestUserIdFromRequest(req);
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
       const result = await getBacktestResult(id, { userId });
       if (!result) {
         return res.status(404).json({ error: "Backtest result not found" });
@@ -314,7 +340,10 @@ export async function registerRoutes(
   app.get("/api/backtests/:id/persistence", async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = getBacktestUserIdFromRequest(req);
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
       const summary = await getBacktestPersistenceSummary(id, { userId });
       if (!summary) {
         return res.status(404).json({ error: "Backtest persistence not found" });
@@ -331,7 +360,10 @@ export async function registerRoutes(
   // Run multiple algorithms for compare view
   app.post("/api/backtests/compare", async (req, res) => {
     try {
-      const userId = getBacktestUserIdFromRequest(req);
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
       const rawAlgorithms = Array.isArray(req.body?.algorithms)
         ? req.body.algorithms
         : [];
@@ -369,6 +401,9 @@ export async function registerRoutes(
   app.post("/api/live/run", async (req, res) => {
     try {
       const userId = getLiveUserIdFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized: missing user identity" });
+      }
       const algorithm = normalizeLiveTradingAlgorithm(req.body?.algorithm ?? "us");
       const result = await runLiveTradingCycle(userId, algorithm);
       res.json(result);
@@ -384,6 +419,9 @@ export async function registerRoutes(
   app.get("/api/live/portfolio", async (req, res) => {
     try {
       const userId = getLiveUserIdFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized: missing user identity" });
+      }
       const algorithm = normalizeLiveTradingAlgorithm(req.query.algorithm ?? "us");
       const snapshot = await getLivePortfolioSnapshot(userId, algorithm);
       res.json(snapshot);
