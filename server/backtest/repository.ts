@@ -13,6 +13,8 @@ import {
   type BacktestAlgorithm,
   type BacktestHistoryItem,
   type BacktestHistoryQuery,
+  type BacktestHistoryResponse,
+  type BacktestStatus,
   type BacktestResult,
 } from "../../shared/backtest";
 
@@ -33,6 +35,19 @@ function normalizeAlgorithm(value: string): BacktestAlgorithm {
     return value;
   }
   return "us";
+}
+
+function normalizeStatus(value: string | null): BacktestStatus | null {
+  if (
+    value === "pending" ||
+    value === "running" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "cancelled"
+  ) {
+    return value;
+  }
+  return null;
 }
 
 function parseNumber(value: unknown, fallback = 0): number {
@@ -198,6 +213,7 @@ async function createPortfolio(
   tx: typeof db extends infer T ? NonNullable<T> : never,
   result: BacktestResult,
   strategyId: string,
+  userId?: string,
 ): Promise<string> {
   const latestPoint = result.equityCurve[result.equityCurve.length - 1];
 
@@ -205,6 +221,7 @@ async function createPortfolio(
     .insert(portfolios)
     .values({
       strategyId,
+      userId,
       name: `${result.config.algorithm.toUpperCase()} Backtest ${result.id.slice(0, 8)}`,
       type: "backtest",
       initialCash: num(result.config.initialCash, 2),
@@ -318,7 +335,10 @@ async function insertFinalHoldings(
   await tx.insert(holdings).values(rows);
 }
 
-export async function saveBacktestResultToDb(result: BacktestResult): Promise<boolean> {
+export async function saveBacktestResultToDb(
+  result: BacktestResult,
+  userId?: string,
+): Promise<boolean> {
   if (!isDatabaseEnabled || !db) {
     return false;
   }
@@ -339,7 +359,7 @@ export async function saveBacktestResultToDb(result: BacktestResult): Promise<bo
     });
 
     const strategyId = await ensureStrategy(tx, result);
-    const portfolioId = await createPortfolio(tx, result, strategyId);
+    const portfolioId = await createPortfolio(tx, result, strategyId, userId);
 
     await insertTrades(tx, portfolioId, result);
     await insertSettlements(tx, portfolioId, result);
@@ -350,39 +370,64 @@ export async function saveBacktestResultToDb(result: BacktestResult): Promise<bo
   return true;
 }
 
-export async function getBacktestResultFromDb(id: string): Promise<BacktestResult | null> {
+export async function getBacktestResultFromDb(
+  id: string,
+  userId?: string,
+): Promise<BacktestResult | null> {
   if (!isDatabaseEnabled || !db) {
     return null;
   }
 
-  const rows = await db
-    .select()
-    .from(backtestResults)
-    .where(eq(backtestResults.id, id))
-    .limit(1);
+  const rows =
+    userId && userId.length > 0
+      ? await db
+          .select({ result: backtestResults })
+          .from(backtestResults)
+          .innerJoin(portfolios, eq(portfolios.sourceBacktestResultId, backtestResults.id))
+          .where(and(eq(backtestResults.id, id), eq(portfolios.userId, userId)))
+          .limit(1)
+      : await db
+          .select({ result: backtestResults })
+          .from(backtestResults)
+          .where(eq(backtestResults.id, id))
+          .limit(1);
 
   if (rows.length === 0) {
     return null;
   }
 
-  return mapRowToResult(rows[0]);
+  return mapRowToResult(rows[0].result);
 }
 
 export async function listBacktestHistoryFromDb(
   query: BacktestHistoryQuery,
-): Promise<BacktestHistoryItem[] | null> {
+  userId?: string,
+): Promise<BacktestHistoryResponse | null> {
   if (!isDatabaseEnabled || !db) {
     return null;
   }
 
-  const limit = Math.max(1, Math.min(200, query.limit ?? 50));
+  const pageSize = Math.max(
+    1,
+    Math.min(200, query.pageSize ?? query.limit ?? 50),
+  );
+  const page = Math.max(1, query.page ?? 1);
+  const offset = (page - 1) * pageSize;
   const whereConditions = [
     eq(portfolios.type, "backtest"),
     isNotNull(portfolios.sourceBacktestResultId),
   ];
 
+  if (userId && userId.length > 0) {
+    whereConditions.push(eq(portfolios.userId, userId));
+  }
+
   if (query.algorithm) {
     whereConditions.push(eq(strategies.algorithmId, query.algorithm));
+  }
+
+  if (query.status) {
+    whereConditions.push(eq(portfolios.backtestStatus, query.status));
   }
 
   if (query.runDateFrom) {
@@ -397,11 +442,19 @@ export async function listBacktestHistoryFromDb(
     );
   }
 
+  const countRows = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(portfolios)
+    .innerJoin(strategies, eq(portfolios.strategyId, strategies.id))
+    .where(and(...whereConditions));
+  const total = parseCount(countRows[0]?.count);
+
   const rows = await db
     .select({
       backtestResultId: portfolios.sourceBacktestResultId,
       portfolioId: portfolios.id,
       strategyId: portfolios.strategyId,
+      userId: portfolios.userId,
       status: portfolios.backtestStatus,
       runAt: portfolios.createdAt,
       startDate: portfolios.backtestStartDate,
@@ -420,16 +473,18 @@ export async function listBacktestHistoryFromDb(
     .leftJoin(strategyPerformance, eq(strategyPerformance.portfolioId, portfolios.id))
     .where(and(...whereConditions))
     .orderBy(desc(portfolios.createdAt))
-    .limit(limit);
+    .offset(offset)
+    .limit(pageSize);
 
-  return rows
+  const items: BacktestHistoryItem[] = rows
     .filter((row) => row.backtestResultId !== null)
     .map((row) => ({
       backtestResultId: row.backtestResultId as string,
       portfolioId: row.portfolioId,
       strategyId: row.strategyId,
+      userId: row.userId,
       algorithm: normalizeAlgorithm(row.algorithm),
-      status: row.status,
+      status: normalizeStatus(row.status),
       runAt: toIso(row.runAt),
       startDate: toDateText(row.startDate),
       endDate: toDateText(row.endDate),
@@ -444,13 +499,27 @@ export async function listBacktestHistoryFromDb(
           ? null
           : parseNumber(row.totalTrades, 0),
     }));
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }
 
 export async function getBacktestPersistenceSummaryByResultId(
   backtestResultId: string,
+  userId?: string,
 ): Promise<BacktestPersistenceSummary | null> {
   if (!isDatabaseEnabled || !db) {
     return null;
+  }
+
+  const whereConditions = [eq(portfolios.sourceBacktestResultId, backtestResultId)];
+  if (userId && userId.length > 0) {
+    whereConditions.push(eq(portfolios.userId, userId));
   }
 
   const portfolioRows = await db
@@ -461,7 +530,7 @@ export async function getBacktestPersistenceSummaryByResultId(
       backtestStatus: portfolios.backtestStatus,
     })
     .from(portfolios)
-    .where(eq(portfolios.sourceBacktestResultId, backtestResultId))
+    .where(and(...whereConditions))
     .limit(1);
 
   if (portfolioRows.length === 0) {

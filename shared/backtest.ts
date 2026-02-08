@@ -1,4 +1,5 @@
-﻿export type BacktestAlgorithm = "us" | "cn" | "hk";
+export type BacktestAlgorithm = "us" | "cn" | "hk";
+export type BacktestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
 export type RebalanceFrequency = "daily" | "weekly" | "monthly";
 
@@ -81,8 +82,11 @@ export interface BacktestResult {
 
 export interface BacktestHistoryQuery {
   algorithm?: BacktestAlgorithm;
+  status?: BacktestStatus;
   runDateFrom?: string;
   runDateTo?: string;
+  page?: number;
+  pageSize?: number;
   limit?: number;
 }
 
@@ -90,6 +94,7 @@ export interface BacktestHistoryItem {
   backtestResultId: string;
   portfolioId: string;
   strategyId: string | null;
+  userId: string | null;
   algorithm: BacktestAlgorithm;
   status: string | null;
   runAt: string;
@@ -102,4 +107,12 @@ export interface BacktestHistoryItem {
   sharpeRatio: number | null;
   maxDrawdown: number | null;
   totalTrades: number | null;
+}
+
+export interface BacktestHistoryResponse {
+  items: BacktestHistoryItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 }

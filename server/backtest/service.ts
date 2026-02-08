@@ -4,6 +4,8 @@ import {
   type BacktestConfig,
   type BacktestHistoryItem,
   type BacktestHistoryQuery,
+  type BacktestHistoryResponse,
+  type BacktestStatus,
   type BacktestExecutionParams,
   type BacktestOptions,
   type BacktestPositionParams,
@@ -22,8 +24,8 @@ import {
 } from "./repository";
 
 const MAX_RESULT_CACHE = 100;
-
 const resultStore = new Map<string, BacktestResult>();
+const resultUserStore = new Map<string, string | undefined>();
 
 const DEFAULT_POSITION_PARAMS: BacktestPositionParams = {
   maxPositionPerStock: 0.1,
@@ -41,6 +43,10 @@ const DEFAULT_OPTIONS: BacktestOptions = {
   rebalanceFrequency: "weekly",
   benchmark: "SPY",
 };
+
+export interface BacktestRequestContext {
+  userId?: string;
+}
 
 function assertFinitePositive(value: number, name: string): void {
   if (!Number.isFinite(value) || value <= 0) {
@@ -82,6 +88,52 @@ function normalizeRebalanceFrequency(value: unknown): RebalanceFrequency {
   return DEFAULT_OPTIONS.rebalanceFrequency;
 }
 
+function normalizeStatus(value: unknown): BacktestStatus | undefined {
+  if (
+    value === "pending" ||
+    value === "running" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "cancelled"
+  ) {
+    return value;
+  }
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  throw new Error("status must be one of pending|running|completed|failed|cancelled");
+}
+
+function normalizePositiveInt(
+  value: unknown,
+  fieldName: string,
+  defaultValue: number,
+  max: number,
+): number {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(`${fieldName} must be a positive integer`);
+  }
+  return Math.min(max, Math.floor(n));
+}
+
+export function normalizeBacktestUserId(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const userId = value.trim();
+  if (userId.length === 0) {
+    return undefined;
+  }
+  if (userId.length > 64) {
+    throw new Error("userId must be <= 64 characters");
+  }
+  return userId;
+}
+
 function normalizeOptionalDate(value: unknown, name: string): string | undefined {
   if (value === undefined || value === null || value === "") {
     return undefined;
@@ -90,17 +142,6 @@ function normalizeOptionalDate(value: unknown, name: string): string | undefined
     throw new Error(`${name} must be a valid date (YYYY-MM-DD)`);
   }
   return parseDateString(value, name);
-}
-
-function normalizeLimit(value: unknown): number | undefined {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-  const limit = Number(value);
-  if (!Number.isFinite(limit)) {
-    throw new Error("limit must be a number");
-  }
-  return Math.max(1, Math.min(200, Math.floor(limit)));
 }
 
 export function getBacktestAlgorithms(): BacktestAlgorithm[] {
@@ -113,6 +154,7 @@ export function normalizeBacktestHistoryQuery(input: unknown): BacktestHistoryQu
     typeof query.algorithm === "string" && query.algorithm.length > 0
       ? normalizeAlgorithm(query.algorithm)
       : undefined;
+  const status = normalizeStatus(query.status);
 
   const runDateFrom = normalizeOptionalDate(query.runDateFrom, "runDateFrom");
   const runDateTo = normalizeOptionalDate(query.runDateTo, "runDateTo");
@@ -120,11 +162,22 @@ export function normalizeBacktestHistoryQuery(input: unknown): BacktestHistoryQu
     throw new Error("runDateFrom must be <= runDateTo");
   }
 
+  const page = normalizePositiveInt(query.page, "page", 1, 1_000_000);
+  const pageSize = normalizePositiveInt(
+    query.pageSize ?? query.limit,
+    "pageSize",
+    20,
+    200,
+  );
+
   return {
     algorithm,
+    status,
     runDateFrom,
     runDateTo,
-    limit: normalizeLimit(query.limit),
+    page,
+    pageSize,
+    limit: undefined,
   };
 }
 
@@ -206,13 +259,15 @@ export function normalizeBacktestConfig(input: unknown): BacktestConfig {
   };
 }
 
-function putResult(result: BacktestResult): void {
+function putResult(result: BacktestResult, userId?: string): void {
   resultStore.set(result.id, result);
+  resultUserStore.set(result.id, userId);
 
   if (resultStore.size > MAX_RESULT_CACHE) {
     const firstKey = resultStore.keys().next().value;
     if (firstKey) {
       resultStore.delete(firstKey);
+      resultUserStore.delete(firstKey);
     }
   }
 }
@@ -227,7 +282,10 @@ function getCoreTickers(resultConfig: BacktestConfig, snapshotEntries: { ticker:
   return snapshotEntries.slice(0, resultConfig.positionParams.maxTotalPositions).map((entry) => entry.ticker);
 }
 
-export async function runBacktest(config: BacktestConfig): Promise<BacktestResult> {
+export async function runBacktest(
+  config: BacktestConfig,
+  context?: BacktestRequestContext,
+): Promise<BacktestResult> {
   const snapshot = await loadSignalSnapshot(config.algorithm);
   const tickers = getCoreTickers(config, snapshot.entries);
 
@@ -251,33 +309,43 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
     priceSeries: prices,
   });
 
-  putResult(result);
+  putResult(result, context?.userId);
   try {
-    await saveBacktestResultToDb(result);
+    await saveBacktestResultToDb(result, context?.userId);
   } catch (error) {
     console.error("[Backtest] Failed to persist result to PostgreSQL:", error);
   }
   return result;
 }
 
-export async function getBacktestResult(id: string): Promise<BacktestResult | null> {
+export async function getBacktestResult(
+  id: string,
+  context?: BacktestRequestContext,
+): Promise<BacktestResult | null> {
   const cached = resultStore.get(id);
   if (cached) {
+    if (context?.userId) {
+      const owner = resultUserStore.get(id);
+      if (owner && owner !== context.userId) {
+        return null;
+      }
+    }
     return cached;
   }
 
-  const fromDb = await getBacktestResultFromDb(id);
+  const fromDb = await getBacktestResultFromDb(id, context?.userId);
   if (fromDb) {
-    putResult(fromDb);
+    putResult(fromDb, context?.userId);
   }
   return fromDb;
 }
 
-function toHistoryItem(result: BacktestResult): BacktestHistoryItem {
+function toHistoryItem(result: BacktestResult, userId?: string): BacktestHistoryItem {
   return {
     backtestResultId: result.id,
     portfolioId: result.id,
     strategyId: null,
+    userId: userId ?? null,
     algorithm: result.summary.algorithm,
     status: "completed",
     runAt: result.createdAt,
@@ -295,8 +363,9 @@ function toHistoryItem(result: BacktestResult): BacktestHistoryItem {
 
 export async function getBacktestHistory(
   query: BacktestHistoryQuery,
-): Promise<BacktestHistoryItem[]> {
-  const dbItems = await listBacktestHistoryFromDb(query);
+  context?: BacktestRequestContext,
+): Promise<BacktestHistoryResponse> {
+  const dbItems = await listBacktestHistoryFromDb(query, context?.userId);
   if (dbItems) {
     return dbItems;
   }
@@ -307,10 +376,19 @@ export async function getBacktestHistory(
   const toMs = query.runDateTo
     ? new Date(`${query.runDateTo}T23:59:59.999Z`).getTime()
     : null;
-  const limit = Math.max(1, Math.min(200, query.limit ?? 50));
+  const pageSize = Math.max(1, Math.min(200, query.pageSize ?? query.limit ?? 20));
+  const page = Math.max(1, query.page ?? 1);
+  const start = (page - 1) * pageSize;
+  const status = query.status;
 
-  return Array.from(resultStore.values())
+  const allItems = Array.from(resultStore.values())
     .filter((result) => (query.algorithm ? result.config.algorithm === query.algorithm : true))
+    .filter((result) => (status ? "completed" === status : true))
+    .filter((result) =>
+      context?.userId
+        ? (resultUserStore.get(result.id) ?? context.userId) === context.userId
+        : true,
+    )
     .filter((result) => {
       const runMs = new Date(result.createdAt).getTime();
       if (fromMs !== null && runMs < fromMs) return false;
@@ -318,14 +396,25 @@ export async function getBacktestHistory(
       return true;
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, limit)
-    .map(toHistoryItem);
+    .map((result) => toHistoryItem(result, resultUserStore.get(result.id)));
+
+  const items = allItems.slice(start, start + pageSize);
+  const total = allItems.length;
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }
 
 export async function getBacktestPersistenceSummary(
   id: string,
+  context?: BacktestRequestContext,
 ): Promise<BacktestPersistenceSummary | null> {
-  const dbSummary = await getBacktestPersistenceSummaryByResultId(id);
+  const dbSummary = await getBacktestPersistenceSummaryByResultId(id, context?.userId);
   if (dbSummary) {
     return dbSummary;
   }
@@ -333,6 +422,12 @@ export async function getBacktestPersistenceSummary(
   const cached = resultStore.get(id);
   if (!cached) {
     return null;
+  }
+  if (context?.userId) {
+    const owner = resultUserStore.get(id);
+    if (owner && owner !== context.userId) {
+      return null;
+    }
   }
 
   return {
@@ -351,6 +446,7 @@ export async function getBacktestPersistenceSummary(
 export async function runBacktestCompare(
   algorithms: BacktestAlgorithm[],
   baseConfig: Omit<BacktestConfig, "algorithm">,
+  context?: BacktestRequestContext,
 ): Promise<BacktestResult[]> {
   const uniqueAlgorithms = Array.from(new Set(algorithms));
   const results: BacktestResult[] = [];
@@ -361,7 +457,7 @@ export async function runBacktestCompare(
       algorithm,
     };
 
-    const result = await runBacktest(config);
+    const result = await runBacktest(config, context);
     results.push(result);
   }
 

@@ -6,6 +6,7 @@ import {
   getBacktestHistory,
   getBacktestPersistenceSummary,
   getBacktestResult,
+  normalizeBacktestUserId,
   normalizeBacktestHistoryQuery,
   normalizeBacktestConfig,
   runBacktest,
@@ -59,6 +60,21 @@ const getUiLang = (req: Request) => {
   }
 
   return "en";
+};
+
+const firstString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return undefined;
+};
+
+const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
+  const headerUserId = firstString(req.headers["x-user-id"]);
+  const queryUserId = firstString(req.query.userId);
+  const bodyUserId =
+    req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).userId) : undefined;
+  const raw = headerUserId ?? queryUserId ?? bodyUserId;
+  return normalizeBacktestUserId(raw);
 };
 
 export const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
@@ -219,6 +235,7 @@ export async function registerRoutes(
   app.post("/api/backtests", async (req, res) => {
     try {
       const config = normalizeBacktestConfig(req.body);
+      const userId = getBacktestUserIdFromRequest(req);
       const available = getBacktestAlgorithms();
       if (!available.includes(config.algorithm)) {
         return res.status(400).json({
@@ -226,7 +243,7 @@ export async function registerRoutes(
         });
       }
 
-      const result = await runBacktest(config);
+      const result = await runBacktest(config, { userId });
       res.json(result);
     } catch (error) {
       console.error("Error in /api/backtests:", error);
@@ -239,9 +256,10 @@ export async function registerRoutes(
   // Get backtest history list with filters
   app.get("/api/backtests/history", async (req, res) => {
     try {
+      const userId = getBacktestUserIdFromRequest(req);
       const query = normalizeBacktestHistoryQuery(req.query);
-      const items = await getBacktestHistory(query);
-      res.json(items);
+      const response = await getBacktestHistory(query, { userId });
+      res.json(response);
     } catch (error) {
       console.error("Error in /api/backtests/history:", error);
       const message =
@@ -254,7 +272,8 @@ export async function registerRoutes(
   app.get("/api/backtests/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await getBacktestResult(id);
+      const userId = getBacktestUserIdFromRequest(req);
+      const result = await getBacktestResult(id, { userId });
       if (!result) {
         return res.status(404).json({ error: "Backtest result not found" });
       }
@@ -262,7 +281,9 @@ export async function registerRoutes(
       res.json(result);
     } catch (error) {
       console.error("Error in /api/backtests/:id:", error);
-      res.status(500).json({ error: "Failed to fetch backtest result" });
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch backtest result";
+      res.status(400).json({ error: message });
     }
   });
 
@@ -270,20 +291,24 @@ export async function registerRoutes(
   app.get("/api/backtests/:id/persistence", async (req, res) => {
     try {
       const { id } = req.params;
-      const summary = await getBacktestPersistenceSummary(id);
+      const userId = getBacktestUserIdFromRequest(req);
+      const summary = await getBacktestPersistenceSummary(id, { userId });
       if (!summary) {
         return res.status(404).json({ error: "Backtest persistence not found" });
       }
       res.json(summary);
     } catch (error) {
       console.error("Error in /api/backtests/:id/persistence:", error);
-      res.status(500).json({ error: "Failed to fetch persistence summary" });
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch persistence summary";
+      res.status(400).json({ error: message });
     }
   });
 
   // Run multiple algorithms for compare view
   app.post("/api/backtests/compare", async (req, res) => {
     try {
+      const userId = getBacktestUserIdFromRequest(req);
       const rawAlgorithms = Array.isArray(req.body?.algorithms)
         ? req.body.algorithms
         : [];
@@ -307,7 +332,7 @@ export async function registerRoutes(
       });
       const { algorithm: _ignored, ...baseConfig } = firstConfig;
 
-      const results = await runBacktestCompare(algorithms, baseConfig);
+      const results = await runBacktestCompare(algorithms, baseConfig, { userId });
       res.json(results);
     } catch (error) {
       console.error("Error in /api/backtests/compare:", error);
