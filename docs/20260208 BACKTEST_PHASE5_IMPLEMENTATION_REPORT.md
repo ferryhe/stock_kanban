@@ -2,6 +2,7 @@
 
 Date: 2026-02-08
 Status: Completed
+Mapping: Internal execution phase, aligned mainly to `CONSOLIDATED_DESIGN.md` original `Phase 3` subset
 
 ## 1. Objective
 

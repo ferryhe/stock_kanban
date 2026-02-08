@@ -3,6 +3,11 @@
 Date: 2026-02-08
 Status: Completed
 
+## Mapping to `CONSOLIDATED_DESIGN.md`
+
+- This is an internal execution phase.
+- Primary mapping: original `Phase 3` (data permission isolation and user-scoped portfolio capability) in lightweight form.
+
 ## 1. Goal
 
 Implement next enhancement on top of Phase 4 history:

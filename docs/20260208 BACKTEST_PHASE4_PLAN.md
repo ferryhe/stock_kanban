@@ -1,7 +1,12 @@
 # Backtest Phase 4 Plan (History API + History UI)
 
 Date: 2026-02-08
-Status: In Progress
+Status: Completed
+
+## Mapping to `CONSOLIDATED_DESIGN.md`
+
+- This is an internal execution phase.
+- Primary mapping: original `Phase 2` (multi-algorithm compare and query/visualization enhancement).
 
 ## 1. Goal
 

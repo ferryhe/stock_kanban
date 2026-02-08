@@ -1,7 +1,12 @@
 ﻿# Backtest Phase 2 Plan (PostgreSQL + Linux Deployment)
 
 Date: 2026-02-07
-Status: In Progress
+Status: Completed
+
+## Mapping to `CONSOLIDATED_DESIGN.md`
+
+- This is an internal execution phase.
+- Primary mapping: `Phase 1` (database and API foundation for backtest core).
 
 ## 1. Goal
 

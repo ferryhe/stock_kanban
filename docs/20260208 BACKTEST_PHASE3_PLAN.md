@@ -1,7 +1,12 @@
 ﻿# Backtest Phase 3 Plan (Core Trading Tables from CONSOLIDATED_DESIGN 3.1)
 
 Date: 2026-02-08
-Status: In Progress
+Status: Completed
+
+## Mapping to `CONSOLIDATED_DESIGN.md`
+
+- This is an internal execution phase.
+- Primary mapping: section `3.1 核心表结构` under the original `Phase 1` core backtest capability.
 
 ## 1. Goal
 
