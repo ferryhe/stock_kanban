@@ -1,4 +1,4 @@
-import { type Language } from "./i18n";
+﻿import { type Language } from "./i18n";
 
 export type BacktestTermKey =
   | "annualizedReturn"
@@ -11,7 +11,11 @@ export type BacktestTermKey =
   | "cashReserve"
   | "correlation"
   | "monthlyHeatmap"
-  | "winRate";
+  | "winRate"
+  | "dailyReturn"
+  | "cumulativeReturn"
+  | "unrealizedPnl"
+  | "paperSettlement";
 
 type TermEntry = {
   label: Record<Language, string>;
@@ -23,7 +27,7 @@ export const backtestTerms: Record<BacktestTermKey, TermEntry> = {
     label: { en: "Annualized Return", zh: "年化收益" },
     description: {
       en: "Compounded return normalized to a one-year horizon.",
-      zh: "把区间收益折算为一年周期后的复合收益率。",
+      zh: "将区间收益折算为一年周期后的复合收益率。",
     },
   },
   maxDrawdown: {
@@ -96,6 +100,34 @@ export const backtestTerms: Record<BacktestTermKey, TermEntry> = {
       zh: "盈利交易数量占总交易数量的比例。",
     },
   },
+  dailyReturn: {
+    label: { en: "Daily Return", zh: "当日收益率" },
+    description: {
+      en: "Profit or loss percentage versus previous trading day close.",
+      zh: "相对上一交易日收盘资产的盈亏比例。",
+    },
+  },
+  cumulativeReturn: {
+    label: { en: "Cumulative Return", zh: "累计收益率" },
+    description: {
+      en: "Total return since strategy start or account reset.",
+      zh: "自策略开始或账户重置以来的累计收益比例。",
+    },
+  },
+  unrealizedPnl: {
+    label: { en: "Unrealized PnL", zh: "浮动盈亏" },
+    description: {
+      en: "Paper profit/loss of current holdings not yet closed.",
+      zh: "当前持仓尚未卖出前的账面盈亏。",
+    },
+  },
+  paperSettlement: {
+    label: { en: "Settlement", zh: "结算" },
+    description: {
+      en: "Daily settlement sync that updates cash, holdings, and PnL.",
+      zh: "按日执行的账务同步，用于更新现金、持仓和盈亏。",
+    },
+  },
 };
 
 type SectionText = Record<Language, string>;
@@ -105,7 +137,7 @@ export const backtestUi = {
     center: { en: "Backtest", zh: "回测中心" } satisfies SectionText,
     compare: { en: "Compare", zh: "算法对比" } satisfies SectionText,
     history: { en: "History", zh: "历史记录" } satisfies SectionText,
-    live: { en: "Live", zh: "实时模拟" } satisfies SectionText,
+    live: { en: "Live", zh: "模拟交易" } satisfies SectionText,
     dashboard: { en: "Dashboard", zh: "看板" } satisfies SectionText,
   },
   center: {
@@ -125,6 +157,9 @@ export const backtestUi = {
     minCommission: { en: "Min Commission", zh: "最小手续费" } satisfies SectionText,
     run: { en: "Run Backtest", zh: "运行回测" } satisfies SectionText,
     running: { en: "Running Backtest...", zh: "回测运行中..." } satisfies SectionText,
+    daily: { en: "Daily", zh: "每日" } satisfies SectionText,
+    weekly: { en: "Weekly", zh: "每周" } satisfies SectionText,
+    monthly: { en: "Monthly", zh: "每月" } satisfies SectionText,
   },
   history: {
     title: { en: "Backtest History", zh: "回测历史" } satisfies SectionText,
@@ -142,6 +177,23 @@ export const backtestUi = {
     view: { en: "View", zh: "查看" } satisfies SectionText,
     prev: { en: "Prev", zh: "上一页" } satisfies SectionText,
     next: { en: "Next", zh: "下一页" } satisfies SectionText,
+    all: { en: "All", zh: "全部" } satisfies SectionText,
+    pending: { en: "Pending", zh: "待执行" } satisfies SectionText,
+    running: { en: "Running", zh: "运行中" } satisfies SectionText,
+    completed: { en: "Completed", zh: "已完成" } satisfies SectionText,
+    failed: { en: "Failed", zh: "失败" } satisfies SectionText,
+    cancelled: { en: "Cancelled", zh: "已取消" } satisfies SectionText,
+    currentPageRows: { en: "Current Page Rows", zh: "当前页记录数" } satisfies SectionText,
+    positiveReturns: { en: "Positive Returns", zh: "正收益条数" } satisfies SectionText,
+    averageReturn: { en: "Average Return", zh: "平均收益" } satisfies SectionText,
+    loading: { en: "Loading history...", zh: "历史数据加载中..." } satisfies SectionText,
+    total: { en: "Total", zh: "总数" } satisfies SectionText,
+    page: { en: "Page", zh: "页码" } satisfies SectionText,
+    userScope: { en: "User Scope", zh: "用户范围" } satisfies SectionText,
+    runAt: { en: "Run At", zh: "运行时间" } satisfies SectionText,
+    period: { en: "Backtest Period", zh: "回测区间" } satisfies SectionText,
+    action: { en: "Action", zh: "操作" } satisfies SectionText,
+    to: { en: "to", zh: "至" } satisfies SectionText,
   },
   results: {
     title: { en: "Backtest Results", zh: "回测结果" } satisfies SectionText,
@@ -154,6 +206,12 @@ export const backtestUi = {
     equityCurve: { en: "Equity Curve", zh: "资产曲线" } satisfies SectionText,
     trades: { en: "Trades", zh: "交易记录" } satisfies SectionText,
     newBacktest: { en: "New Backtest", zh: "新建回测" } satisfies SectionText,
+    date: { en: "Date", zh: "日期" } satisfies SectionText,
+    ticker: { en: "Ticker", zh: "代码" } satisfies SectionText,
+    side: { en: "Side", zh: "方向" } satisfies SectionText,
+    shares: { en: "Shares", zh: "股数" } satisfies SectionText,
+    price: { en: "Price", zh: "价格" } satisfies SectionText,
+    notional: { en: "Notional", zh: "成交额" } satisfies SectionText,
   },
   compare: {
     title: { en: "Algorithm Compare", zh: "算法对比" } satisfies SectionText,
@@ -170,6 +228,44 @@ export const backtestUi = {
     drawdownCurves: { en: "Drawdown Curves", zh: "回撤曲线对比" } satisfies SectionText,
     summary: { en: "Summary", zh: "汇总指标" } satisfies SectionText,
     monthlyReturnHeatmap: { en: "Monthly Return Heatmap", zh: "月度收益热力图" } satisfies SectionText,
+    algorithm: { en: "Algorithm", zh: "算法" } satisfies SectionText,
+    trades: { en: "Trades", zh: "交易数" } satisfies SectionText,
+    month: { en: "Month", zh: "月份" } satisfies SectionText,
+  },
+  live: {
+    title: { en: "Live Paper Trading", zh: "实时模拟交易" } satisfies SectionText,
+    subtitle: {
+      en: "Real-time paper portfolio snapshot with daily settlement.",
+      zh: "提供带日内结算的模拟组合实时快照。",
+    } satisfies SectionText,
+    actions: { en: "Actions", zh: "操作" } satisfies SectionText,
+    scope: { en: "Scope", zh: "范围" } satisfies SectionText,
+    runNow: { en: "Run Now", zh: "立即运行" } satisfies SectionText,
+    runningNow: { en: "Running...", zh: "运行中..." } satisfies SectionText,
+    settleNow: { en: "Settle Now", zh: "立即结算" } satisfies SectionText,
+    settlingNow: { en: "Settling...", zh: "结算中..." } satisfies SectionText,
+    applyUserId: { en: "Apply User ID", zh: "应用用户 ID" } satisfies SectionText,
+    totalValue: { en: "Total Value", zh: "总资产" } satisfies SectionText,
+    cash: { en: "Cash", zh: "现金" } satisfies SectionText,
+    holdingsValue: { en: "Holdings Value", zh: "持仓市值" } satisfies SectionText,
+    holdings: { en: "Holdings", zh: "持仓" } satisfies SectionText,
+    recentTrades: { en: "Recent Trades", zh: "最近交易" } satisfies SectionText,
+    updated: { en: "Updated", zh: "更新时间" } satisfies SectionText,
+    refreshing: { en: "refreshing...", zh: "刷新中..." } satisfies SectionText,
+    loading: { en: "loading...", zh: "加载中..." } satisfies SectionText,
+    noHoldings: { en: "No holdings yet.", zh: "暂无持仓。" } satisfies SectionText,
+    noTrades: { en: "No trades yet.", zh: "暂无交易。" } satisfies SectionText,
+    time: { en: "Time", zh: "时间" } satisfies SectionText,
+    ticker: { en: "Ticker", zh: "代码" } satisfies SectionText,
+    side: { en: "Side", zh: "方向" } satisfies SectionText,
+    quantity: { en: "Quantity", zh: "数量" } satisfies SectionText,
+    avgCost: { en: "Avg Cost", zh: "平均成本" } satisfies SectionText,
+    price: { en: "Price", zh: "价格" } satisfies SectionText,
+    marketValue: { en: "Market Value", zh: "市值" } satisfies SectionText,
+    amount: { en: "Amount", zh: "成交额" } satisfies SectionText,
+    commission: { en: "Commission", zh: "手续费" } satisfies SectionText,
+    buy: { en: "BUY", zh: "买入" } satisfies SectionText,
+    sell: { en: "SELL", zh: "卖出" } satisfies SectionText,
   },
 } as const;
 

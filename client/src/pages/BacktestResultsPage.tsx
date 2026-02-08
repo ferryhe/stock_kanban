@@ -31,7 +31,7 @@ function metricClass(value: number): string {
 export default function BacktestResultsPage({ params }: BacktestResultsPageProps) {
   const id = params?.id ?? "";
   const { data: result, isLoading, error } = useBacktestResult(id, id.length > 0);
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang } = useI18n();
 
   if (isLoading) {
     return (
@@ -70,7 +70,7 @@ export default function BacktestResultsPage({ params }: BacktestResultsPageProps
               className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               data-testid="backtest-results-lang-toggle"
             >
-              {t("langToggle")}
+              {lang === "en" ? "EN" : "中"}
             </button>
           </div>
           <BacktestQuickLinks lang={lang} />
@@ -171,12 +171,12 @@ export default function BacktestResultsPage({ params }: BacktestResultsPageProps
             <table className="w-full text-sm">
                 <thead className="text-muted-foreground">
                   <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-2">{lang === "en" ? "Date" : "日期"}</th>
-                    <th className="text-left py-2 pr-2">{lang === "en" ? "Ticker" : "代码"}</th>
-                    <th className="text-left py-2 pr-2">{lang === "en" ? "Side" : "方向"}</th>
-                    <th className="text-right py-2 pr-2">{lang === "en" ? "Shares" : "股数"}</th>
-                    <th className="text-right py-2 pr-2">{lang === "en" ? "Price" : "价格"}</th>
-                    <th className="text-right py-2 pr-2">{lang === "en" ? "Notional" : "成交额"}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.results.date, lang)}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.results.ticker, lang)}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.results.side, lang)}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.shares, lang)}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.price, lang)}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.notional, lang)}</th>
                     <th className="text-right py-2">
                       <TermInfoLabel
                         label={backtestTerms.commissionBps.label[lang]}

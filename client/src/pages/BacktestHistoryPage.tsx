@@ -59,7 +59,7 @@ function metricClass(value: number | null): string {
 
 export default function BacktestHistoryPage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang } = useI18n();
   const [userId, setUserId] = useState<string>(getBacktestUserId());
   const [algorithm, setAlgorithm] = useState<AlgorithmFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -132,7 +132,7 @@ export default function BacktestHistoryPage() {
               className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               data-testid="backtest-history-lang-toggle"
             >
-              {t("langToggle")}
+              {lang === "en" ? "EN" : "中"}
             </button>
           </div>
           <BacktestQuickLinks lang={lang} />
@@ -155,7 +155,7 @@ export default function BacktestHistoryPage() {
               onChange={(e) => setAlgorithm(e.target.value as AlgorithmFilter)}
               className="h-10 px-3 rounded-md bg-background border border-input"
             >
-              <option value="all">{lang === "en" ? "All" : "全部"}</option>
+              <option value="all">{bt(backtestUi.history.all, lang)}</option>
               {algorithms.map((item) => (
                 <option key={item} value={item}>
                   {item.toUpperCase()}
@@ -170,12 +170,12 @@ export default function BacktestHistoryPage() {
               onChange={(e) => setStatus(e.target.value as StatusFilter)}
               className="h-10 px-3 rounded-md bg-background border border-input"
             >
-              <option value="all">{lang === "en" ? "All" : "全部"}</option>
-              <option value="pending">{lang === "en" ? "Pending" : "待执行"}</option>
-              <option value="running">{lang === "en" ? "Running" : "运行中"}</option>
-              <option value="completed">{lang === "en" ? "Completed" : "已完成"}</option>
-              <option value="failed">{lang === "en" ? "Failed" : "失败"}</option>
-              <option value="cancelled">{lang === "en" ? "Cancelled" : "已取消"}</option>
+              <option value="all">{bt(backtestUi.history.all, lang)}</option>
+              <option value="pending">{bt(backtestUi.history.pending, lang)}</option>
+              <option value="running">{bt(backtestUi.history.running, lang)}</option>
+              <option value="completed">{bt(backtestUi.history.completed, lang)}</option>
+              <option value="failed">{bt(backtestUi.history.failed, lang)}</option>
+              <option value="cancelled">{bt(backtestUi.history.cancelled, lang)}</option>
             </select>
           </label>
           <label className="text-sm grid gap-1">
@@ -225,19 +225,19 @@ export default function BacktestHistoryPage() {
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border p-3 bg-card">
             <p className="text-xs text-muted-foreground">
-              {lang === "en" ? "Current Page Rows" : "当前页记录数"}
+              {bt(backtestUi.history.currentPageRows, lang)}
             </p>
             <p className="text-xl font-semibold">{summary.count}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
             <p className="text-xs text-muted-foreground">
-              {lang === "en" ? "Positive Returns" : "正收益条数"}
+              {bt(backtestUi.history.positiveReturns, lang)}
             </p>
             <p className="text-xl font-semibold">{summary.positive}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
             <p className="text-xs text-muted-foreground">
-              {lang === "en" ? "Average Return" : "平均收益"}
+              {bt(backtestUi.history.averageReturn, lang)}
             </p>
             <p className={`text-xl font-semibold ${metricClass(summary.avgReturn)}`}>
               {formatPercent(summary.avgReturn)}
@@ -247,7 +247,7 @@ export default function BacktestHistoryPage() {
 
         {isLoading ? (
           <section className="rounded-xl border border-border p-6 bg-card">
-            {lang === "en" ? "Loading history..." : "历史数据加载中..."}
+            {bt(backtestUi.history.loading, lang)}
           </section>
         ) : error ? (
           <section className="rounded-xl border border-border p-6 bg-card text-negative">
@@ -257,18 +257,18 @@ export default function BacktestHistoryPage() {
           <section className="rounded-xl border border-border p-3 bg-card space-y-3">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                {lang === "en" ? "Total" : "总数"}: {data?.total ?? 0} |{" "}
-                {lang === "en" ? "Page" : "页码"} {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
+                {bt(backtestUi.history.total, lang)}: {data?.total ?? 0} |{" "}
+                {bt(backtestUi.history.page, lang)} {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
               </span>
-              <span>{lang === "en" ? "User Scope" : "用户范围"}: {getBacktestUserId()}</span>
+              <span>{bt(backtestUi.history.userScope, lang)}: {getBacktestUserId()}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-muted-foreground">
                   <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-2">{lang === "en" ? "Run At" : "运行时间"}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.history.runAt, lang)}</th>
                     <th className="text-left py-2 pr-2">{bt(backtestUi.center.algorithm, lang)}</th>
-                    <th className="text-left py-2 pr-2">{lang === "en" ? "Backtest Period" : "回测区间"}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.history.period, lang)}</th>
                     <th className="text-right py-2 pr-2">{bt(backtestUi.results.finalValue, lang)}</th>
                     <th className="text-right py-2 pr-2">{bt(backtestUi.results.totalReturn, lang)}</th>
                     <th className="text-right py-2 pr-2">
@@ -285,7 +285,7 @@ export default function BacktestHistoryPage() {
                     </th>
                     <th className="text-right py-2 pr-2">{bt(backtestUi.results.totalTrades, lang)}</th>
                     <th className="text-left py-2 pr-2">{bt(backtestUi.history.status, lang)}</th>
-                    <th className="text-right py-2">{lang === "en" ? "Action" : "操作"}</th>
+                    <th className="text-right py-2">{bt(backtestUi.history.action, lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -301,7 +301,7 @@ export default function BacktestHistoryPage() {
                       <td className="py-2 pr-2 whitespace-nowrap">{formatRunAt(item.runAt, lang)}</td>
                       <td className="py-2 pr-2">{item.algorithm.toUpperCase()}</td>
                       <td className="py-2 pr-2">
-                        {item.startDate ?? "-"} to {item.endDate ?? "-"}
+                        {item.startDate ?? "-"} {bt(backtestUi.history.to, lang)} {item.endDate ?? "-"}
                       </td>
                       <td className="py-2 pr-2 text-right">{formatCurrency(item.finalValue)}</td>
                       <td className={`py-2 pr-2 text-right ${metricClass(item.totalReturn)}`}>

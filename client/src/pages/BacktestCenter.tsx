@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+﻿import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -22,7 +22,7 @@ function getDefaultDate(offsetDays: number): string {
 export default function BacktestCenter() {
   const [, setLocation] = useLocation();
   const { data: algorithms = [], isLoading } = useBacktestAlgorithms();
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang } = useI18n();
 
   const [algorithm, setAlgorithm] = useState<BacktestAlgorithm>("us");
   const [userId, setUserId] = useState<string>(getBacktestUserId());
@@ -99,7 +99,7 @@ export default function BacktestCenter() {
               className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               data-testid="backtest-lang-toggle"
             >
-              {t("langToggle")}
+              {lang === "en" ? "EN" : "中"}
             </button>
           </div>
           <BacktestQuickLinks lang={lang} />
@@ -144,9 +144,9 @@ export default function BacktestCenter() {
                   setRebalanceFrequency(e.target.value as "daily" | "weekly" | "monthly")
                 }
               >
-                <option value="daily">{lang === "en" ? "Daily" : "每日"}</option>
-                <option value="weekly">{lang === "en" ? "Weekly" : "每周"}</option>
-                <option value="monthly">{lang === "en" ? "Monthly" : "每月"}</option>
+                <option value="daily">{bt(backtestUi.center.daily, lang)}</option>
+                <option value="weekly">{bt(backtestUi.center.weekly, lang)}</option>
+                <option value="monthly">{bt(backtestUi.center.monthly, lang)}</option>
               </select>
             </label>
           </div>
@@ -284,4 +284,5 @@ export default function BacktestCenter() {
     </main>
   );
 }
+
 

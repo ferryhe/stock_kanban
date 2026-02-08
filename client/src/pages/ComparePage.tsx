@@ -313,7 +313,7 @@ function buildPrintableReportHtml(
 
 export default function ComparePage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
-  const { lang, setLang, t } = useI18n();
+  const { lang, setLang } = useI18n();
   const [userId, setUserId] = useState<string>(getBacktestUserId());
   const [selected, setSelected] = useState<BacktestAlgorithm[]>([]);
 
@@ -486,7 +486,7 @@ export default function ComparePage() {
               className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               data-testid="compare-lang-toggle"
             >
-              {t("langToggle")}
+              {lang === "en" ? "EN" : "中"}
             </button>
           </div>
           <BacktestQuickLinks lang={lang} />
@@ -563,9 +563,9 @@ export default function ComparePage() {
                 value={rebalanceFrequency}
                 onChange={(e) => setRebalanceFrequency(e.target.value as "daily" | "weekly" | "monthly")}
               >
-                <option value="daily">{lang === "en" ? "Daily" : "每日"}</option>
-                <option value="weekly">{lang === "en" ? "Weekly" : "每周"}</option>
-                <option value="monthly">{lang === "en" ? "Monthly" : "每月"}</option>
+                <option value="daily">{bt(backtestUi.center.daily, lang)}</option>
+                <option value="weekly">{bt(backtestUi.center.weekly, lang)}</option>
+                <option value="monthly">{bt(backtestUi.center.monthly, lang)}</option>
               </select>
             </label>
           </div>
@@ -753,9 +753,9 @@ export default function ComparePage() {
               <table className="w-full text-sm min-w-[860px]">
                 <thead className="text-muted-foreground border-b border-border">
                   <tr>
-                    <th className="text-left py-2 pr-2">Algorithm</th>
-                    <th className="text-right py-2 pr-2">Final Value</th>
-                    <th className="text-right py-2 pr-2">Total Return</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.compare.algorithm, lang)}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.finalValue, lang)}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.totalReturn, lang)}</th>
                     <th className="text-right py-2 pr-2">
                       <TermInfoLabel
                         label={backtestTerms.annualizedReturn.label[lang]}
@@ -780,7 +780,7 @@ export default function ComparePage() {
                         description={backtestTerms.maxDrawdown.description[lang]}
                       />
                     </th>
-                    <th className="text-right py-2 pr-2">Trades</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.compare.trades, lang)}</th>
                     <th className="text-right py-2">
                       <TermInfoLabel
                         label={backtestTerms.winRate.label[lang]}
@@ -817,7 +817,7 @@ export default function ComparePage() {
               <table className="w-full text-sm min-w-[520px]">
                 <thead className="text-muted-foreground border-b border-border">
                   <tr>
-                    <th className="text-left py-2 pr-2">Algorithm</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.compare.algorithm, lang)}</th>
                     {correlation.labels.map((label) => (
                       <th key={`corr-head-${label}`} className="text-right py-2 pr-2">
                         {label}
@@ -853,7 +853,7 @@ export default function ComparePage() {
               <table className="w-full text-sm min-w-[640px]">
                 <thead className="text-muted-foreground border-b border-border">
                   <tr>
-                    <th className="text-left py-2 pr-2">Month</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.compare.month, lang)}</th>
                     {correlation.labels.map((label) => (
                       <th key={`month-head-${label}`} className="text-right py-2 pr-2">
                         {label}
