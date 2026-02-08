@@ -11,7 +11,12 @@ import {
 import { runBacktestEngine } from "./engine";
 import { loadHistoricalPrices } from "./priceProvider";
 import { getAvailableBacktestAlgorithms, loadSignalSnapshot } from "./signalProvider";
-import { getBacktestResultFromDb, saveBacktestResultToDb } from "./repository";
+import {
+  getBacktestPersistenceSummaryByResultId,
+  getBacktestResultFromDb,
+  type BacktestPersistenceSummary,
+  saveBacktestResultToDb,
+} from "./repository";
 
 const MAX_RESULT_CACHE = 100;
 
@@ -221,6 +226,32 @@ export async function getBacktestResult(id: string): Promise<BacktestResult | nu
     putResult(fromDb);
   }
   return fromDb;
+}
+
+export async function getBacktestPersistenceSummary(
+  id: string,
+): Promise<BacktestPersistenceSummary | null> {
+  const dbSummary = await getBacktestPersistenceSummaryByResultId(id);
+  if (dbSummary) {
+    return dbSummary;
+  }
+
+  const cached = resultStore.get(id);
+  if (!cached) {
+    return null;
+  }
+
+  return {
+    backtestResultId: id,
+    strategyId: null,
+    portfolioId: null,
+    portfolioType: "backtest",
+    backtestStatus: "completed",
+    tradeCount: cached.trades.length,
+    settlementCount: cached.equityCurve.length,
+    holdingCount: 0,
+    performanceCount: 1,
+  };
 }
 
 export async function runBacktestCompare(

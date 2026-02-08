@@ -3,6 +3,7 @@ import { type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate, getAvailableLeaderboards, getLeaderboardData } from "./stockService";
 import {
   getBacktestAlgorithms,
+  getBacktestPersistenceSummary,
   getBacktestResult,
   normalizeBacktestConfig,
   runBacktest,
@@ -246,6 +247,21 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in /api/backtests/:id:", error);
       res.status(500).json({ error: "Failed to fetch backtest result" });
+    }
+  });
+
+  // Get persistence details for one backtest run
+  app.get("/api/backtests/:id/persistence", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const summary = await getBacktestPersistenceSummary(id);
+      if (!summary) {
+        return res.status(404).json({ error: "Backtest persistence not found" });
+      }
+      res.json(summary);
+    } catch (error) {
+      console.error("Error in /api/backtests/:id/persistence:", error);
+      res.status(500).json({ error: "Failed to fetch persistence summary" });
     }
   });
 
