@@ -23,6 +23,7 @@ Main purpose:
 - Configure one algorithm and run one backtest.
 
 Key fields:
+- `User ID` (used as `x-user-id` for isolated backtest records)
 - `Algorithm`: `US` / `CN` / `HK` (depends on available quant files)
 - `Start Date` / `End Date`
 - `Initial Cash`
@@ -75,18 +76,24 @@ Main purpose:
 - Query previous runs from PostgreSQL-backed history records.
 
 Filters:
+- `User ID`
 - `Algorithm`: `All` / `US` / `CN` / `HK`
+- `Status`: `All` / `Pending` / `Running` / `Completed` / `Failed` / `Cancelled`
 - `Run Date From`
 - `Run Date To`
+- `Page Size`
 
 Operation steps:
 1. Open `/backtest/history`
 2. Set algorithm/date filters
-3. Click `Apply Filters`
-4. Click `View` on any row to open `/backtest/:id/results`
+3. Optional: adjust status and page size
+4. Click `Apply Filters`
+5. Click `View` on any row to open `/backtest/:id/results`
+6. Use `Prev` / `Next` for pagination
 
 Expected outputs:
 - Rows sorted by latest run time first
+- Response is user-scoped by `User ID`
 - Key metrics visible in list:
   - final value
   - total return
@@ -139,3 +146,7 @@ API behind this page:
 4. Compare is slow
 - expected when many tickers/long periods
 - reduce date range or number of algorithms for quick checks
+
+5. History list empty unexpectedly
+- check current `User ID` in backtest pages and history page matches
+- records are isolated by `x-user-id`

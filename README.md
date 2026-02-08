@@ -91,7 +91,8 @@ MIT License
 - Backtest results are persisted when `DATABASE_URL` is configured.
 - Without `DATABASE_URL`, the app falls back to in-memory backtest storage.
 - Run `npm run db:prepare` before `npm run db:push` on a fresh PostgreSQL database.
-- Backtest history API: `GET /api/backtests/history?algorithm=us&runDateFrom=YYYY-MM-DD&runDateTo=YYYY-MM-DD&limit=100`
+- User isolation header: `x-user-id` (frontend defaults to `demo-user`)
+- Backtest history API (paginated): `GET /api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=YYYY-MM-DD&runDateTo=YYYY-MM-DD`
 - Frontend history page: `/backtest/history`
 - Linux deployment guide: `LINUX_FRONTEND_PGSQL_CONFIG.md`
 - UI operation guide: `BACKTEST_UI_OPERATION_GUIDE.md`

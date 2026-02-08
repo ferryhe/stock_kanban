@@ -1,6 +1,6 @@
 ﻿# Linux Frontend + PostgreSQL Configuration Guide
 
-Date: 2026-02-07
+Date: 2026-02-08
 Target: Deploy `stock_kanban` on Linux with an existing PostgreSQL instance.
 
 ## 1. Overview
@@ -120,6 +120,7 @@ curl http://127.0.0.1:3000/api/backtests/algorithms
 3. Run one backtest and verify persistence:
 ```bash
 curl -X POST http://127.0.0.1:3000/api/backtests \
+  -H "x-user-id: demo-user" \
   -H "Content-Type: application/json" \
   -d '{
     "algorithm":"us",
@@ -139,9 +140,13 @@ psql "$DATABASE_URL" -c "select count(*) from backtest_results;"
 
 5. Query backtest history API:
 ```bash
-curl "http://127.0.0.1:3000/api/backtests/history?limit=10"
-curl "http://127.0.0.1:3000/api/backtests/history?algorithm=us&runDateFrom=2026-02-01&runDateTo=2026-02-08"
+curl -H "x-user-id: demo-user" "http://127.0.0.1:3000/api/backtests/history?page=1&pageSize=20"
+curl -H "x-user-id: demo-user" "http://127.0.0.1:3000/api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=2026-02-01&runDateTo=2026-02-08"
 ```
+
+Note:
+- `x-user-id` is used for record isolation.
+- If this `user_id` does not exist in `users`, backend auto-provisions a lightweight user row.
 
 ## 8. Frontend integration notes
 
@@ -164,3 +169,6 @@ curl "http://127.0.0.1:3000/api/backtests/history?algorithm=us&runDateFrom=2026-
 
 5. Backtest ID can be queried immediately but disappears after restart
 - This indicates DB persistence is not active and app is using in-memory fallback.
+
+6. History query returns empty unexpectedly
+- Check `x-user-id` consistency between run requests and history requests.
