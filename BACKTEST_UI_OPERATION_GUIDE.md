@@ -16,6 +16,7 @@ You can enter the new flow in two ways:
 - Backtest history: `/backtest/history`
 - Backtest result: `/backtest/:id/results`
 - Compare page: `/compare`
+- Live trading page: `/live`
 
 ## 2. Backtest Center (`/backtest`)
 
@@ -125,7 +126,35 @@ Expected outputs:
 API behind this page:
 - `POST /api/backtests/compare`
 
-## 6. Recommended Test Script (UI)
+## 6. Live Paper Trading Page (`/live`)
+
+Main purpose:
+- Run non-backtest live paper trading cycle and inspect current live portfolio.
+
+Main controls:
+- `User ID` (sent as `x-user-id`)
+- `Algorithm` (`US` / `CN` / `HK`)
+- `Run Now`
+- `Settle Now`
+- `Apply User ID`
+
+Operation steps:
+1. Open `/live`
+2. Set `User ID` and `Algorithm`
+3. Click `Run Now` to execute one rebalance cycle
+4. Verify:
+   - metric cards update
+   - holdings table has latest positions
+   - recent trades table has latest executions
+5. Click `Settle Now` to trigger one settlement run
+
+Expected outputs:
+- `POST /api/live/run` succeeds and returns `tradeCount`
+- `GET /api/live/portfolio` returns snapshot with holdings/trades
+- `POST /api/live/settle-now` returns processed/settled counts
+- per user isolation: different `User ID` maps to different live portfolio
+
+## 7. Recommended Test Script (UI)
 
 1. Run one backtest in `/backtest`
 2. Confirm result page loads chart + table
@@ -135,7 +164,7 @@ API behind this page:
 6. Refresh result URL directly and confirm data still loads
    - with PostgreSQL configured, result remains queryable after service restart
 
-## 7. Common Issues
+## 8. Common Issues
 
 1. Algorithm list empty
 - check `/api/backtests/algorithms`
@@ -156,3 +185,11 @@ API behind this page:
 5. History list empty unexpectedly
 - check current `User ID` in backtest pages and history page matches
 - records are isolated by `x-user-id`
+
+6. Live page returns PostgreSQL error
+- ensure `DATABASE_URL` is configured
+- run `npm run db:prepare && npm run db:push`
+
+7. Live run returns no tradable data
+- verify `quant-metrics-*.json` exists for chosen algorithm
+- verify Yahoo price data is reachable from current network

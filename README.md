@@ -94,6 +94,11 @@ MIT License
 - User isolation header: `x-user-id` (frontend defaults to `demo-user`)
 - Backtest history API (paginated): `GET /api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=YYYY-MM-DD&runDateTo=YYYY-MM-DD`
 - Frontend history page: `/backtest/history`
+- Live paper trading APIs:
+  - `POST /api/live/run`
+  - `GET /api/live/portfolio?algorithm=us|cn|hk`
+  - `POST /api/live/settle-now`
+- Frontend live page: `/live`
 - Compare page adds:
   - drawdown curve
   - correlation matrix

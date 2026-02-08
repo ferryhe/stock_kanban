@@ -30,6 +30,10 @@ PGSSL=false
 PGSSL_REJECT_UNAUTHORIZED=false
 PGPOOL_MAX=10
 PGPOOL_IDLE_TIMEOUT_MS=30000
+
+# Live settlement scheduler (Phase 3 Week 1)
+LIVE_SETTLEMENT_SCHEDULER=true
+LIVE_SETTLEMENT_INTERVAL_MS=900000
 ```
 
 Notes:
@@ -144,6 +148,19 @@ curl -H "x-user-id: demo-user" "http://127.0.0.1:3000/api/backtests/history?page
 curl -H "x-user-id: demo-user" "http://127.0.0.1:3000/api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=2026-02-01&runDateTo=2026-02-08"
 ```
 
+6. Verify live paper trading APIs:
+```bash
+curl -X POST http://127.0.0.1:3000/api/live/run \
+  -H "x-user-id: demo-user" \
+  -H "Content-Type: application/json" \
+  -d '{"algorithm":"us"}'
+
+curl -H "x-user-id: demo-user" \
+  "http://127.0.0.1:3000/api/live/portfolio?algorithm=us"
+
+curl -X POST http://127.0.0.1:3000/api/live/settle-now
+```
+
 Note:
 - `x-user-id` is used for record isolation.
 - If this `user_id` does not exist in `users`, backend auto-provisions a lightweight user row.
@@ -172,3 +189,7 @@ Note:
 
 6. History query returns empty unexpectedly
 - Check `x-user-id` consistency between run requests and history requests.
+
+7. Live settlement scheduler not running
+- Check `LIVE_SETTLEMENT_SCHEDULER` is not `false`.
+- Verify app logs contain `[LiveSettlement]` entries after startup.
