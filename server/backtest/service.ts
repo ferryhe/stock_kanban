@@ -2,6 +2,8 @@
 import {
   type BacktestAlgorithm,
   type BacktestConfig,
+  type BacktestHistoryItem,
+  type BacktestHistoryQuery,
   type BacktestExecutionParams,
   type BacktestOptions,
   type BacktestPositionParams,
@@ -14,6 +16,7 @@ import { getAvailableBacktestAlgorithms, loadSignalSnapshot } from "./signalProv
 import {
   getBacktestPersistenceSummaryByResultId,
   getBacktestResultFromDb,
+  listBacktestHistoryFromDb,
   type BacktestPersistenceSummary,
   saveBacktestResultToDb,
 } from "./repository";
@@ -79,8 +82,50 @@ function normalizeRebalanceFrequency(value: unknown): RebalanceFrequency {
   return DEFAULT_OPTIONS.rebalanceFrequency;
 }
 
+function normalizeOptionalDate(value: unknown, name: string): string | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${name} must be a valid date (YYYY-MM-DD)`);
+  }
+  return parseDateString(value, name);
+}
+
+function normalizeLimit(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  const limit = Number(value);
+  if (!Number.isFinite(limit)) {
+    throw new Error("limit must be a number");
+  }
+  return Math.max(1, Math.min(200, Math.floor(limit)));
+}
+
 export function getBacktestAlgorithms(): BacktestAlgorithm[] {
   return getAvailableBacktestAlgorithms();
+}
+
+export function normalizeBacktestHistoryQuery(input: unknown): BacktestHistoryQuery {
+  const query = (input ?? {}) as Record<string, unknown>;
+  const algorithm =
+    typeof query.algorithm === "string" && query.algorithm.length > 0
+      ? normalizeAlgorithm(query.algorithm)
+      : undefined;
+
+  const runDateFrom = normalizeOptionalDate(query.runDateFrom, "runDateFrom");
+  const runDateTo = normalizeOptionalDate(query.runDateTo, "runDateTo");
+  if (runDateFrom && runDateTo && runDateFrom > runDateTo) {
+    throw new Error("runDateFrom must be <= runDateTo");
+  }
+
+  return {
+    algorithm,
+    runDateFrom,
+    runDateTo,
+    limit: normalizeLimit(query.limit),
+  };
 }
 
 export function normalizeBacktestConfig(input: unknown): BacktestConfig {
@@ -226,6 +271,55 @@ export async function getBacktestResult(id: string): Promise<BacktestResult | nu
     putResult(fromDb);
   }
   return fromDb;
+}
+
+function toHistoryItem(result: BacktestResult): BacktestHistoryItem {
+  return {
+    backtestResultId: result.id,
+    portfolioId: result.id,
+    strategyId: null,
+    algorithm: result.summary.algorithm,
+    status: "completed",
+    runAt: result.createdAt,
+    startDate: result.config.startDate,
+    endDate: result.config.endDate,
+    initialCash: result.config.initialCash,
+    finalValue: result.summary.finalValue,
+    totalReturn: result.summary.totalReturn,
+    annualizedReturn: result.summary.annualizedReturn,
+    sharpeRatio: result.summary.sharpeRatio,
+    maxDrawdown: result.summary.maxDrawdown,
+    totalTrades: result.summary.totalTrades,
+  };
+}
+
+export async function getBacktestHistory(
+  query: BacktestHistoryQuery,
+): Promise<BacktestHistoryItem[]> {
+  const dbItems = await listBacktestHistoryFromDb(query);
+  if (dbItems) {
+    return dbItems;
+  }
+
+  const fromMs = query.runDateFrom
+    ? new Date(`${query.runDateFrom}T00:00:00.000Z`).getTime()
+    : null;
+  const toMs = query.runDateTo
+    ? new Date(`${query.runDateTo}T23:59:59.999Z`).getTime()
+    : null;
+  const limit = Math.max(1, Math.min(200, query.limit ?? 50));
+
+  return Array.from(resultStore.values())
+    .filter((result) => (query.algorithm ? result.config.algorithm === query.algorithm : true))
+    .filter((result) => {
+      const runMs = new Date(result.createdAt).getTime();
+      if (fromMs !== null && runMs < fromMs) return false;
+      if (toMs !== null && runMs > toMs) return false;
+      return true;
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+    .map(toHistoryItem);
 }
 
 export async function getBacktestPersistenceSummary(

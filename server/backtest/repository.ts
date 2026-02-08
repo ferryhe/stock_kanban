@@ -1,4 +1,4 @@
-﻿import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { db, isDatabaseEnabled } from "../db";
 import {
   backtestResults,
@@ -9,7 +9,12 @@ import {
   strategyPerformance,
   trades,
 } from "../../shared/schema";
-import { type BacktestResult } from "../../shared/backtest";
+import {
+  type BacktestAlgorithm,
+  type BacktestHistoryItem,
+  type BacktestHistoryQuery,
+  type BacktestResult,
+} from "../../shared/backtest";
 
 export interface BacktestPersistenceSummary {
   backtestResultId: string;
@@ -21,6 +26,48 @@ export interface BacktestPersistenceSummary {
   settlementCount: number;
   holdingCount: number;
   performanceCount: number;
+}
+
+function normalizeAlgorithm(value: string): BacktestAlgorithm {
+  if (value === "us" || value === "cn" || value === "hk") {
+    return value;
+  }
+  return "us";
+}
+
+function parseNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const n = Number(value);
+    if (Number.isFinite(n)) {
+      return n;
+    }
+  }
+  return fallback;
+}
+
+function parseNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const n = Number(value);
+    if (Number.isFinite(n)) {
+      return n;
+    }
+  }
+  return null;
+}
+
+function toDateText(value: Date | string | null): string | null {
+  if (!value) return null;
+  if (typeof value === "string") return value.slice(0, 10);
+  return value.toISOString().slice(0, 10);
 }
 
 type HoldingState = {
@@ -58,12 +105,7 @@ function num(value: number, fractionDigits: number): string {
 }
 
 function parseCount(value: unknown): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+  return parseNumber(value, 0);
 }
 
 function tradeTimestamp(date: string): Date {
@@ -324,6 +366,84 @@ export async function getBacktestResultFromDb(id: string): Promise<BacktestResul
   }
 
   return mapRowToResult(rows[0]);
+}
+
+export async function listBacktestHistoryFromDb(
+  query: BacktestHistoryQuery,
+): Promise<BacktestHistoryItem[] | null> {
+  if (!isDatabaseEnabled || !db) {
+    return null;
+  }
+
+  const limit = Math.max(1, Math.min(200, query.limit ?? 50));
+  const whereConditions = [
+    eq(portfolios.type, "backtest"),
+    isNotNull(portfolios.sourceBacktestResultId),
+  ];
+
+  if (query.algorithm) {
+    whereConditions.push(eq(strategies.algorithmId, query.algorithm));
+  }
+
+  if (query.runDateFrom) {
+    whereConditions.push(
+      gte(portfolios.createdAt, new Date(`${query.runDateFrom}T00:00:00.000Z`)),
+    );
+  }
+
+  if (query.runDateTo) {
+    whereConditions.push(
+      lte(portfolios.createdAt, new Date(`${query.runDateTo}T23:59:59.999Z`)),
+    );
+  }
+
+  const rows = await db
+    .select({
+      backtestResultId: portfolios.sourceBacktestResultId,
+      portfolioId: portfolios.id,
+      strategyId: portfolios.strategyId,
+      status: portfolios.backtestStatus,
+      runAt: portfolios.createdAt,
+      startDate: portfolios.backtestStartDate,
+      endDate: portfolios.backtestEndDate,
+      initialCash: portfolios.initialCash,
+      finalValue: portfolios.totalValue,
+      algorithm: strategies.algorithmId,
+      totalReturn: strategyPerformance.totalReturn,
+      annualizedReturn: strategyPerformance.annualizedReturn,
+      sharpeRatio: strategyPerformance.sharpeRatio,
+      maxDrawdown: strategyPerformance.maxDrawdown,
+      totalTrades: strategyPerformance.totalTrades,
+    })
+    .from(portfolios)
+    .innerJoin(strategies, eq(portfolios.strategyId, strategies.id))
+    .leftJoin(strategyPerformance, eq(strategyPerformance.portfolioId, portfolios.id))
+    .where(and(...whereConditions))
+    .orderBy(desc(portfolios.createdAt))
+    .limit(limit);
+
+  return rows
+    .filter((row) => row.backtestResultId !== null)
+    .map((row) => ({
+      backtestResultId: row.backtestResultId as string,
+      portfolioId: row.portfolioId,
+      strategyId: row.strategyId,
+      algorithm: normalizeAlgorithm(row.algorithm),
+      status: row.status,
+      runAt: toIso(row.runAt),
+      startDate: toDateText(row.startDate),
+      endDate: toDateText(row.endDate),
+      initialCash: parseNumber(row.initialCash, 0),
+      finalValue: parseNumber(row.finalValue, 0),
+      totalReturn: parseNullableNumber(row.totalReturn),
+      annualizedReturn: parseNullableNumber(row.annualizedReturn),
+      sharpeRatio: parseNullableNumber(row.sharpeRatio),
+      maxDrawdown: parseNullableNumber(row.maxDrawdown),
+      totalTrades:
+        row.totalTrades === null || row.totalTrades === undefined
+          ? null
+          : parseNumber(row.totalTrades, 0),
+    }));
 }
 
 export async function getBacktestPersistenceSummaryByResultId(

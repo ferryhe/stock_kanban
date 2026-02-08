@@ -78,3 +78,28 @@ export interface BacktestResult {
     configFile?: string;
   };
 }
+
+export interface BacktestHistoryQuery {
+  algorithm?: BacktestAlgorithm;
+  runDateFrom?: string;
+  runDateTo?: string;
+  limit?: number;
+}
+
+export interface BacktestHistoryItem {
+  backtestResultId: string;
+  portfolioId: string;
+  strategyId: string | null;
+  algorithm: BacktestAlgorithm;
+  status: string | null;
+  runAt: string;
+  startDate: string | null;
+  endDate: string | null;
+  initialCash: number;
+  finalValue: number;
+  totalReturn: number | null;
+  annualizedReturn: number | null;
+  sharpeRatio: number | null;
+  maxDrawdown: number | null;
+  totalTrades: number | null;
+}

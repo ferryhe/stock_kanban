@@ -3,8 +3,10 @@ import { type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate, getAvailableLeaderboards, getLeaderboardData } from "./stockService";
 import {
   getBacktestAlgorithms,
+  getBacktestHistory,
   getBacktestPersistenceSummary,
   getBacktestResult,
+  normalizeBacktestHistoryQuery,
   normalizeBacktestConfig,
   runBacktest,
   runBacktestCompare,
@@ -230,6 +232,20 @@ export async function registerRoutes(
       console.error("Error in /api/backtests:", error);
       const message =
         error instanceof Error ? error.message : "Failed to run backtest";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get backtest history list with filters
+  app.get("/api/backtests/history", async (req, res) => {
+    try {
+      const query = normalizeBacktestHistoryQuery(req.query);
+      const items = await getBacktestHistory(query);
+      res.json(items);
+    } catch (error) {
+      console.error("Error in /api/backtests/history:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch backtest history";
       res.status(400).json({ error: message });
     }
   });
