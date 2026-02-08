@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   type BacktestAlgorithm,
   type BacktestConfig,
+  type BacktestHistoryItem,
+  type BacktestHistoryQuery,
   type BacktestResult,
 } from "@shared/backtest";
 
@@ -545,6 +547,59 @@ export const useBacktestResult = (id: string, enabled: boolean = true) => {
     },
     enabled: enabled && id.length > 0,
     staleTime: 60_000,
+  });
+};
+
+function buildBacktestHistoryQuery(query: BacktestHistoryQuery): string {
+  const params = new URLSearchParams();
+  if (query.algorithm) {
+    params.set("algorithm", query.algorithm);
+  }
+  if (query.runDateFrom) {
+    params.set("runDateFrom", query.runDateFrom);
+  }
+  if (query.runDateTo) {
+    params.set("runDateTo", query.runDateTo);
+  }
+  if (query.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+  return params.toString();
+}
+
+export const useBacktestHistory = (
+  query: BacktestHistoryQuery,
+  enabled: boolean = true,
+) => {
+  return useQuery<BacktestHistoryItem[]>({
+    queryKey: [
+      "backtests",
+      "history",
+      query.algorithm ?? "",
+      query.runDateFrom ?? "",
+      query.runDateTo ?? "",
+      query.limit ?? 50,
+    ],
+    queryFn: async () => {
+      const qs = buildBacktestHistoryQuery(query);
+      const url = qs.length > 0 ? `/api/backtests/history?${qs}` : "/api/backtests/history";
+      const res = await fetch(url);
+      if (!res.ok) {
+        let message = "Failed to fetch backtest history";
+        try {
+          const body = await res.json();
+          if (body?.error && typeof body.error === "string") {
+            message = body.error;
+          }
+        } catch {
+          // ignore non-json body
+        }
+        throw new Error(message);
+      }
+      return res.json();
+    },
+    enabled,
+    staleTime: 30_000,
   });
 };
 

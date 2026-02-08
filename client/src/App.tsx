@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import BacktestCenter from "@/pages/BacktestCenter";
+import BacktestHistoryPage from "@/pages/BacktestHistoryPage";
 import BacktestResultsPage from "@/pages/BacktestResultsPage";
 import ComparePage from "@/pages/ComparePage";
 import { useEffect } from "react";
@@ -17,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/backtest" component={BacktestCenter} />
+      <Route path="/backtest/history" component={BacktestHistoryPage} />
       <Route path="/backtest/:id/results" component={BacktestResultsPage} />
       <Route path="/compare" component={ComparePage} />
       <Route component={NotFound} />

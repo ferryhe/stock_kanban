@@ -59,6 +59,9 @@ export default function BacktestResultsPage({ params }: BacktestResultsPageProps
             <Link href="/compare" className="text-xs px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80">
               Compare
             </Link>
+            <Link href="/backtest/history" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
+              History
+            </Link>
             <Link href="/backtest" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
               New Backtest
             </Link>
