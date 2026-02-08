@@ -8,6 +8,7 @@ import {
   strategies,
   strategyPerformance,
   trades,
+  users,
 } from "../../shared/schema";
 import {
   type BacktestAlgorithm,
@@ -209,6 +210,36 @@ async function ensureStrategy(
   return inserted[0].id;
 }
 
+function syntheticUsernameFromUserId(userId: string): string {
+  const safe = userId.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+  return `ext_${safe}`.slice(0, 64);
+}
+
+async function ensureUserExists(
+  tx: typeof db extends infer T ? NonNullable<T> : never,
+  userId?: string,
+): Promise<void> {
+  if (!userId || userId.length === 0) {
+    return;
+  }
+
+  const existing = await tx
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return;
+  }
+
+  await tx.insert(users).values({
+    id: userId,
+    username: syntheticUsernameFromUserId(userId),
+    password: "!external-user",
+  });
+}
+
 async function createPortfolio(
   tx: typeof db extends infer T ? NonNullable<T> : never,
   result: BacktestResult,
@@ -344,6 +375,8 @@ export async function saveBacktestResultToDb(
   }
 
   await db.transaction(async (tx) => {
+    await ensureUserExists(tx, userId);
+
     await tx.insert(backtestResults).values({
       id: result.id,
       algorithm: result.config.algorithm,
