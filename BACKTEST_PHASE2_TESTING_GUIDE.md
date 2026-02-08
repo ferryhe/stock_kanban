@@ -75,3 +75,34 @@ If API works but DB has no row:
 1. check app log for `[Backtest] Failed to persist result to PostgreSQL`
 2. validate `DATABASE_URL`, SSL flags, network ACL
 3. rerun `npm run db:prepare && npm run db:push`
+
+## 8. Windows local verified run (2026-02-08)
+
+Environment:
+- OS: Windows
+- DB: Docker PostgreSQL (`postgres:16-alpine`)
+- Mapping: `127.0.0.1:55432 -> 5432`
+
+Commands executed:
+
+```powershell
+docker run -d --name stock-kanban-pg-test `
+  -e POSTGRES_USER=stock_user `
+  -e POSTGRES_PASSWORD=stock_pass `
+  -e POSTGRES_DB=stock_kanban_test `
+  -p 55432:5432 postgres:16-alpine
+
+$env:DATABASE_URL="postgresql://stock_user:stock_pass@127.0.0.1:55432/stock_kanban_test"
+$env:PGSSL="false"
+
+npm run db:prepare
+npm run db:push
+```
+
+Backtest persistence verification:
+- Backtest run succeeded
+- `getBacktestResultFromDb(id)` returned non-null
+- Verified in DB:
+  - `total_rows = 1`
+  - latest row id: `a82d78f9-6ad3-417c-ac1d-a866a215df1d`
+  - `algorithm = us`

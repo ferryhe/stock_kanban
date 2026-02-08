@@ -82,9 +82,23 @@ Updated runtime config templates:
 - Result:
   - clean skip behavior without `DATABASE_URL`
 
-### 3.4 Full PostgreSQL E2E status
+### 3.4 Full PostgreSQL E2E status (updated)
 
-Attempted to start local test PostgreSQL via Docker, but Docker daemon was unavailable in this environment (CLI present, daemon pipe missing). Therefore, full write/read verification against a live PostgreSQL instance was not executed here.
+Windows local E2E validation completed with Docker PostgreSQL:
+
+- PostgreSQL container: `stock-kanban-pg-test` (`postgres:16-alpine`)
+- Connection: `postgresql://stock_user:stock_pass@127.0.0.1:55432/stock_kanban_test`
+- Commands passed:
+  - `npm run db:prepare`
+  - `npm run db:push`
+- Backtest run persisted successfully:
+  - id: `a82d78f9-6ad3-417c-ac1d-a866a215df1d`
+  - algorithm: `us`
+  - trades: `129`
+  - equity points: `64`
+- SQL verification passed:
+  - `select count(*) from backtest_results;` -> `1`
+  - latest row id matches API/service run id
 
 ## 4. Operational Behavior Summary
 

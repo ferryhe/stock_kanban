@@ -92,3 +92,4 @@ MIT License
 - Without `DATABASE_URL`, the app falls back to in-memory backtest storage.
 - Run `npm run db:prepare` before `npm run db:push` on a fresh PostgreSQL database.
 - Linux deployment guide: `LINUX_FRONTEND_PGSQL_CONFIG.md`
+- UI operation guide: `BACKTEST_UI_OPERATION_GUIDE.md`
