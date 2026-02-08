@@ -1,9 +1,19 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "wouter";
-import { useBacktestAlgorithms, useBacktestHistory } from "@/lib/stockApi";
-import { type BacktestAlgorithm, type BacktestHistoryQuery } from "@shared/backtest";
+import {
+  getBacktestUserId,
+  setBacktestUserId,
+  useBacktestAlgorithms,
+  useBacktestHistory,
+} from "@/lib/stockApi";
+import {
+  type BacktestAlgorithm,
+  type BacktestHistoryQuery,
+  type BacktestStatus,
+} from "@shared/backtest";
 
 type AlgorithmFilter = "all" | BacktestAlgorithm;
+type StatusFilter = "all" | BacktestStatus;
 
 function getDefaultDate(offsetDays: number): string {
   const date = new Date();
@@ -45,31 +55,45 @@ function metricClass(value: number | null): string {
 
 export default function BacktestHistoryPage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
-
+  const [userId, setUserId] = useState<string>(getBacktestUserId());
   const [algorithm, setAlgorithm] = useState<AlgorithmFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
   const [runDateFrom, setRunDateFrom] = useState<string>(getDefaultDate(-60));
   const [runDateTo, setRunDateTo] = useState<string>(getDefaultDate(0));
+  const [pageSize, setPageSize] = useState<number>(20);
   const [query, setQuery] = useState<BacktestHistoryQuery>({
     runDateFrom: getDefaultDate(-60),
     runDateTo: getDefaultDate(0),
-    limit: 100,
+    page: 1,
+    pageSize: 20,
   });
 
-  const { data: items = [], isLoading, error, isFetching } = useBacktestHistory(query);
+  const { data, isLoading, error, isFetching } = useBacktestHistory(query);
+  const items = data?.items ?? [];
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
+    setBacktestUserId(userId);
     setQuery({
       algorithm: algorithm === "all" ? undefined : algorithm,
+      status: status === "all" ? undefined : status,
       runDateFrom: runDateFrom.length > 0 ? runDateFrom : undefined,
       runDateTo: runDateTo.length > 0 ? runDateTo : undefined,
-      limit: 100,
+      page: 1,
+      pageSize,
     });
+  };
+
+  const gotoPage = (page: number) => {
+    setQuery((prev) => ({
+      ...prev,
+      page,
+    }));
   };
 
   const summary = useMemo(() => {
     if (items.length === 0) {
-      return { total: 0, positive: 0, avgReturn: null as number | null };
+      return { count: 0, positive: 0, avgReturn: null as number | null };
     }
 
     const returnValues = items
@@ -78,7 +102,7 @@ export default function BacktestHistoryPage() {
     const positive = returnValues.filter((value) => value >= 0).length;
 
     return {
-      total: items.length,
+      count: items.length,
       positive,
       avgReturn:
         returnValues.length > 0
@@ -94,7 +118,7 @@ export default function BacktestHistoryPage() {
           <div>
             <h1 className="text-2xl font-semibold">Backtest History</h1>
             <p className="text-sm text-muted-foreground">
-              Filter by algorithm and run date, then open any result details.
+              Paginated history with status filter and user-isolated records.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -107,7 +131,16 @@ export default function BacktestHistoryPage() {
           </div>
         </header>
 
-        <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-4 rounded-xl border border-border p-4 bg-card">
+        <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 rounded-xl border border-border p-4 bg-card">
+          <label className="text-sm grid gap-1">
+            <span>User ID</span>
+            <input
+              className="h-10 px-3 rounded-md bg-background border border-input"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="demo-user"
+            />
+          </label>
           <label className="text-sm grid gap-1">
             <span>Algorithm</span>
             <select
@@ -121,6 +154,21 @@ export default function BacktestHistoryPage() {
                   {item.toUpperCase()}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="text-sm grid gap-1">
+            <span>Status</span>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StatusFilter)}
+              className="h-10 px-3 rounded-md bg-background border border-input"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </label>
           <label className="text-sm grid gap-1">
@@ -141,8 +189,20 @@ export default function BacktestHistoryPage() {
               onChange={(e) => setRunDateTo(e.target.value)}
             />
           </label>
-          <div className="text-sm grid gap-1">
-            <span>&nbsp;</span>
+          <label className="text-sm grid gap-1">
+            <span>Page Size</span>
+            <select
+              value={String(pageSize)}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="h-10 px-3 rounded-md bg-background border border-input"
+            >
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <div className="text-sm grid gap-1 sm:col-span-3 lg:col-span-6">
             <button
               type="submit"
               className="h-10 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-60"
@@ -155,8 +215,8 @@ export default function BacktestHistoryPage() {
 
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Runs</p>
-            <p className="text-xl font-semibold">{summary.total}</p>
+            <p className="text-xs text-muted-foreground">Current Page Rows</p>
+            <p className="text-xl font-semibold">{summary.count}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
             <p className="text-xs text-muted-foreground">Positive Returns</p>
@@ -177,7 +237,13 @@ export default function BacktestHistoryPage() {
             {(error as Error).message}
           </section>
         ) : (
-          <section className="rounded-xl border border-border p-3 bg-card">
+          <section className="rounded-xl border border-border p-3 bg-card space-y-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Total: {data?.total ?? 0} | Page {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
+              </span>
+              <span>User Scope: {getBacktestUserId()}</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-muted-foreground">
@@ -231,6 +297,24 @@ export default function BacktestHistoryPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60 disabled:opacity-50"
+                disabled={(data?.page ?? 1) <= 1 || isFetching}
+                onClick={() => gotoPage((data?.page ?? 1) - 1)}
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60 disabled:opacity-50"
+                disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1) || isFetching}
+                onClick={() => gotoPage((data?.page ?? 1) + 1)}
+              >
+                Next
+              </button>
             </div>
           </section>
         )}

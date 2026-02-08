@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   type BacktestAlgorithm,
   type BacktestConfig,
-  type BacktestHistoryItem,
   type BacktestHistoryQuery,
+  type BacktestHistoryResponse,
   type BacktestResult,
 } from "@shared/backtest";
 
@@ -85,6 +85,33 @@ const withUiLang = () => ({
   headers: {
     "x-ui-lang": getUiLang(),
   },
+});
+
+const BACKTEST_USER_ID_KEY = "backtest_user_id";
+const DEFAULT_BACKTEST_USER_ID = "demo-user";
+
+export const getBacktestUserId = (): string => {
+  if (typeof window === "undefined") {
+    return DEFAULT_BACKTEST_USER_ID;
+  }
+  const value = localStorage.getItem(BACKTEST_USER_ID_KEY)?.trim();
+  return value && value.length > 0 ? value : DEFAULT_BACKTEST_USER_ID;
+};
+
+export const setBacktestUserId = (userId: string): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const trimmed = userId.trim();
+  localStorage.setItem(
+    BACKTEST_USER_ID_KEY,
+    trimmed.length > 0 ? trimmed : DEFAULT_BACKTEST_USER_ID,
+  );
+};
+
+const withBacktestUserHeaders = () => ({
+  ...withUiLang().headers,
+  "x-user-id": getBacktestUserId(),
 });
 
 // Check if US market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
@@ -514,7 +541,7 @@ export const runBacktestRequest = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...withUiLang().headers,
+      ...withBacktestUserHeaders(),
     },
     body: JSON.stringify(config),
   });
@@ -537,9 +564,11 @@ export const runBacktestRequest = async (
 
 export const useBacktestResult = (id: string, enabled: boolean = true) => {
   return useQuery<BacktestResult>({
-    queryKey: ["backtests", id],
+    queryKey: ["backtests", id, getBacktestUserId()],
     queryFn: async () => {
-      const res = await fetch(`/api/backtests/${id}`);
+      const res = await fetch(`/api/backtests/${id}`, {
+        headers: withBacktestUserHeaders(),
+      });
       if (!res.ok) {
         throw new Error("Failed to fetch backtest result");
       }
@@ -555,11 +584,20 @@ function buildBacktestHistoryQuery(query: BacktestHistoryQuery): string {
   if (query.algorithm) {
     params.set("algorithm", query.algorithm);
   }
+  if (query.status) {
+    params.set("status", query.status);
+  }
   if (query.runDateFrom) {
     params.set("runDateFrom", query.runDateFrom);
   }
   if (query.runDateTo) {
     params.set("runDateTo", query.runDateTo);
+  }
+  if (query.page !== undefined) {
+    params.set("page", String(query.page));
+  }
+  if (query.pageSize !== undefined) {
+    params.set("pageSize", String(query.pageSize));
   }
   if (query.limit !== undefined) {
     params.set("limit", String(query.limit));
@@ -571,19 +609,24 @@ export const useBacktestHistory = (
   query: BacktestHistoryQuery,
   enabled: boolean = true,
 ) => {
-  return useQuery<BacktestHistoryItem[]>({
+  return useQuery<BacktestHistoryResponse>({
     queryKey: [
       "backtests",
       "history",
+      getBacktestUserId(),
       query.algorithm ?? "",
+      query.status ?? "",
       query.runDateFrom ?? "",
       query.runDateTo ?? "",
-      query.limit ?? 50,
+      query.page ?? 1,
+      query.pageSize ?? query.limit ?? 20,
     ],
     queryFn: async () => {
       const qs = buildBacktestHistoryQuery(query);
       const url = qs.length > 0 ? `/api/backtests/history?${qs}` : "/api/backtests/history";
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: withBacktestUserHeaders(),
+      });
       if (!res.ok) {
         let message = "Failed to fetch backtest history";
         try {
@@ -611,7 +654,7 @@ export const runBacktestCompareRequest = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...withUiLang().headers,
+      ...withBacktestUserHeaders(),
     },
     body: JSON.stringify({
       algorithms,

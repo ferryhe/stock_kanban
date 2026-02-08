@@ -2,7 +2,12 @@
 import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
-import { runBacktestCompareRequest, useBacktestAlgorithms } from "@/lib/stockApi";
+import {
+  getBacktestUserId,
+  runBacktestCompareRequest,
+  setBacktestUserId,
+  useBacktestAlgorithms,
+} from "@/lib/stockApi";
 import { type BacktestAlgorithm, type BacktestConfig } from "@shared/backtest";
 
 function getDefaultDate(offsetDays: number): string {
@@ -27,6 +32,7 @@ const LINE_COLORS = ["#22c55e", "#60a5fa", "#f59e0b", "#f43f5e", "#14b8a6", "#a7
 
 export default function ComparePage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
+  const [userId, setUserId] = useState<string>(getBacktestUserId());
   const [selected, setSelected] = useState<BacktestAlgorithm[]>([]);
 
   const [startDate, setStartDate] = useState<string>(getDefaultDate(-365));
@@ -89,6 +95,7 @@ export default function ComparePage() {
       },
     };
 
+    setBacktestUserId(userId);
     mutation.mutate({ selectedAlgorithms: selected, baseConfig });
   };
 
@@ -159,6 +166,15 @@ export default function ComparePage() {
           </div>
 
           <div className="grid gap-2 sm:grid-cols-4">
+            <label className="text-sm grid gap-1">
+              <span>User ID</span>
+              <input
+                className="h-10 px-3 rounded-md bg-background border border-input"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="demo-user"
+              />
+            </label>
             <label className="text-sm grid gap-1">
               <span>Start Date</span>
               <input
