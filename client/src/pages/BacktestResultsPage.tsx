@@ -1,6 +1,10 @@
-﻿import { Link } from "wouter";
+import { Link } from "wouter";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useBacktestResult } from "@/lib/stockApi";
+import { useI18n } from "@/lib/i18n";
+import { backtestTerms, backtestUi, bt } from "@/lib/backtestUi";
+import { TermInfoLabel } from "@/components/TermInfoLabel";
+import { BacktestQuickLinks } from "@/components/BacktestQuickLinks";
 
 type BacktestResultsPageProps = {
   params?: {
@@ -27,17 +31,22 @@ function metricClass(value: number): string {
 export default function BacktestResultsPage({ params }: BacktestResultsPageProps) {
   const id = params?.id ?? "";
   const { data: result, isLoading, error } = useBacktestResult(id, id.length > 0);
+  const { lang, setLang, t } = useI18n();
 
   if (isLoading) {
-    return <main className="min-h-screen bg-background text-foreground p-6">Loading backtest...</main>;
+    return (
+      <main className="min-h-screen bg-background text-foreground p-6">
+        {bt(backtestUi.results.loading, lang)}
+      </main>
+    );
   }
 
   if (error || !result) {
     return (
       <main className="min-h-screen bg-background text-foreground p-6 space-y-4">
-        <p className="text-negative">Failed to load backtest result.</p>
+        <p className="text-negative">{bt(backtestUi.results.loadFailed, lang)}</p>
         <Link href="/backtest" className="text-sm px-3 py-2 rounded-md border border-border">
-          Back to Backtest Center
+          {bt(backtestUi.results.backToCenter, lang)}
         </Link>
       </main>
     );
@@ -48,67 +57,91 @@ export default function BacktestResultsPage({ params }: BacktestResultsPageProps
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Backtest Results</h1>
-            <p className="text-sm text-muted-foreground">
-              {summary.algorithm.toUpperCase()} | {summary.startDate} to {summary.endDate}
-            </p>
+        <header className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">{bt(backtestUi.results.title, lang)}</h1>
+              <p className="text-sm text-muted-foreground">
+                {summary.algorithm.toUpperCase()} | {summary.startDate} to {summary.endDate}
+              </p>
+            </div>
+            <button
+              onClick={() => setLang(lang === "en" ? "zh" : "en")}
+              className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              data-testid="backtest-results-lang-toggle"
+            >
+              {t("langToggle")}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/compare" className="text-xs px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80">
-              Compare
-            </Link>
-            <Link href="/backtest/history" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              History
-            </Link>
-            <Link href="/backtest" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              New Backtest
-            </Link>
-          </div>
+          <BacktestQuickLinks lang={lang} />
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Final Value</p>
+            <p className="text-xs text-muted-foreground">{bt(backtestUi.results.finalValue, lang)}</p>
             <p className="text-xl font-semibold">{formatCurrency(summary.finalValue)}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Total Return</p>
+            <p className="text-xs text-muted-foreground">{bt(backtestUi.results.totalReturn, lang)}</p>
             <p className={`text-xl font-semibold ${metricClass(summary.totalReturn)}`}>
               {formatPercent(summary.totalReturn)}
             </p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Annualized Return</p>
+            <p className="text-xs text-muted-foreground">
+              <TermInfoLabel
+                label={backtestTerms.annualizedReturn.label[lang]}
+                description={backtestTerms.annualizedReturn.description[lang]}
+              />
+            </p>
             <p className={`text-xl font-semibold ${metricClass(summary.annualizedReturn)}`}>
               {formatPercent(summary.annualizedReturn)}
             </p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Max Drawdown</p>
+            <p className="text-xs text-muted-foreground">
+              <TermInfoLabel
+                label={backtestTerms.maxDrawdown.label[lang]}
+                description={backtestTerms.maxDrawdown.description[lang]}
+              />
+            </p>
             <p className="text-xl font-semibold text-negative">{formatPercent(summary.maxDrawdown)}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Sharpe Ratio</p>
+            <p className="text-xs text-muted-foreground">
+              <TermInfoLabel
+                label={backtestTerms.sharpeRatio.label[lang]}
+                description={backtestTerms.sharpeRatio.description[lang]}
+              />
+            </p>
             <p className="text-xl font-semibold">{summary.sharpeRatio.toFixed(2)}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Volatility</p>
+            <p className="text-xs text-muted-foreground">
+              <TermInfoLabel
+                label={backtestTerms.volatility.label[lang]}
+                description={backtestTerms.volatility.description[lang]}
+              />
+            </p>
             <p className="text-xl font-semibold">{formatPercent(summary.volatility)}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Total Trades</p>
+            <p className="text-xs text-muted-foreground">{bt(backtestUi.results.totalTrades, lang)}</p>
             <p className="text-xl font-semibold">{summary.totalTrades}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Win Rate</p>
+            <p className="text-xs text-muted-foreground">
+              <TermInfoLabel
+                label={backtestTerms.winRate.label[lang]}
+                description={backtestTerms.winRate.description[lang]}
+              />
+            </p>
             <p className="text-xl font-semibold">{formatPercent(summary.winRate)}</p>
           </div>
         </section>
 
         <section className="rounded-xl border border-border p-3 bg-card">
-          <h2 className="text-sm font-medium mb-2">Equity Curve</h2>
+          <h2 className="text-sm font-medium mb-2">{bt(backtestUi.results.equityCurve, lang)}</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={result.equityCurve} margin={{ left: 8, right: 12, top: 8, bottom: 8 }}>
@@ -133,20 +166,25 @@ export default function BacktestResultsPage({ params }: BacktestResultsPageProps
         </section>
 
         <section className="rounded-xl border border-border p-3 bg-card">
-          <h2 className="text-sm font-medium mb-2">Trades</h2>
+          <h2 className="text-sm font-medium mb-2">{bt(backtestUi.results.trades, lang)}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-muted-foreground">
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-2">Date</th>
-                  <th className="text-left py-2 pr-2">Ticker</th>
-                  <th className="text-left py-2 pr-2">Side</th>
-                  <th className="text-right py-2 pr-2">Shares</th>
-                  <th className="text-right py-2 pr-2">Price</th>
-                  <th className="text-right py-2 pr-2">Notional</th>
-                  <th className="text-right py-2">Commission</th>
-                </tr>
-              </thead>
+                <thead className="text-muted-foreground">
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 pr-2">{lang === "en" ? "Date" : "日期"}</th>
+                    <th className="text-left py-2 pr-2">{lang === "en" ? "Ticker" : "代码"}</th>
+                    <th className="text-left py-2 pr-2">{lang === "en" ? "Side" : "方向"}</th>
+                    <th className="text-right py-2 pr-2">{lang === "en" ? "Shares" : "股数"}</th>
+                    <th className="text-right py-2 pr-2">{lang === "en" ? "Price" : "价格"}</th>
+                    <th className="text-right py-2 pr-2">{lang === "en" ? "Notional" : "成交额"}</th>
+                    <th className="text-right py-2">
+                      <TermInfoLabel
+                        label={backtestTerms.commissionBps.label[lang]}
+                        description={backtestTerms.commissionBps.description[lang]}
+                      />
+                    </th>
+                  </tr>
+                </thead>
               <tbody>
                 {result.trades.slice().reverse().slice(0, 120).map((trade, idx) => (
                   <tr key={`${trade.date}-${trade.ticker}-${idx}`} className="border-b border-border/40">

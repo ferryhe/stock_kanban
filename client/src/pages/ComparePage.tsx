@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import {
   CartesianGrid,
@@ -18,6 +17,10 @@ import {
   useBacktestAlgorithms,
 } from "@/lib/stockApi";
 import { type BacktestAlgorithm, type BacktestConfig, type BacktestResult } from "@shared/backtest";
+import { useI18n } from "@/lib/i18n";
+import { backtestTerms, backtestUi, bt } from "@/lib/backtestUi";
+import { TermInfoLabel } from "@/components/TermInfoLabel";
+import { BacktestQuickLinks } from "@/components/BacktestQuickLinks";
 
 type ChartRow = Record<string, string | number | null>;
 
@@ -310,6 +313,7 @@ function buildPrintableReportHtml(
 
 export default function ComparePage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
+  const { lang, setLang, t } = useI18n();
   const [userId, setUserId] = useState<string>(getBacktestUserId());
   const [selected, setSelected] = useState<BacktestAlgorithm[]>([]);
 
@@ -469,29 +473,28 @@ export default function ComparePage() {
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Algorithm Compare</h1>
-            <p className="text-sm text-muted-foreground">
-              Run multiple market algorithms and compare backtest outcomes.
-            </p>
+        <header className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">{bt(backtestUi.compare.title, lang)}</h1>
+              <p className="text-sm text-muted-foreground">
+                {bt(backtestUi.compare.subtitle, lang)}
+              </p>
+            </div>
+            <button
+              onClick={() => setLang(lang === "en" ? "zh" : "en")}
+              className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              data-testid="compare-lang-toggle"
+            >
+              {t("langToggle")}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/backtest" className="text-xs px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80">
-              Backtest Center
-            </Link>
-            <Link href="/backtest/history" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              History
-            </Link>
-            <Link href="/" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              Dashboard
-            </Link>
-          </div>
+          <BacktestQuickLinks lang={lang} />
         </header>
 
         <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-border p-4 bg-card">
           <div className="grid gap-2">
-            <p className="text-sm font-medium">Algorithms</p>
+            <p className="text-sm font-medium">{bt(backtestUi.compare.algorithms, lang)}</p>
             <div className="flex flex-wrap gap-2">
               {algorithms.map((algorithm) => {
                 const active = selected.includes(algorithm);
@@ -515,7 +518,7 @@ export default function ComparePage() {
 
           <div className="grid gap-2 sm:grid-cols-4">
             <label className="text-sm grid gap-1">
-              <span>User ID</span>
+              <span>{bt(backtestUi.center.userId, lang)}</span>
               <input
                 className="h-10 px-3 rounded-md bg-background border border-input"
                 value={userId}
@@ -524,7 +527,7 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Start Date</span>
+              <span>{bt(backtestUi.center.startDate, lang)}</span>
               <input
                 type="date"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -533,7 +536,7 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>End Date</span>
+              <span>{bt(backtestUi.center.endDate, lang)}</span>
               <input
                 type="date"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -542,7 +545,7 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Initial Cash</span>
+              <span>{bt(backtestUi.center.initialCash, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -551,22 +554,25 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Rebalance</span>
+              <TermInfoLabel
+                label={backtestTerms.rebalance.label[lang]}
+                description={backtestTerms.rebalance.description[lang]}
+              />
               <select
                 className="h-10 px-3 rounded-md bg-background border border-input"
                 value={rebalanceFrequency}
                 onChange={(e) => setRebalanceFrequency(e.target.value as "daily" | "weekly" | "monthly")}
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{lang === "en" ? "Daily" : "每日"}</option>
+                <option value="weekly">{lang === "en" ? "Weekly" : "每周"}</option>
+                <option value="monthly">{lang === "en" ? "Monthly" : "每月"}</option>
               </select>
             </label>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <label className="text-sm grid gap-1">
-              <span>Max Position</span>
+              <span>{bt(backtestUi.center.maxPositionPerStock, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -578,7 +584,7 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Max Positions</span>
+              <span>{bt(backtestUi.center.maxTotalPositions, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -589,7 +595,10 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Cash Reserve</span>
+              <TermInfoLabel
+                label={backtestTerms.cashReserve.label[lang]}
+                description={backtestTerms.cashReserve.description[lang]}
+              />
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -601,7 +610,10 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Commission bps</span>
+              <TermInfoLabel
+                label={backtestTerms.commissionBps.label[lang]}
+                description={backtestTerms.commissionBps.description[lang]}
+              />
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -612,7 +624,10 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Slippage bps</span>
+              <TermInfoLabel
+                label={backtestTerms.slippageBps.label[lang]}
+                description={backtestTerms.slippageBps.description[lang]}
+              />
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -623,7 +638,7 @@ export default function ComparePage() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Min Fee</span>
+              <span>{bt(backtestUi.center.minCommission, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -644,7 +659,9 @@ export default function ComparePage() {
             className="h-11 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-60"
             disabled={selected.length === 0 || mutation.isPending}
           >
-            {mutation.isPending ? "Running Compare..." : "Run Compare"}
+            {mutation.isPending
+              ? bt(backtestUi.compare.running, lang)
+              : bt(backtestUi.compare.run, lang)}
           </button>
         </form>
 
@@ -652,21 +669,21 @@ export default function ComparePage() {
           <>
             <section className="rounded-xl border border-border p-3 bg-card">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-medium">Equity Curves</h2>
+                <h2 className="text-sm font-medium">{bt(backtestUi.compare.equityCurves, lang)}</h2>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60"
                     onClick={onExportCsv}
                   >
-                    Export CSV
+                    {bt(backtestUi.compare.exportCsv, lang)}
                   </button>
                   <button
                     type="button"
                     className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60"
                     onClick={onExportPdf}
                   >
-                    Export PDF
+                    {bt(backtestUi.compare.exportPdf, lang)}
                   </button>
                 </div>
               </div>
@@ -704,7 +721,7 @@ export default function ComparePage() {
             </section>
 
             <section className="rounded-xl border border-border p-3 bg-card">
-              <h2 className="text-sm font-medium mb-2">Drawdown Curves</h2>
+              <h2 className="text-sm font-medium mb-2">{bt(backtestUi.compare.drawdownCurves, lang)}</h2>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={drawdownChartData} margin={{ left: 8, right: 12, top: 8, bottom: 8 }}>
@@ -732,19 +749,44 @@ export default function ComparePage() {
             </section>
 
             <section className="rounded-xl border border-border p-3 bg-card overflow-x-auto">
-              <h2 className="text-sm font-medium mb-2">Summary</h2>
+              <h2 className="text-sm font-medium mb-2">{bt(backtestUi.compare.summary, lang)}</h2>
               <table className="w-full text-sm min-w-[860px]">
                 <thead className="text-muted-foreground border-b border-border">
                   <tr>
                     <th className="text-left py-2 pr-2">Algorithm</th>
                     <th className="text-right py-2 pr-2">Final Value</th>
                     <th className="text-right py-2 pr-2">Total Return</th>
-                    <th className="text-right py-2 pr-2">Annualized</th>
-                    <th className="text-right py-2 pr-2">Sharpe</th>
-                    <th className="text-right py-2 pr-2">Volatility</th>
-                    <th className="text-right py-2 pr-2">Max Drawdown</th>
+                    <th className="text-right py-2 pr-2">
+                      <TermInfoLabel
+                        label={backtestTerms.annualizedReturn.label[lang]}
+                        description={backtestTerms.annualizedReturn.description[lang]}
+                      />
+                    </th>
+                    <th className="text-right py-2 pr-2">
+                      <TermInfoLabel
+                        label={backtestTerms.sharpeRatio.label[lang]}
+                        description={backtestTerms.sharpeRatio.description[lang]}
+                      />
+                    </th>
+                    <th className="text-right py-2 pr-2">
+                      <TermInfoLabel
+                        label={backtestTerms.volatility.label[lang]}
+                        description={backtestTerms.volatility.description[lang]}
+                      />
+                    </th>
+                    <th className="text-right py-2 pr-2">
+                      <TermInfoLabel
+                        label={backtestTerms.maxDrawdown.label[lang]}
+                        description={backtestTerms.maxDrawdown.description[lang]}
+                      />
+                    </th>
                     <th className="text-right py-2 pr-2">Trades</th>
-                    <th className="text-right py-2">Win Rate</th>
+                    <th className="text-right py-2">
+                      <TermInfoLabel
+                        label={backtestTerms.winRate.label[lang]}
+                        description={backtestTerms.winRate.description[lang]}
+                      />
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -766,7 +808,12 @@ export default function ComparePage() {
             </section>
 
             <section className="rounded-xl border border-border p-3 bg-card overflow-x-auto">
-              <h2 className="text-sm font-medium mb-2">Correlation Matrix (Daily Returns)</h2>
+              <h2 className="text-sm font-medium mb-2">
+                <TermInfoLabel
+                  label={backtestTerms.correlation.label[lang]}
+                  description={backtestTerms.correlation.description[lang]}
+                />
+              </h2>
               <table className="w-full text-sm min-w-[520px]">
                 <thead className="text-muted-foreground border-b border-border">
                   <tr>
@@ -797,7 +844,12 @@ export default function ComparePage() {
             </section>
 
             <section className="rounded-xl border border-border p-3 bg-card overflow-x-auto">
-              <h2 className="text-sm font-medium mb-2">Monthly Return Heatmap</h2>
+              <h2 className="text-sm font-medium mb-2">
+                <TermInfoLabel
+                  label={backtestTerms.monthlyHeatmap.label[lang]}
+                  description={backtestTerms.monthlyHeatmap.description[lang]}
+                />
+              </h2>
               <table className="w-full text-sm min-w-[640px]">
                 <thead className="text-muted-foreground border-b border-border">
                   <tr>

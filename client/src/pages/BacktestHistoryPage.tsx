@@ -11,6 +11,10 @@ import {
   type BacktestHistoryQuery,
   type BacktestStatus,
 } from "@shared/backtest";
+import { useI18n } from "@/lib/i18n";
+import { backtestTerms, backtestUi, bt } from "@/lib/backtestUi";
+import { TermInfoLabel } from "@/components/TermInfoLabel";
+import { BacktestQuickLinks } from "@/components/BacktestQuickLinks";
 
 type AlgorithmFilter = "all" | BacktestAlgorithm;
 type StatusFilter = "all" | BacktestStatus;
@@ -34,12 +38,12 @@ function formatPercent(value: number | null): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
-function formatRunAt(value: string): string {
+function formatRunAt(value: string, lang: "en" | "zh"): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString("en-US", {
+  return date.toLocaleString(lang === "en" ? "en-US" : "zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -55,6 +59,7 @@ function metricClass(value: number | null): string {
 
 export default function BacktestHistoryPage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
+  const { lang, setLang, t } = useI18n();
   const [userId, setUserId] = useState<string>(getBacktestUserId());
   const [algorithm, setAlgorithm] = useState<AlgorithmFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -114,26 +119,28 @@ export default function BacktestHistoryPage() {
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Backtest History</h1>
-            <p className="text-sm text-muted-foreground">
-              Paginated history with status filter and user-isolated records.
-            </p>
+        <header className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">{bt(backtestUi.history.title, lang)}</h1>
+              <p className="text-sm text-muted-foreground">
+                {bt(backtestUi.history.subtitle, lang)}
+              </p>
+            </div>
+            <button
+              onClick={() => setLang(lang === "en" ? "zh" : "en")}
+              className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              data-testid="backtest-history-lang-toggle"
+            >
+              {t("langToggle")}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/backtest" className="text-xs px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80">
-              Backtest Center
-            </Link>
-            <Link href="/compare" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              Compare
-            </Link>
-          </div>
+          <BacktestQuickLinks lang={lang} />
         </header>
 
         <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 rounded-xl border border-border p-4 bg-card">
           <label className="text-sm grid gap-1">
-            <span>User ID</span>
+            <span>{bt(backtestUi.center.userId, lang)}</span>
             <input
               className="h-10 px-3 rounded-md bg-background border border-input"
               value={userId}
@@ -142,13 +149,13 @@ export default function BacktestHistoryPage() {
             />
           </label>
           <label className="text-sm grid gap-1">
-            <span>Algorithm</span>
+            <span>{bt(backtestUi.center.algorithm, lang)}</span>
             <select
               value={algorithm}
               onChange={(e) => setAlgorithm(e.target.value as AlgorithmFilter)}
               className="h-10 px-3 rounded-md bg-background border border-input"
             >
-              <option value="all">All</option>
+              <option value="all">{lang === "en" ? "All" : "全部"}</option>
               {algorithms.map((item) => (
                 <option key={item} value={item}>
                   {item.toUpperCase()}
@@ -157,22 +164,22 @@ export default function BacktestHistoryPage() {
             </select>
           </label>
           <label className="text-sm grid gap-1">
-            <span>Status</span>
+            <span>{bt(backtestUi.history.status, lang)}</span>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as StatusFilter)}
               className="h-10 px-3 rounded-md bg-background border border-input"
             >
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="running">Running</option>
-              <option value="completed">Completed</option>
-              <option value="failed">Failed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">{lang === "en" ? "All" : "全部"}</option>
+              <option value="pending">{lang === "en" ? "Pending" : "待执行"}</option>
+              <option value="running">{lang === "en" ? "Running" : "运行中"}</option>
+              <option value="completed">{lang === "en" ? "Completed" : "已完成"}</option>
+              <option value="failed">{lang === "en" ? "Failed" : "失败"}</option>
+              <option value="cancelled">{lang === "en" ? "Cancelled" : "已取消"}</option>
             </select>
           </label>
           <label className="text-sm grid gap-1">
-            <span>Run Date From</span>
+            <span>{bt(backtestUi.history.runDateFrom, lang)}</span>
             <input
               type="date"
               className="h-10 px-3 rounded-md bg-background border border-input"
@@ -181,7 +188,7 @@ export default function BacktestHistoryPage() {
             />
           </label>
           <label className="text-sm grid gap-1">
-            <span>Run Date To</span>
+            <span>{bt(backtestUi.history.runDateTo, lang)}</span>
             <input
               type="date"
               className="h-10 px-3 rounded-md bg-background border border-input"
@@ -190,7 +197,7 @@ export default function BacktestHistoryPage() {
             />
           </label>
           <label className="text-sm grid gap-1">
-            <span>Page Size</span>
+            <span>{bt(backtestUi.history.pageSize, lang)}</span>
             <select
               value={String(pageSize)}
               onChange={(e) => setPageSize(Number(e.target.value))}
@@ -208,22 +215,30 @@ export default function BacktestHistoryPage() {
               className="h-10 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-60"
               disabled={isFetching}
             >
-              {isFetching ? "Filtering..." : "Apply Filters"}
+              {isFetching
+                ? bt(backtestUi.history.filtering, lang)
+                : bt(backtestUi.history.applyFilters, lang)}
             </button>
           </div>
         </form>
 
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Current Page Rows</p>
+            <p className="text-xs text-muted-foreground">
+              {lang === "en" ? "Current Page Rows" : "当前页记录数"}
+            </p>
             <p className="text-xl font-semibold">{summary.count}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Positive Returns</p>
+            <p className="text-xs text-muted-foreground">
+              {lang === "en" ? "Positive Returns" : "正收益条数"}
+            </p>
             <p className="text-xl font-semibold">{summary.positive}</p>
           </div>
           <div className="rounded-lg border border-border p-3 bg-card">
-            <p className="text-xs text-muted-foreground">Average Return</p>
+            <p className="text-xs text-muted-foreground">
+              {lang === "en" ? "Average Return" : "平均收益"}
+            </p>
             <p className={`text-xl font-semibold ${metricClass(summary.avgReturn)}`}>
               {formatPercent(summary.avgReturn)}
             </p>
@@ -231,7 +246,9 @@ export default function BacktestHistoryPage() {
         </section>
 
         {isLoading ? (
-          <section className="rounded-xl border border-border p-6 bg-card">Loading history...</section>
+          <section className="rounded-xl border border-border p-6 bg-card">
+            {lang === "en" ? "Loading history..." : "历史数据加载中..."}
+          </section>
         ) : error ? (
           <section className="rounded-xl border border-border p-6 bg-card text-negative">
             {(error as Error).message}
@@ -240,37 +257,48 @@ export default function BacktestHistoryPage() {
           <section className="rounded-xl border border-border p-3 bg-card space-y-3">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                Total: {data?.total ?? 0} | Page {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
+                {lang === "en" ? "Total" : "总数"}: {data?.total ?? 0} |{" "}
+                {lang === "en" ? "Page" : "页码"} {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
               </span>
-              <span>User Scope: {getBacktestUserId()}</span>
+              <span>{lang === "en" ? "User Scope" : "用户范围"}: {getBacktestUserId()}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-muted-foreground">
                   <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-2">Run At</th>
-                    <th className="text-left py-2 pr-2">Algorithm</th>
-                    <th className="text-left py-2 pr-2">Backtest Period</th>
-                    <th className="text-right py-2 pr-2">Final Value</th>
-                    <th className="text-right py-2 pr-2">Total Return</th>
-                    <th className="text-right py-2 pr-2">Sharpe</th>
-                    <th className="text-right py-2 pr-2">Max Drawdown</th>
-                    <th className="text-right py-2 pr-2">Trades</th>
-                    <th className="text-left py-2 pr-2">Status</th>
-                    <th className="text-right py-2">Action</th>
+                    <th className="text-left py-2 pr-2">{lang === "en" ? "Run At" : "运行时间"}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.center.algorithm, lang)}</th>
+                    <th className="text-left py-2 pr-2">{lang === "en" ? "Backtest Period" : "回测区间"}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.finalValue, lang)}</th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.totalReturn, lang)}</th>
+                    <th className="text-right py-2 pr-2">
+                      <TermInfoLabel
+                        label={backtestTerms.sharpeRatio.label[lang]}
+                        description={backtestTerms.sharpeRatio.description[lang]}
+                      />
+                    </th>
+                    <th className="text-right py-2 pr-2">
+                      <TermInfoLabel
+                        label={backtestTerms.maxDrawdown.label[lang]}
+                        description={backtestTerms.maxDrawdown.description[lang]}
+                      />
+                    </th>
+                    <th className="text-right py-2 pr-2">{bt(backtestUi.results.totalTrades, lang)}</th>
+                    <th className="text-left py-2 pr-2">{bt(backtestUi.history.status, lang)}</th>
+                    <th className="text-right py-2">{lang === "en" ? "Action" : "操作"}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.length === 0 && (
                     <tr>
                       <td colSpan={10} className="py-6 text-center text-muted-foreground">
-                        No backtest history found for current filters.
+                        {bt(backtestUi.history.noData, lang)}
                       </td>
                     </tr>
                   )}
                   {items.map((item) => (
                     <tr key={item.backtestResultId} className="border-b border-border/40">
-                      <td className="py-2 pr-2 whitespace-nowrap">{formatRunAt(item.runAt)}</td>
+                      <td className="py-2 pr-2 whitespace-nowrap">{formatRunAt(item.runAt, lang)}</td>
                       <td className="py-2 pr-2">{item.algorithm.toUpperCase()}</td>
                       <td className="py-2 pr-2">
                         {item.startDate ?? "-"} to {item.endDate ?? "-"}
@@ -290,7 +318,7 @@ export default function BacktestHistoryPage() {
                           href={`/backtest/${item.backtestResultId}/results`}
                           className="text-xs px-2 py-1 rounded-md border border-border hover:bg-secondary/60"
                         >
-                          View
+                          {bt(backtestUi.history.view, lang)}
                         </Link>
                       </td>
                     </tr>
@@ -305,7 +333,7 @@ export default function BacktestHistoryPage() {
                 disabled={(data?.page ?? 1) <= 1 || isFetching}
                 onClick={() => gotoPage((data?.page ?? 1) - 1)}
               >
-                Prev
+                {bt(backtestUi.history.prev, lang)}
               </button>
               <button
                 type="button"
@@ -313,7 +341,7 @@ export default function BacktestHistoryPage() {
                 disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1) || isFetching}
                 onClick={() => gotoPage((data?.page ?? 1) + 1)}
               >
-                Next
+                {bt(backtestUi.history.next, lang)}
               </button>
             </div>
           </section>

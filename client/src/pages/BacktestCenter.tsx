@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useLocation } from "wouter";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import {
   getBacktestUserId,
@@ -8,6 +8,10 @@ import {
   useBacktestAlgorithms,
 } from "@/lib/stockApi";
 import { type BacktestAlgorithm, type BacktestConfig } from "@shared/backtest";
+import { useI18n } from "@/lib/i18n";
+import { backtestTerms, backtestUi, bt } from "@/lib/backtestUi";
+import { TermInfoLabel } from "@/components/TermInfoLabel";
+import { BacktestQuickLinks } from "@/components/BacktestQuickLinks";
 
 function getDefaultDate(offsetDays: number): string {
   const date = new Date();
@@ -18,6 +22,7 @@ function getDefaultDate(offsetDays: number): string {
 export default function BacktestCenter() {
   const [, setLocation] = useLocation();
   const { data: algorithms = [], isLoading } = useBacktestAlgorithms();
+  const { lang, setLang, t } = useI18n();
 
   const [algorithm, setAlgorithm] = useState<BacktestAlgorithm>("us");
   const [userId, setUserId] = useState<string>(getBacktestUserId());
@@ -81,30 +86,29 @@ export default function BacktestCenter() {
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-6">
       <div className="max-w-3xl mx-auto space-y-6">
-        <header className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Backtest Center</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure and run a single-algorithm backtest from quant snapshot signals.
-            </p>
+        <header className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">{bt(backtestUi.center.title, lang)}</h1>
+              <p className="text-sm text-muted-foreground">
+                {bt(backtestUi.center.subtitle, lang)}
+              </p>
+            </div>
+            <button
+              onClick={() => setLang(lang === "en" ? "zh" : "en")}
+              className="self-start px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              data-testid="backtest-lang-toggle"
+            >
+              {t("langToggle")}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/compare" className="text-xs px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80">
-              Compare
-            </Link>
-            <Link href="/backtest/history" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              History
-            </Link>
-            <Link href="/" className="text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary/60">
-              Dashboard
-            </Link>
-          </div>
+          <BacktestQuickLinks lang={lang} />
         </header>
 
         <form onSubmit={onSubmit} className="grid gap-4 rounded-xl border border-border p-4 bg-card">
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="text-sm grid gap-1">
-              <span>User ID</span>
+              <span>{bt(backtestUi.center.userId, lang)}</span>
               <input
                 className="h-10 px-3 rounded-md bg-background border border-input"
                 value={userId}
@@ -113,7 +117,7 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Algorithm</span>
+              <span>{bt(backtestUi.center.algorithm, lang)}</span>
               <select
                 className="h-10 px-3 rounded-md bg-background border border-input"
                 value={algorithm}
@@ -129,7 +133,10 @@ export default function BacktestCenter() {
             </label>
 
             <label className="text-sm grid gap-1">
-              <span>Rebalance</span>
+              <TermInfoLabel
+                label={backtestTerms.rebalance.label[lang]}
+                description={backtestTerms.rebalance.description[lang]}
+              />
               <select
                 className="h-10 px-3 rounded-md bg-background border border-input"
                 value={rebalanceFrequency}
@@ -137,16 +144,16 @@ export default function BacktestCenter() {
                   setRebalanceFrequency(e.target.value as "daily" | "weekly" | "monthly")
                 }
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="daily">{lang === "en" ? "Daily" : "每日"}</option>
+                <option value="weekly">{lang === "en" ? "Weekly" : "每周"}</option>
+                <option value="monthly">{lang === "en" ? "Monthly" : "每月"}</option>
               </select>
             </label>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="text-sm grid gap-1">
-              <span>Start Date</span>
+              <span>{bt(backtestUi.center.startDate, lang)}</span>
               <input
                 type="date"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -155,7 +162,7 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>End Date</span>
+              <span>{bt(backtestUi.center.endDate, lang)}</span>
               <input
                 type="date"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -164,7 +171,7 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Initial Cash</span>
+              <span>{bt(backtestUi.center.initialCash, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -178,7 +185,7 @@ export default function BacktestCenter() {
 
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="text-sm grid gap-1">
-              <span>Max Position Per Stock</span>
+              <span>{bt(backtestUi.center.maxPositionPerStock, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -190,7 +197,7 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Max Total Positions</span>
+              <span>{bt(backtestUi.center.maxTotalPositions, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -201,7 +208,10 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Min Cash Reserve</span>
+              <TermInfoLabel
+                label={backtestTerms.cashReserve.label[lang]}
+                description={backtestTerms.cashReserve.description[lang]}
+              />
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -216,7 +226,10 @@ export default function BacktestCenter() {
 
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="text-sm grid gap-1">
-              <span>Commission (bps)</span>
+              <TermInfoLabel
+                label={backtestTerms.commissionBps.label[lang]}
+                description={backtestTerms.commissionBps.description[lang]}
+              />
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -227,7 +240,10 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Slippage (bps)</span>
+              <TermInfoLabel
+                label={backtestTerms.slippageBps.label[lang]}
+                description={backtestTerms.slippageBps.description[lang]}
+              />
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -238,7 +254,7 @@ export default function BacktestCenter() {
               />
             </label>
             <label className="text-sm grid gap-1">
-              <span>Min Commission</span>
+              <span>{bt(backtestUi.center.minCommission, lang)}</span>
               <input
                 type="number"
                 className="h-10 px-3 rounded-md bg-background border border-input"
@@ -259,7 +275,9 @@ export default function BacktestCenter() {
             className="h-11 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-60"
             disabled={!canSubmit || mutation.isPending}
           >
-            {mutation.isPending ? "Running Backtest..." : "Run Backtest"}
+            {mutation.isPending
+              ? bt(backtestUi.center.running, lang)
+              : bt(backtestUi.center.run, lang)}
           </button>
         </form>
       </div>
