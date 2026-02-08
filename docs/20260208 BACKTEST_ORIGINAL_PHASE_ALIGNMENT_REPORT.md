@@ -45,17 +45,18 @@ Gap / deviation:
 
 ### Original Phase 2: 多算法对比与优化
 
-Status: Partially completed
+Status: Mostly completed
 
 Done:
 - compare page and multi-algorithm run endpoint
 - history query and query-oriented UI evolution
+- correlation analysis
+- drawdown curve and monthly return heatmap
+- export capability (CSV + browser PDF workflow)
+- initial performance optimization (in-memory historical price cache + benchmark script)
 
 Not done:
-- correlation analysis
-- drawdown curve and monthly return heatmap enhancements
-- export capability (CSV/PDF)
-- explicit backtest performance optimization (parallel compute/caching roadmap item)
+- deeper performance optimization roadmap (e.g., distributed/shared cache or advanced parallel backtest engine tuning)
 
 ### Original Phase 3: 实时虚拟交易与用户系统
 
@@ -97,7 +98,6 @@ To avoid phase naming confusion:
 
 Recommended next package: original `Phase 2` remaining items
 
-1. Add correlation analysis in compare output.
-2. Add drawdown curve + monthly return heatmap visualization.
-3. Add export API/UI (CSV first, then PDF).
-4. Add performance optimization benchmark and caching strategy.
+1. Continue performance optimization with cross-process/shared cache strategy.
+2. Optional: enhance compare UX (advanced heatmap interaction/correlation diagnostics).
+3. Then move to original `Phase 3` core scope (real-time paper trading + auth system).

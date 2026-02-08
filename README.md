@@ -94,5 +94,11 @@ MIT License
 - User isolation header: `x-user-id` (frontend defaults to `demo-user`)
 - Backtest history API (paginated): `GET /api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=YYYY-MM-DD&runDateTo=YYYY-MM-DD`
 - Frontend history page: `/backtest/history`
+- Compare page adds:
+  - drawdown curve
+  - correlation matrix
+  - monthly return heatmap
+  - CSV/PDF export workflow
+- Price cache benchmark: `npm run benchmark:price-cache`
 - Linux deployment guide: `LINUX_FRONTEND_PGSQL_CONFIG.md`
 - UI operation guide: `BACKTEST_UI_OPERATION_GUIDE.md`

@@ -115,6 +115,12 @@ Operation steps:
 Expected outputs:
 - Multi-line equity chart (one line per algorithm)
 - Summary table with aligned metrics across algorithms
+- Drawdown curve comparison
+- Daily return correlation matrix
+- Monthly return heatmap
+- Export actions:
+  - `Export CSV`
+  - `Export PDF` (browser print/save-as-PDF workflow)
 
 API behind this page:
 - `POST /api/backtests/compare`
