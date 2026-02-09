@@ -1,10 +1,10 @@
 ﻿import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getBacktestUserId,
+  getStrategyAccountId,
   runLiveSettlementNowRequest,
   runLiveTradingRequest,
-  setBacktestUserId,
+  setStrategyAccountId,
   useBacktestAlgorithms,
   useLivePortfolio,
 } from "@/lib/stockApi";
@@ -50,7 +50,7 @@ export default function LiveTradingPage() {
   const { lang, setLang } = useI18n();
 
   const [algorithm, setAlgorithm] = useState<BacktestAlgorithm>("us");
-  const [userId, setUserId] = useState<string>(getBacktestUserId());
+  const [accountId, setAccountId] = useState<string>(getStrategyAccountId());
   const [localError, setLocalError] = useState<string | null>(null);
 
   const activeAlgorithm = useMemo<BacktestAlgorithm>(() => {
@@ -72,7 +72,7 @@ export default function LiveTradingPage() {
 
   const invalidateLive = () => {
     queryClient.invalidateQueries({
-      queryKey: ["live", "portfolio", getBacktestUserId(), activeAlgorithm],
+      queryKey: ["live", "portfolio", getStrategyAccountId(), activeAlgorithm],
     });
   };
 
@@ -98,9 +98,9 @@ export default function LiveTradingPage() {
     },
   });
 
-  const onApplyUserId = (event: FormEvent) => {
+  const onApplyStrategyAccountId = (event: FormEvent) => {
     event.preventDefault();
-    setBacktestUserId(userId);
+    setStrategyAccountId(accountId);
     invalidateLive();
   };
 
@@ -127,15 +127,15 @@ export default function LiveTradingPage() {
         </header>
 
         <form
-          onSubmit={onApplyUserId}
+          onSubmit={onApplyStrategyAccountId}
           className="grid gap-3 rounded-xl border border-border p-4 bg-card sm:grid-cols-2 lg:grid-cols-4"
         >
           <label className="text-sm grid gap-1">
-            <span>{bt(backtestUi.center.userId, lang)}</span>
+            <span>{bt(backtestUi.center.strategyAccountId, lang)}</span>
             <input
               className="h-10 px-3 rounded-md bg-background border border-input"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
               placeholder="demo-user"
             />
           </label>

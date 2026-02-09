@@ -92,31 +92,31 @@ const withUiLang = () => ({
   },
 });
 
-const BACKTEST_USER_ID_KEY = "backtest_user_id";
-const DEFAULT_BACKTEST_USER_ID = "demo-user";
+const STRATEGY_ACCOUNT_ID_KEY = "strategy_account_id";
+const DEFAULT_STRATEGY_ACCOUNT_ID = "demo-user";
 
-export const getBacktestUserId = (): string => {
+export const getStrategyAccountId = (): string => {
   if (typeof window === "undefined") {
-    return DEFAULT_BACKTEST_USER_ID;
+    return DEFAULT_STRATEGY_ACCOUNT_ID;
   }
-  const value = localStorage.getItem(BACKTEST_USER_ID_KEY)?.trim();
-  return value && value.length > 0 ? value : DEFAULT_BACKTEST_USER_ID;
+  const value = localStorage.getItem(STRATEGY_ACCOUNT_ID_KEY)?.trim();
+  return value && value.length > 0 ? value : DEFAULT_STRATEGY_ACCOUNT_ID;
 };
 
-export const setBacktestUserId = (userId: string): void => {
+export const setStrategyAccountId = (accountId: string): void => {
   if (typeof window === "undefined") {
     return;
   }
-  const trimmed = userId.trim();
+  const trimmed = accountId.trim();
   localStorage.setItem(
-    BACKTEST_USER_ID_KEY,
-    trimmed.length > 0 ? trimmed : DEFAULT_BACKTEST_USER_ID,
+    STRATEGY_ACCOUNT_ID_KEY,
+    trimmed.length > 0 ? trimmed : DEFAULT_STRATEGY_ACCOUNT_ID,
   );
 };
 
-const withBacktestUserHeaders = () => ({
+const withStrategyAccountHeaders = () => ({
   ...withUiLang().headers,
-  "x-user-id": getBacktestUserId(),
+  "x-strategy-account-id": getStrategyAccountId(),
 });
 
 // Check if US market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
@@ -546,7 +546,7 @@ export const runBacktestRequest = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...withBacktestUserHeaders(),
+      ...withStrategyAccountHeaders(),
     },
     body: JSON.stringify(config),
   });
@@ -569,10 +569,10 @@ export const runBacktestRequest = async (
 
 export const useBacktestResult = (id: string, enabled: boolean = true) => {
   return useQuery<BacktestResult>({
-    queryKey: ["backtests", id, getBacktestUserId()],
+    queryKey: ["backtests", id, getStrategyAccountId()],
     queryFn: async () => {
       const res = await fetch(`/api/backtests/${id}`, {
-        headers: withBacktestUserHeaders(),
+        headers: withStrategyAccountHeaders(),
       });
       if (!res.ok) {
         throw new Error("Failed to fetch backtest result");
@@ -618,7 +618,7 @@ export const useBacktestHistory = (
     queryKey: [
       "backtests",
       "history",
-      getBacktestUserId(),
+      getStrategyAccountId(),
       query.algorithm ?? "",
       query.status ?? "",
       query.runDateFrom ?? "",
@@ -630,7 +630,7 @@ export const useBacktestHistory = (
       const qs = buildBacktestHistoryQuery(query);
       const url = qs.length > 0 ? `/api/backtests/history?${qs}` : "/api/backtests/history";
       const res = await fetch(url, {
-        headers: withBacktestUserHeaders(),
+        headers: withStrategyAccountHeaders(),
       });
       if (!res.ok) {
         let message = "Failed to fetch backtest history";
@@ -659,7 +659,7 @@ export const runBacktestCompareRequest = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...withBacktestUserHeaders(),
+      ...withStrategyAccountHeaders(),
     },
     body: JSON.stringify({
       algorithms,
@@ -688,10 +688,10 @@ export const useLivePortfolio = (
   enabled: boolean = true,
 ) => {
   return useQuery<LivePortfolioSnapshot>({
-    queryKey: ["live", "portfolio", getBacktestUserId(), algorithm],
+    queryKey: ["live", "portfolio", getStrategyAccountId(), algorithm],
     queryFn: async () => {
       const res = await fetch(`/api/live/portfolio?algorithm=${algorithm}`, {
-        headers: withBacktestUserHeaders(),
+        headers: withStrategyAccountHeaders(),
       });
       if (!res.ok) {
         let message = "Failed to fetch live portfolio";
@@ -720,7 +720,7 @@ export const runLiveTradingRequest = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...withBacktestUserHeaders(),
+      ...withStrategyAccountHeaders(),
     },
     body: JSON.stringify({ algorithm }),
   });

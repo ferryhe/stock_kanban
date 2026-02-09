@@ -6,7 +6,7 @@ import {
   getBacktestHistory,
   getBacktestPersistenceSummary,
   getBacktestResult,
-  normalizeBacktestUserId,
+  normalizeStrategyAccountId,
   normalizeBacktestHistoryQuery,
   normalizeBacktestConfig,
   runBacktest,
@@ -80,37 +80,37 @@ const firstString = (value: unknown): string | undefined => {
 const isUserIsolationEnabled = (): boolean =>
   process.env.ENABLE_USER_ISOLATION === "true";
 
-const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
-  // If ENABLE_USER_ISOLATION is not set or false, allow client-controlled userId (demo mode)
+const getStrategyAccountIdFromRequest = (req: Request): string | undefined => {
+  // If ENABLE_USER_ISOLATION is not set or false, allow client-controlled accountId (demo mode)
   // In production with real auth, this should derive from session/JWT
   const enableUserIsolation = isUserIsolationEnabled();
   
   if (!enableUserIsolation) {
-    // Demo mode: accept client-provided userId for local testing
-    const headerUserId = firstString(req.headers["x-user-id"]);
-    const queryUserId = firstString(req.query.userId);
-    const bodyUserId =
-      req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).userId) : undefined;
-    const raw = headerUserId ?? queryUserId ?? bodyUserId;
-    return normalizeBacktestUserId(raw);
+    // Demo mode: accept client-provided accountId for local testing
+    const headerAccountId = firstString(req.headers["x-strategy-account-id"]);
+    const queryAccountId = firstString(req.query.accountId);
+    const bodyAccountId =
+      req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).accountId) : undefined;
+    const raw = headerAccountId ?? queryAccountId ?? bodyAccountId;
+    return normalizeStrategyAccountId(raw);
   }
   
-  // Production mode: derive userId from authentication
+  // Production mode: derive accountId from authentication
   // TODO: Extract from JWT/session instead of client-controlled header
-  const headerUserId = firstString(req.headers["x-user-id"]);
-  return normalizeBacktestUserId(headerUserId);
+  const headerAccountId = firstString(req.headers["x-strategy-account-id"]);
+  return normalizeStrategyAccountId(headerAccountId);
 };
 
-const resolveBacktestUserIdOrReject = (
+const resolveStrategyAccountIdOrReject = (
   req: Request,
   res: Response,
 ): string | undefined => {
-  const userId = getBacktestUserIdFromRequest(req);
-  if (isUserIsolationEnabled() && !userId) {
-    res.status(401).json({ error: "Unauthorized: missing user identity" });
+  const accountId = getStrategyAccountIdFromRequest(req);
+  if (isUserIsolationEnabled() && !accountId) {
+    res.status(401).json({ error: "Unauthorized: missing strategy account identity" });
     return undefined;
   }
-  return userId;
+  return accountId;
 };
 
 const getLiveUserIdFromRequest = (req: Request): string | undefined => {
@@ -293,8 +293,8 @@ export async function registerRoutes(
   app.post("/api/backtests", async (req, res) => {
     try {
       const config = normalizeBacktestConfig(req.body);
-      const userId = resolveBacktestUserIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !userId) {
+      const accountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !accountId) {
         return;
       }
       const available = getBacktestAlgorithms();
@@ -304,7 +304,7 @@ export async function registerRoutes(
         });
       }
 
-      const result = await runBacktest(config, { userId });
+      const result = await runBacktest(config, { userId: accountId });
       res.json(result);
     } catch (error) {
       console.error("Error in /api/backtests:", error);
@@ -317,12 +317,12 @@ export async function registerRoutes(
   // Get backtest history list with filters
   app.get("/api/backtests/history", async (req, res) => {
     try {
-      const userId = resolveBacktestUserIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !userId) {
+      const accountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !accountId) {
         return;
       }
       const query = normalizeBacktestHistoryQuery(req.query);
-      const response = await getBacktestHistory(query, { userId });
+      const response = await getBacktestHistory(query, { userId: accountId });
       res.json(response);
     } catch (error) {
       console.error("Error in /api/backtests/history:", error);
@@ -336,11 +336,11 @@ export async function registerRoutes(
   app.get("/api/backtests/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = resolveBacktestUserIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !userId) {
+      const accountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !accountId) {
         return;
       }
-      const result = await getBacktestResult(id, { userId });
+      const result = await getBacktestResult(id, { userId: accountId });
       if (!result) {
         return res.status(404).json({ error: "Backtest result not found" });
       }
@@ -358,11 +358,11 @@ export async function registerRoutes(
   app.get("/api/backtests/:id/persistence", async (req, res) => {
     try {
       const { id } = req.params;
-      const userId = resolveBacktestUserIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !userId) {
+      const accountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !accountId) {
         return;
       }
-      const summary = await getBacktestPersistenceSummary(id, { userId });
+      const summary = await getBacktestPersistenceSummary(id, { userId: accountId });
       if (!summary) {
         return res.status(404).json({ error: "Backtest persistence not found" });
       }
@@ -378,8 +378,8 @@ export async function registerRoutes(
   // Run multiple algorithms for compare view
   app.post("/api/backtests/compare", async (req, res) => {
     try {
-      const userId = resolveBacktestUserIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !userId) {
+      const accountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !accountId) {
         return;
       }
       const rawAlgorithms = Array.isArray(req.body?.algorithms)
@@ -405,7 +405,7 @@ export async function registerRoutes(
       });
       const { algorithm: _ignored, ...baseConfig } = firstConfig;
 
-      const results = await runBacktestCompare(algorithms, baseConfig, { userId });
+      const results = await runBacktestCompare(algorithms, baseConfig, { userId: accountId });
       res.json(results);
     } catch (error) {
       console.error("Error in /api/backtests/compare:", error);

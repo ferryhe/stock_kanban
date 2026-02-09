@@ -120,18 +120,18 @@ function normalizePositiveInt(
   return Math.min(max, Math.floor(n));
 }
 
-export function normalizeBacktestUserId(value: unknown): string | undefined {
+export function normalizeStrategyAccountId(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  const userId = value.trim();
-  if (userId.length === 0) {
+  const accountId = value.trim();
+  if (accountId.length === 0) {
     return undefined;
   }
-  if (userId.length > 64) {
-    throw new Error("userId must be <= 64 characters");
+  if (accountId.length > 64) {
+    throw new Error("strategyAccountId must be <= 64 characters");
   }
-  return userId;
+  return accountId;
 }
 
 function normalizeOptionalDate(value: unknown, name: string): string | undefined {

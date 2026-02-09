@@ -11,9 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import {
-  getBacktestUserId,
+  getStrategyAccountId,
   runBacktestCompareRequest,
-  setBacktestUserId,
+  setStrategyAccountId,
   useBacktestAlgorithms,
 } from "@/lib/stockApi";
 import { type BacktestAlgorithm, type BacktestConfig, type BacktestResult } from "@shared/backtest";
@@ -314,7 +314,7 @@ function buildPrintableReportHtml(
 export default function ComparePage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
   const { lang, setLang } = useI18n();
-  const [userId, setUserId] = useState<string>(getBacktestUserId());
+  const [accountId, setAccountId] = useState<string>(getStrategyAccountId());
   const [selected, setSelected] = useState<BacktestAlgorithm[]>([]);
 
   const [startDate, setStartDate] = useState<string>(getDefaultDate(-365));
@@ -377,7 +377,7 @@ export default function ComparePage() {
       },
     };
 
-    setBacktestUserId(userId);
+    setStrategyAccountId(accountId);
     mutation.mutate({ selectedAlgorithms: selected, baseConfig });
   };
 
@@ -518,11 +518,11 @@ export default function ComparePage() {
 
           <div className="grid gap-2 sm:grid-cols-4">
             <label className="text-sm grid gap-1">
-              <span>{bt(backtestUi.center.userId, lang)}</span>
+              <span>{bt(backtestUi.center.strategyAccountId, lang)}</span>
               <input
                 className="h-10 px-3 rounded-md bg-background border border-input"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
                 placeholder="demo-user"
               />
             </label>

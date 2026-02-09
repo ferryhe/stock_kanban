@@ -2,9 +2,9 @@
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import {
-  getBacktestUserId,
+  getStrategyAccountId,
   runBacktestRequest,
-  setBacktestUserId,
+  setStrategyAccountId,
   useBacktestAlgorithms,
 } from "@/lib/stockApi";
 import { type BacktestAlgorithm, type BacktestConfig } from "@shared/backtest";
@@ -25,7 +25,7 @@ export default function BacktestCenter() {
   const { lang, setLang } = useI18n();
 
   const [algorithm, setAlgorithm] = useState<BacktestAlgorithm>("us");
-  const [userId, setUserId] = useState<string>(getBacktestUserId());
+  const [accountId, setAccountId] = useState<string>(getStrategyAccountId());
   const [startDate, setStartDate] = useState<string>(getDefaultDate(-365));
   const [endDate, setEndDate] = useState<string>(getDefaultDate(-1));
   const [initialCash, setInitialCash] = useState<string>("100000");
@@ -79,7 +79,7 @@ export default function BacktestCenter() {
       },
     };
 
-    setBacktestUserId(userId);
+    setStrategyAccountId(accountId);
     mutation.mutate(config);
   };
 
@@ -108,11 +108,11 @@ export default function BacktestCenter() {
         <form onSubmit={onSubmit} className="grid gap-4 rounded-xl border border-border p-4 bg-card">
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="text-sm grid gap-1">
-              <span>{bt(backtestUi.center.userId, lang)}</span>
+              <span>{bt(backtestUi.center.strategyAccountId, lang)}</span>
               <input
                 className="h-10 px-3 rounded-md bg-background border border-input"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
                 placeholder="demo-user"
               />
             </label>
