@@ -10,6 +10,9 @@ import BacktestHistoryPage from "@/pages/BacktestHistoryPage";
 import BacktestResultsPage from "@/pages/BacktestResultsPage";
 import ComparePage from "@/pages/ComparePage";
 import LiveTradingPage from "@/pages/LiveTradingPage";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import PortfoliosPage from "@/pages/PortfoliosPage";
 import { useEffect } from "react";
 import { LanguageProvider } from "./lib/i18n";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -17,12 +20,15 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
       <Route path="/" component={Dashboard} />
       <Route path="/backtest" component={BacktestCenter} />
       <Route path="/backtest/history" component={BacktestHistoryPage} />
       <Route path="/backtest/:id/results" component={BacktestResultsPage} />
       <Route path="/compare" component={ComparePage} />
       <Route path="/live" component={LiveTradingPage} />
+      <Route path="/portfolios" component={PortfoliosPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -47,5 +53,6 @@ function App() {
     </ErrorBoundary>
   );
 }
+
 
 export default App;

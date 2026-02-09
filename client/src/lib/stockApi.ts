@@ -761,3 +761,166 @@ export const runLiveSettlementNowRequest = async (): Promise<LiveSettlementRunRe
 
   return res.json();
 };
+
+// === Authentication API Functions ===
+
+export const registerUser = async (
+  username: string,
+  password: string,
+): Promise<{ message: string; user: { id: string; username: string } }> => {
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!res.ok) {
+    let message = "Registration failed";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const loginUser = async (
+  username: string,
+  password: string,
+): Promise<{ message: string; user: { id: string; username: string } }> => {
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!res.ok) {
+    let message = "Login failed";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const logoutUser = async (): Promise<{ message: string }> => {
+  const res = await fetch("/api/auth/logout", {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    throw new Error("Logout failed");
+  }
+
+  return res.json();
+};
+
+export const getCurrentUser = async (): Promise<{
+  user: { id: string; username: string; profile?: any };
+}> => {
+  const res = await fetch("/api/auth/me");
+
+  if (!res.ok) {
+    throw new Error("Not authenticated");
+  }
+
+  return res.json();
+};
+
+// === Profile API Functions ===
+
+export const getProfile = async (): Promise<any> => {
+  const res = await fetch("/api/profile");
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch profile");
+  }
+
+  return res.json();
+};
+
+export const updateProfile = async (data: Record<string, any>): Promise<{ message: string; profile: any }> => {
+  const res = await fetch("/api/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to update profile";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+// === Portfolio API Functions ===
+
+export const getPortfolios = async (): Promise<any[]> => {
+  const res = await fetch("/api/portfolios");
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch portfolios");
+  }
+
+  return res.json();
+};
+
+export const createPortfolio = async (data: {
+  name: string;
+  initialCash: number;
+  type: "live" | "backtest";
+  strategyId?: string;
+}): Promise<{ message: string; portfolio: any }> => {
+  const res = await fetch("/api/portfolios", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to create portfolio";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const getPortfolioDetails = async (portfolioId: string): Promise<any> => {
+  const res = await fetch(`/api/portfolios/${portfolioId}`);
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch portfolio details");
+  }
+
+  return res.json();
+};
