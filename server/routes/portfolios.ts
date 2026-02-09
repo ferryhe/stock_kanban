@@ -170,7 +170,7 @@ export async function getPortfolioDetails(req: Request, res: Response) {
 
 /**
  * DELETE /api/portfolios/:portfolioId
- * Soft delete a portfolio by setting deletedAt timestamp
+ * Delete a portfolio
  */
 export async function deletePortfolio(req: Request, res: Response) {
   try {
