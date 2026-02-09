@@ -12,7 +12,6 @@ import {
   runBacktest,
   runBacktestCompare,
 } from "./backtest/service";
-import { type BacktestAlgorithm } from "../shared/backtest";
 import {
   getLivePortfolioSnapshot,
   normalizeLiveTradingAlgorithm,
@@ -81,8 +80,6 @@ const isUserIsolationEnabled = (): boolean =>
   process.env.ENABLE_USER_ISOLATION === "true";
 
 const getStrategyAccountIdFromRequest = (req: Request): string | undefined => {
-  // If ENABLE_USER_ISOLATION is not set or false, allow client-controlled accountId (demo mode)
-  // In production with real auth, this should derive from session/JWT
   const enableUserIsolation = isUserIsolationEnabled();
   
   if (!enableUserIsolation) {
@@ -95,10 +92,11 @@ const getStrategyAccountIdFromRequest = (req: Request): string | undefined => {
     return normalizeStrategyAccountId(raw);
   }
   
-  // Production mode: derive accountId from authentication
-  // TODO: Extract from JWT/session instead of client-controlled header
-  const headerAccountId = firstString(req.headers["x-strategy-account-id"]);
-  return normalizeStrategyAccountId(headerAccountId);
+  // Production mode: derive accountId from validated server session
+  if (req.session && req.session.userId) {
+    return normalizeStrategyAccountId(req.session.userId);
+  }
+  return undefined;
 };
 
 const resolveStrategyAccountIdOrReject = (
@@ -396,7 +394,7 @@ export async function registerRoutes(
         .filter((item: unknown): item is string => typeof item === "string")
         .map((item: string) => item.toLowerCase())
         .filter(
-          (item: string): item is BacktestAlgorithm =>
+          (item: string) =>
             item === "us" || item === "cn" || item === "hk",
         );
 
