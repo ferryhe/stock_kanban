@@ -27,9 +27,16 @@ app.use(
 app.use(express.urlencoded({ extended: false }));
 
 // Session middleware
+const sessionSecret = process.env.SESSION_SECRET || "dev-secret-key-change-in-production";
+
+// Fail fast if SESSION_SECRET is not set in production
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required in production");
+}
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {

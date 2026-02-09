@@ -74,6 +74,14 @@ export class RiskManager {
   checkOrderRisk(order: Order, portfolio: Portfolio, positions: Position[]): RiskCheckResult {
     const limits = RISK_LIMITS[this.riskTolerance];
 
+    // Guard against division by zero
+    if (portfolio.totalValue <= 0) {
+      return {
+        approved: false,
+        reason: "Portfolio has no value - cannot execute trades",
+      };
+    }
+
     // 1. 检查最小现金储备
     const orderValue = order.quantity * order.price;
     const commission = orderValue * 0.0005; // 0.05% 佣金
@@ -169,6 +177,11 @@ export class RiskManager {
       const val =pos.quantity * pos.currentPrice;
       positionValue += val;
       maxPosition = Math.max(maxPosition, val);
+    }
+
+    // Guard against division by zero
+    if (portfolio.totalValue <= 0) {
+      return "low";
     }
 
     const leverage = positionValue / portfolio.totalValue;
