@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import LoginRequiredPage from "@/pages/LoginRequiredPage";
 import Dashboard from "@/pages/Dashboard";
 import BacktestCenter from "@/pages/BacktestCenter";
 import BacktestHistoryPage from "@/pages/BacktestHistoryPage";
@@ -17,7 +18,6 @@ import { useEffect } from "react";
 import { LanguageProvider } from "./lib/i18n";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./lib/auth";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,17 +32,28 @@ function Router() {
       {/* Public routes */}
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
+      
+      {/* Dashboard always accessible (public) */}
+      <Route path="/" component={Dashboard} />
 
-      {/* Protected routes - require authentication */}
-      {isAuthenticated && (
+      {/* Protected routes - show LoginRequiredPage if not authenticated */}
+      {isAuthenticated ? (
         <>
-          <Route path="/" component={Dashboard} />
           <Route path="/backtest" component={BacktestCenter} />
           <Route path="/backtest/history" component={BacktestHistoryPage} />
           <Route path="/backtest/:id/results" component={BacktestResultsPage} />
           <Route path="/compare" component={ComparePage} />
           <Route path="/live" component={LiveTradingPage} />
           <Route path="/portfolios" component={PortfoliosPage} />
+        </>
+      ) : (
+        <>
+          <Route path="/backtest" component={LoginRequiredPage} />
+          <Route path="/backtest/history" component={LoginRequiredPage} />
+          <Route path="/backtest/:id/results" component={LoginRequiredPage} />
+          <Route path="/compare" component={LoginRequiredPage} />
+          <Route path="/live" component={LoginRequiredPage} />
+          <Route path="/portfolios" component={LoginRequiredPage} />
         </>
       )}
 
