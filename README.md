@@ -1,109 +1,127 @@
-# Stock Kanban - 股票监控应用
+﻿# Stock Kanban
 
-一个用于股票监控与量化分析的看板应用，聚合技术指标与量化指标，帮助快速筛选和对比标的。
+Stock Kanban is a full-stack stock dashboard + backtest/live-paper-trading service.
+Frontend and API are served by one Node process.
 
-## 主要功能
+## Core Features
 
-- 实时行情与基础指标展示
-- 常用技术指标（RSI / MACD / Bollinger / SMA20）
-- 量化指标与风险指标（Rank / Score / Predicted Return / vol60 / maxdd252 / Signal）
-- 多看板管理与自定义股票列表
-- 指标点击解释与交互式说明
+- Watchlists and stock data dashboard
+- Backtest center (`/backtest`)
+- Backtest history with pagination/status filter/user scope (`/backtest/history`)
+- Compare page with correlation/heatmap/CSV/PDF export (`/compare`)
+- Live paper trading page (`/live`)
 
-## 量化指标说明
+## Runtime Model
 
-量化数据存放在 `data/quant-metrics-<market>.json`（如 `quant-metrics-us.json` / `quant-metrics-cn.json` / `quant-metrics-hk.json`），文件结构为 `{ metadata, data }`。
+- API + frontend static are served together
+- Persistent storage uses PostgreSQL when `DATABASE_URL` is set
+- If `DATABASE_URL` is missing, backtest/live data falls back to in-memory mode
 
-- `score`：综合评分（0~1，越小排名越靠前；基于多模型排名结果）
-- `rank`：排名名次（1 为最好）
-- `predictedReturn`：未来 20 个交易日的预测收益
-- `risk.vol60`：60 日波动率 z-score（越高越波动）
-- `risk.maxdd252`：252 日最大回撤 z-score（越低/越负回撤越大）
-- `signal`：交易信号（BUY / SELL / HOLD / RISK_ALERT）
+## Scripts in Project Root
 
-## 量化数据元信息
+- `stock_kanban_update_and_run.sh`:
+  One-command Linux deploy/update flow for your current Docker + Caddy setup.
+  It does: `git restore .` -> `git pull` -> ensure PostgreSQL -> rebuild/start `stock-kanban-app`.
+  
+- `verify-database.sh`:
+  Verify PostgreSQL is correctly initialized with all required tables.
+  
+- `check-linux-environment.sh`:  
+  Pre-flight check for Linux deployment environment (Docker, Git, ports, disk space, etc).
+  
+- `start-dev.bat`:
+  Windows-only local development launcher (opens backend + frontend terminals).
 
-- `metadata.generated_at_utc`：生成时间（UTC，ISO 字符串）
-- `metadata.generated_at_local`：生成时的本地时间（ISO 字符串）
-- `metadata.timezone`：生成时使用的 IANA 时区
-- `metadata.data_date`：数据截面时间
-- `metadata.config_file`：配置文件名
-- `metadata.total_stocks`：`data` 中记录条数
+## Scripts in `deploy/`
 
-排行榜页会优先使用 `metadata.generated_at_utc`，并按用户浏览器时区显示生成时间。
+- `deploy/docker-deploy-simple.sh`:
+  Docker deploy script (uses `.env.production`, rebuilds and restarts `stock-kanban-app`).
+- `deploy/start-production.sh`:
+  PM2 production startup (non-Docker mode).
+- `deploy/ec2-setup.sh`:
+  First-time EC2 environment bootstrap helper.
+- `deploy/deploy-to-ec2.bat`:
+  Windows helper for EC2 deployment steps (Windows-only).
 
-## 数据文件
+## Removed Obsolete Scripts
 
-- `data/quant-metrics-us.json`：量化指标数据（美股）
-- `data/quant-metrics-cn.json`：量化指标数据（A 股）
-- `data/quant-metrics-hk.json`：量化指标数据（港股）
-- `data/README.md`：数据文件字段说明
+The following scripts were removed because they were outdated/unreferenced:
 
-## 本地 Linux 运行
+- `deploy/docker-check.sh`
+- `deploy/verify-deployment.sh`
+- `scripts/update-quant-metrics.sh`
+- `scripts/update-quant-metrics.bat`
+- `diagnose.bat`
 
-1. `npm install`
-2. `npm run dev`
+## Local Development
 
-默认会在 `PORT=5000` 启动（API + 前端一体）。
-
-## 本地 Windows 运行
-
-方式一（推荐）：
-1. `npm install`
-2. `start-dev.bat`
-
-方式二（手动打开两个终端）：
-1. 终端 A：`$env:NODE_ENV="development"; npx tsx server/index.ts`
-2. 终端 B：`npm run dev:client`
-
-## 云端 Linux 运行（非 Docker）
-
-1. `git pull`
-2. `npm install --production`
-3. `npm run build`
-4. `NODE_ENV=production PORT=3000 npm run start`
-
-## 云端 git pull 后的 sh 运行方法（Docker）
-
-在服务器上执行：
+### Linux/macOS
 
 ```bash
-bash deploy/docker-deploy-simple.sh
+npm install
+npm run dev
 ```
 
-该脚本会自动拉取最新代码并重建/重启容器。
+### Windows
 
-## 技术栈
+```powershell
+npm install
+start-dev.bat
+```
 
-- React + TypeScript + Vite
-- Tailwind CSS + Framer Motion
+## Docker Production (Current EC2 Layout)
 
-## 文档
+Your current routing is:
 
-- `data/README.md`
+- Caddy -> `stock-kanban-app:3000`
+- Domain: `stockkanban.aixintelligence.com`
 
-## 许可
+### Quick Linux Deployment
 
-MIT License
+**For first-time deployment**, follow: [LINUX_QUICKSTART.md](./LINUX_QUICKSTART.md)
 
-## Backtest Persistence (PostgreSQL)
+**For detailed setup guide**, see: [LINUX_DEPLOYMENT_GUIDE.md](./LINUX_DEPLOYMENT_GUIDE.md)
 
-- Backtest results are persisted when `DATABASE_URL` is configured.
-- Without `DATABASE_URL`, the app falls back to in-memory backtest storage.
-- Run `npm run db:prepare` before `npm run db:push` on a fresh PostgreSQL database.
-- User isolation header: `x-user-id` (frontend defaults to `demo-user`)
-- Backtest history API (paginated): `GET /api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=YYYY-MM-DD&runDateTo=YYYY-MM-DD`
-- Frontend history page: `/backtest/history`
-- Live paper trading APIs:
-  - `POST /api/live/run`
-  - `GET /api/live/portfolio?algorithm=us|cn|hk`
-  - `POST /api/live/settle-now`
-- Frontend live page: `/live`
-- Compare page adds:
-  - drawdown curve
-  - correlation matrix
-  - monthly return heatmap
-  - CSV/PDF export workflow
-- Price cache benchmark: `npm run benchmark:price-cache`
-- Linux deployment guide: `LINUX_FRONTEND_PGSQL_CONFIG.md`
-- UI operation guide: `BACKTEST_UI_OPERATION_GUIDE.md`
+**For environment variable configuration**, check: [ENV_CONFIGURATION_GUIDE.md](./ENV_CONFIGURATION_GUIDE.md)
+
+**For complete review and summary**, read: [DEPLOYMENT_SUMMARY.md](./DEPLOYMENT_SUMMARY.md)
+
+### One-Command Update
+
+Once deployed, update with a single command:
+
+```bash
+./stock_kanban_update_and_run.sh
+```
+
+## Required Production Env (`.env.production`)
+
+Minimum:
+
+```env
+NODE_ENV=production
+PORT=3000
+HOST=0.0.0.0
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/stock_kanban
+PGSSL=false
+LIVE_SETTLEMENT_SCHEDULER=true
+ENABLE_USER_ISOLATION=true
+ADMIN_SECRET=change-me
+```
+
+## DB Initialization (Manual Option)
+
+```bash
+npm install
+npm run db:prepare
+npm run db:push
+```
+
+## Useful Endpoints
+
+- `GET /api/watchlists`
+- `GET /api/backtests/algorithms`
+- `GET /api/backtests/history?page=1&pageSize=20`
+- `POST /api/live/run`
+- `GET /api/live/portfolio?algorithm=us`
+- `POST /api/live/settle-now` (protected when `ADMIN_SECRET` is set)
