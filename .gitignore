@@ -7,3 +7,5 @@ vite.config.ts.*
 data/quant-metrics-cn.json
 data/quant-metrics-hk.json
 data/quant-metrics-us.json
+.env.production
+.env.local

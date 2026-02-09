@@ -17,7 +17,7 @@ RUN npm ci
 COPY client ./client
 COPY server ./server
 COPY shared ./shared
-COPY script ./script
+COPY scripts ./scripts
 COPY vite.config.ts vite-plugin-meta-images.ts ./
 COPY data ./data
 
