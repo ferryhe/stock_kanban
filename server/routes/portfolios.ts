@@ -13,7 +13,7 @@ export async function getPortfolios(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
@@ -44,7 +44,7 @@ export async function createPortfolio(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
@@ -97,7 +97,7 @@ export async function getPortfolioDetails(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
@@ -165,7 +165,7 @@ export async function deletePortfolio(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 

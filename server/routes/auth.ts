@@ -10,7 +10,7 @@ import { hashPassword, comparePassword } from "../auth";
  */
 export async function register(req: Request, res: Response) {
   try {
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
@@ -84,7 +84,7 @@ export async function register(req: Request, res: Response) {
  */
 export async function login(req: Request, res: Response) {
   try {
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
@@ -152,7 +152,7 @@ export async function getCurrentUser(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 

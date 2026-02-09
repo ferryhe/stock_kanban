@@ -13,7 +13,7 @@ export async function getProfile(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
@@ -44,7 +44,7 @@ export async function updateProfile(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled()) {
+    if (!isDatabaseEnabled) {
       return res.status(503).json({ error: "Database not available" });
     }
 
