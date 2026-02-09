@@ -1,4 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  type BacktestAlgorithm,
+  type BacktestConfig,
+  type BacktestHistoryQuery,
+  type BacktestHistoryResponse,
+  type BacktestResult,
+} from "@shared/backtest";
+import {
+  type LivePortfolioSnapshot,
+  type LiveSettlementRunResult,
+  type LiveTradingRunResult,
+} from "@shared/liveTrading";
 
 export type SignalType = "BUY" | "SELL" | "NEUTRAL" | "WARNING";
 
@@ -78,6 +90,33 @@ const withUiLang = () => ({
   headers: {
     "x-ui-lang": getUiLang(),
   },
+});
+
+const BACKTEST_USER_ID_KEY = "backtest_user_id";
+const DEFAULT_BACKTEST_USER_ID = "demo-user";
+
+export const getBacktestUserId = (): string => {
+  if (typeof window === "undefined") {
+    return DEFAULT_BACKTEST_USER_ID;
+  }
+  const value = localStorage.getItem(BACKTEST_USER_ID_KEY)?.trim();
+  return value && value.length > 0 ? value : DEFAULT_BACKTEST_USER_ID;
+};
+
+export const setBacktestUserId = (userId: string): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const trimmed = userId.trim();
+  localStorage.setItem(
+    BACKTEST_USER_ID_KEY,
+    trimmed.length > 0 ? trimmed : DEFAULT_BACKTEST_USER_ID,
+  );
+};
+
+const withBacktestUserHeaders = () => ({
+  ...withUiLang().headers,
+  "x-user-id": getBacktestUserId(),
 });
 
 // Check if US market is open (9:30 AM - 4:00 PM ET, Mon-Fri)
@@ -484,4 +523,241 @@ export const useLeaderboardData = (market: string, enabled: boolean = true) => {
     staleTime: 60000, // 1 minute
     refetchInterval: 60000,
   });
+};
+
+export const useBacktestAlgorithms = () => {
+  return useQuery<BacktestAlgorithm[]>({
+    queryKey: ["backtests", "algorithms"],
+    queryFn: async () => {
+      const res = await fetch("/api/backtests/algorithms");
+      if (!res.ok) {
+        throw new Error("Failed to fetch backtest algorithms");
+      }
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+};
+
+export const runBacktestRequest = async (
+  config: BacktestConfig,
+): Promise<BacktestResult> => {
+  const res = await fetch("/api/backtests", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...withBacktestUserHeaders(),
+    },
+    body: JSON.stringify(config),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run backtest";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const useBacktestResult = (id: string, enabled: boolean = true) => {
+  return useQuery<BacktestResult>({
+    queryKey: ["backtests", id, getBacktestUserId()],
+    queryFn: async () => {
+      const res = await fetch(`/api/backtests/${id}`, {
+        headers: withBacktestUserHeaders(),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch backtest result");
+      }
+      return res.json();
+    },
+    enabled: enabled && id.length > 0,
+    staleTime: 60_000,
+  });
+};
+
+function buildBacktestHistoryQuery(query: BacktestHistoryQuery): string {
+  const params = new URLSearchParams();
+  if (query.algorithm) {
+    params.set("algorithm", query.algorithm);
+  }
+  if (query.status) {
+    params.set("status", query.status);
+  }
+  if (query.runDateFrom) {
+    params.set("runDateFrom", query.runDateFrom);
+  }
+  if (query.runDateTo) {
+    params.set("runDateTo", query.runDateTo);
+  }
+  if (query.page !== undefined) {
+    params.set("page", String(query.page));
+  }
+  if (query.pageSize !== undefined) {
+    params.set("pageSize", String(query.pageSize));
+  }
+  if (query.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+  return params.toString();
+}
+
+export const useBacktestHistory = (
+  query: BacktestHistoryQuery,
+  enabled: boolean = true,
+) => {
+  return useQuery<BacktestHistoryResponse>({
+    queryKey: [
+      "backtests",
+      "history",
+      getBacktestUserId(),
+      query.algorithm ?? "",
+      query.status ?? "",
+      query.runDateFrom ?? "",
+      query.runDateTo ?? "",
+      query.page ?? 1,
+      query.pageSize ?? query.limit ?? 20,
+    ],
+    queryFn: async () => {
+      const qs = buildBacktestHistoryQuery(query);
+      const url = qs.length > 0 ? `/api/backtests/history?${qs}` : "/api/backtests/history";
+      const res = await fetch(url, {
+        headers: withBacktestUserHeaders(),
+      });
+      if (!res.ok) {
+        let message = "Failed to fetch backtest history";
+        try {
+          const body = await res.json();
+          if (body?.error && typeof body.error === "string") {
+            message = body.error;
+          }
+        } catch {
+          // ignore non-json body
+        }
+        throw new Error(message);
+      }
+      return res.json();
+    },
+    enabled,
+    staleTime: 30_000,
+  });
+};
+
+export const runBacktestCompareRequest = async (
+  algorithms: BacktestAlgorithm[],
+  config: Omit<BacktestConfig, "algorithm">,
+): Promise<BacktestResult[]> => {
+  const res = await fetch("/api/backtests/compare", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...withBacktestUserHeaders(),
+    },
+    body: JSON.stringify({
+      algorithms,
+      config,
+    }),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run backtest compare";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const useLivePortfolio = (
+  algorithm: BacktestAlgorithm,
+  enabled: boolean = true,
+) => {
+  return useQuery<LivePortfolioSnapshot>({
+    queryKey: ["live", "portfolio", getBacktestUserId(), algorithm],
+    queryFn: async () => {
+      const res = await fetch(`/api/live/portfolio?algorithm=${algorithm}`, {
+        headers: withBacktestUserHeaders(),
+      });
+      if (!res.ok) {
+        let message = "Failed to fetch live portfolio";
+        try {
+          const body = await res.json();
+          if (body?.error && typeof body.error === "string") {
+            message = body.error;
+          }
+        } catch {
+          // ignore non-json body
+        }
+        throw new Error(message);
+      }
+      return res.json();
+    },
+    enabled,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+};
+
+export const runLiveTradingRequest = async (
+  algorithm: BacktestAlgorithm,
+): Promise<LiveTradingRunResult> => {
+  const res = await fetch("/api/live/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...withBacktestUserHeaders(),
+    },
+    body: JSON.stringify({ algorithm }),
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run live trading";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+};
+
+export const runLiveSettlementNowRequest = async (): Promise<LiveSettlementRunResult> => {
+  const res = await fetch("/api/live/settle-now", {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    let message = "Failed to run live settlement";
+    try {
+      const body = await res.json();
+      if (body?.error && typeof body.error === "string") {
+        message = body.error;
+      }
+    } catch {
+      // ignore non-json body
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
 };

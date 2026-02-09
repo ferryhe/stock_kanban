@@ -1,6 +1,24 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response } from "express";
 import { type Server } from "http";
 import { getStockAnalysis, getMarketOverview, getStockChart, searchStocks, scheduleZhNameUpdate, getAvailableLeaderboards, getLeaderboardData } from "./stockService";
+import {
+  getBacktestAlgorithms,
+  getBacktestHistory,
+  getBacktestPersistenceSummary,
+  getBacktestResult,
+  normalizeBacktestUserId,
+  normalizeBacktestHistoryQuery,
+  normalizeBacktestConfig,
+  runBacktest,
+  runBacktestCompare,
+} from "./backtest/service";
+import { type BacktestAlgorithm } from "../shared/backtest";
+import {
+  getLivePortfolioSnapshot,
+  normalizeLiveTradingAlgorithm,
+  runLiveSettlementOnce,
+  runLiveTradingCycle,
+} from "./liveTrading/service";
 
 const getUiLang = (req: Request) => {
   const uiHeader = req.headers["x-ui-lang"];
@@ -48,6 +66,55 @@ const getUiLang = (req: Request) => {
   }
 
   return "en";
+};
+
+const firstString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return undefined;
+};
+
+const isUserIsolationEnabled = (): boolean =>
+  process.env.ENABLE_USER_ISOLATION === "true";
+
+const getBacktestUserIdFromRequest = (req: Request): string | undefined => {
+  // If ENABLE_USER_ISOLATION is not set or false, allow client-controlled userId (demo mode)
+  // In production with real auth, this should derive from session/JWT
+  const enableUserIsolation = isUserIsolationEnabled();
+  
+  if (!enableUserIsolation) {
+    // Demo mode: accept client-provided userId for local testing
+    const headerUserId = firstString(req.headers["x-user-id"]);
+    const queryUserId = firstString(req.query.userId);
+    const bodyUserId =
+      req.body && typeof req.body === "object" ? firstString((req.body as Record<string, unknown>).userId) : undefined;
+    const raw = headerUserId ?? queryUserId ?? bodyUserId;
+    return normalizeBacktestUserId(raw);
+  }
+  
+  // Production mode: derive userId from authentication
+  // TODO: Extract from JWT/session instead of client-controlled header
+  const headerUserId = firstString(req.headers["x-user-id"]);
+  return normalizeBacktestUserId(headerUserId);
+};
+
+const resolveBacktestUserIdOrReject = (
+  req: Request,
+  res: Response,
+): string | undefined => {
+  const userId = getBacktestUserIdFromRequest(req);
+  if (isUserIsolationEnabled() && !userId) {
+    res.status(401).json({ error: "Unauthorized: missing user identity" });
+    return undefined;
+  }
+  return userId;
+};
+
+const getLiveUserIdFromRequest = (req: Request): string | undefined => {
+  const userId = getBacktestUserIdFromRequest(req);
+  if (userId) return userId;
+  if (isUserIsolationEnabled()) return undefined;
+  return "demo-user";
 };
 
 export const DEFAULT_WATCHLISTS: Record<string, { label: string; tickers: string[] }> = {
@@ -190,6 +257,200 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in /api/leaderboard:", error);
       res.status(500).json({ error: "Failed to fetch leaderboard data" });
+    }
+  });
+
+  // Get available algorithms for backtesting
+  app.get("/api/backtests/algorithms", (_req, res) => {
+    try {
+      const algorithms = getBacktestAlgorithms();
+      res.json(algorithms);
+    } catch (error) {
+      console.error("Error in /api/backtests/algorithms:", error);
+      res.status(500).json({ error: "Failed to fetch backtest algorithms" });
+    }
+  });
+
+  // Run a single backtest
+  app.post("/api/backtests", async (req, res) => {
+    try {
+      const config = normalizeBacktestConfig(req.body);
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
+      const available = getBacktestAlgorithms();
+      if (!available.includes(config.algorithm)) {
+        return res.status(400).json({
+          error: `Algorithm not available: ${config.algorithm}`,
+        });
+      }
+
+      const result = await runBacktest(config, { userId });
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/backtests:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run backtest";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get backtest history list with filters
+  app.get("/api/backtests/history", async (req, res) => {
+    try {
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
+      const query = normalizeBacktestHistoryQuery(req.query);
+      const response = await getBacktestHistory(query, { userId });
+      res.json(response);
+    } catch (error) {
+      console.error("Error in /api/backtests/history:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch backtest history";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get single backtest result
+  app.get("/api/backtests/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
+      const result = await getBacktestResult(id, { userId });
+      if (!result) {
+        return res.status(404).json({ error: "Backtest result not found" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/backtests/:id:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch backtest result";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get persistence details for one backtest run
+  app.get("/api/backtests/:id/persistence", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
+      const summary = await getBacktestPersistenceSummary(id, { userId });
+      if (!summary) {
+        return res.status(404).json({ error: "Backtest persistence not found" });
+      }
+      res.json(summary);
+    } catch (error) {
+      console.error("Error in /api/backtests/:id/persistence:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch persistence summary";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Run multiple algorithms for compare view
+  app.post("/api/backtests/compare", async (req, res) => {
+    try {
+      const userId = resolveBacktestUserIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !userId) {
+        return;
+      }
+      const rawAlgorithms = Array.isArray(req.body?.algorithms)
+        ? req.body.algorithms
+        : [];
+      const algorithms = rawAlgorithms
+        .filter((item: unknown): item is string => typeof item === "string")
+        .map((item: string) => item.toLowerCase())
+        .filter(
+          (item: string): item is BacktestAlgorithm =>
+            item === "us" || item === "cn" || item === "hk",
+        );
+
+      if (algorithms.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "At least one algorithm is required" });
+      }
+
+      const firstConfig = normalizeBacktestConfig({
+        ...(req.body?.config ?? {}),
+        algorithm: algorithms[0],
+      });
+      const { algorithm: _ignored, ...baseConfig } = firstConfig;
+
+      const results = await runBacktestCompare(algorithms, baseConfig, { userId });
+      res.json(results);
+    } catch (error) {
+      console.error("Error in /api/backtests/compare:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run backtest compare";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Run one live paper-trading cycle
+  app.post("/api/live/run", async (req, res) => {
+    try {
+      const userId = getLiveUserIdFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized: missing user identity" });
+      }
+      const algorithm = normalizeLiveTradingAlgorithm(req.body?.algorithm ?? "us");
+      const result = await runLiveTradingCycle(userId, algorithm);
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/live/run:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run live trading cycle";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Get current live portfolio snapshot
+  app.get("/api/live/portfolio", async (req, res) => {
+    try {
+      const userId = getLiveUserIdFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized: missing user identity" });
+      }
+      const algorithm = normalizeLiveTradingAlgorithm(req.query.algorithm ?? "us");
+      const snapshot = await getLivePortfolioSnapshot(userId, algorithm);
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Error in /api/live/portfolio:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch live portfolio";
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // Trigger settlement once (for validation / ops)
+  // Requires ADMIN_SECRET header for security
+  app.post("/api/live/settle-now", async (req, res) => {
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (adminSecret) {
+      const providedSecret = req.headers["x-admin-secret"];
+      if (providedSecret !== adminSecret) {
+        return res.status(403).json({ error: "Forbidden: invalid or missing admin secret" });
+      }
+    }
+    try {
+      const result = await runLiveSettlementOnce();
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/live/settle-now:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to run live settlement";
+      res.status(400).json({ error: message });
     }
   });
 

@@ -4,6 +4,7 @@ import { useI18n } from "@/lib/i18n";
 import { motion, AnimatePresence, PanInfo, useMotionValue, animate } from "framer-motion";
 import { Trophy, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BacktestQuickLinks } from "@/components/BacktestQuickLinks";
 
 interface LeaderboardPanelProps {
   onStockClick: (ticker: string) => void;
@@ -150,17 +151,22 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
       
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 px-6 py-4">
         <div className="max-w-md mx-auto">
-          <div className="flex items-center gap-2 mb-3">
-            <button
-              onClick={() => setLang(lang === "en" ? "zh" : "en")}
-              className="px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              data-testid="lang-toggle"
-            >
-              {t("langToggle")}
-            </button>
-            <h1 className="text-lg font-bold tracking-tight">
-              {leaderboard.title}
-            </h1>
+          <div className="flex flex-col gap-2 mb-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLang(lang === "en" ? "zh" : "en")}
+                  className="px-2 py-1 rounded-full border border-border text-[10px] font-mono font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  data-testid="lang-toggle"
+                >
+                  {t("langToggle")}
+                </button>
+                <h1 className="text-lg font-bold tracking-tight">
+                  {leaderboard.title}
+                </h1>
+              </div>
+            </div>
+            <BacktestQuickLinks lang={lang} compact />
           </div>
           
           {/* Market Switcher */}

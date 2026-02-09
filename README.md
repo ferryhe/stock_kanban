@@ -85,3 +85,25 @@ bash deploy/docker-deploy-simple.sh
 ## 许可
 
 MIT License
+
+## Backtest Persistence (PostgreSQL)
+
+- Backtest results are persisted when `DATABASE_URL` is configured.
+- Without `DATABASE_URL`, the app falls back to in-memory backtest storage.
+- Run `npm run db:prepare` before `npm run db:push` on a fresh PostgreSQL database.
+- User isolation header: `x-user-id` (frontend defaults to `demo-user`)
+- Backtest history API (paginated): `GET /api/backtests/history?page=1&pageSize=20&algorithm=us&status=completed&runDateFrom=YYYY-MM-DD&runDateTo=YYYY-MM-DD`
+- Frontend history page: `/backtest/history`
+- Live paper trading APIs:
+  - `POST /api/live/run`
+  - `GET /api/live/portfolio?algorithm=us|cn|hk`
+  - `POST /api/live/settle-now`
+- Frontend live page: `/live`
+- Compare page adds:
+  - drawdown curve
+  - correlation matrix
+  - monthly return heatmap
+  - CSV/PDF export workflow
+- Price cache benchmark: `npm run benchmark:price-cache`
+- Linux deployment guide: `LINUX_FRONTEND_PGSQL_CONFIG.md`
+- UI operation guide: `BACKTEST_UI_OPERATION_GUIDE.md`

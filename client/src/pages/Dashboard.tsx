@@ -7,11 +7,12 @@ import { WatchlistSearchBox } from "@/components/WatchlistSearchBox";
 import { BottomNav } from "@/components/BottomNav";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 // import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
-import { Loader2, Settings2, RefreshCw } from "lucide-react";
+import { Loader2, Settings2, RefreshCw, FlaskConical, BarChart3, History, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 
 const LEADERBOARD_ID = "__leaderboard__";
 
@@ -206,6 +207,38 @@ export default function Dashboard() {
                   >
                     <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
                   </button>
+                  <Link
+                    href="/backtest"
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    data-testid="backtest-link"
+                    title="Backtest Center"
+                  >
+                    <FlaskConical className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href="/compare"
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    data-testid="compare-link"
+                    title="Algorithm Compare"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href="/backtest/history"
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    data-testid="backtest-history-link"
+                    title="Backtest History"
+                  >
+                    <History className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href="/live"
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    data-testid="live-link"
+                    title="Live Paper Trading"
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Link>
                   <button 
                     onClick={() => setIsManagerOpen(true)}
                     className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"

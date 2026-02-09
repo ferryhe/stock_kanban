@@ -3,6 +3,7 @@ import { spawn } from "child_process";
 import * as fs from "fs";
 import { promises as fsPromises } from "fs";
 import * as path from "path";
+import { TechnicalIndicators } from "../shared/indicators";
 
 // Initialize yahoo-finance2 instance with suppressed warnings
 const yf = new YahooFinance({
@@ -163,6 +164,7 @@ const ZH_NAME_SCRIPT = path.join(process.cwd(), "scripts", "build_zh_name_map.py
 const pendingZhUpdates: Set<string> = new Set();
 const queuedZhUpdates: Set<string> = new Set();
 let zhUpdateRunning = false;
+const ZH_NAME_US_FETCH_CONCURRENCY = 4;
 const STOCK_FETCH_CONCURRENCY = 6;
 const SHORT_FLOAT_CACHE_TTL = 15 * 60 * 1000;
 const shortFloatCache: Map<string, { value: number; expiresAt: number }> = new Map();
@@ -242,25 +244,120 @@ function loadZhNameMap(): Map<string, string> {
   return map;
 }
 
-function runQueuedZhUpdates(uiLang: UILang) {
+async function persistZhNameMap(map: Map<string, string>): Promise<void> {
+  const sortedEntries = Array.from(map.entries()).sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
+  const payload = Object.fromEntries(sortedEntries);
+  await fsPromises.mkdir(path.dirname(zhNamePath), { recursive: true });
+  await fsPromises.writeFile(
+    zhNamePath,
+    `${JSON.stringify(payload, null, 2)}\n`,
+    "utf-8",
+  );
+
+  zhNameCache = new Map(sortedEntries);
+  zhNameCacheTime = Date.now();
+  try {
+    zhNameCacheMtime = (await fsPromises.stat(zhNamePath)).mtimeMs;
+  } catch {
+    zhNameCacheMtime = 0;
+  }
+}
+
+function isUsSymbol(symbol: string): boolean {
+  const upper = symbol.toUpperCase();
+  return !upper.endsWith(".SS") && !upper.endsWith(".SZ") && !upper.endsWith(".HK");
+}
+
+async function runZhNameScript(args: string[], batch: string[]): Promise<number | null> {
+  return new Promise((resolve) => {
+    const python = process.env.PYTHON || "python";
+    const child = spawn(python, args, {
+      stdio: ["ignore", "ignore", "pipe"],
+      windowsHide: true,
+    });
+
+    if (child.stderr) {
+      child.stderr.on("data", (data: Buffer) => {
+        const msg = data.toString().trim();
+        if (msg) {
+          console.error(`[ZhName] Python stderr: ${msg}`);
+        }
+      });
+    }
+
+    child.on("close", (code: number | null) => {
+      if (code !== 0) {
+        console.error(
+          `[ZhName] Python script exited with code ${code} for symbols: ${batch.join(",")}`,
+        );
+      }
+      resolve(code);
+    });
+
+    child.on("error", (err) => {
+      console.error(
+        `[ZhName] Failed to spawn Python process "${python}" with args ${JSON.stringify(
+          args,
+        )} for symbols: ${batch.join(",")}`,
+        err,
+      );
+      resolve(null);
+    });
+  });
+}
+
+async function fetchUsNamesAndPersist(symbols: string[]): Promise<void> {
+  const usSymbols = symbols
+    .map((s) => s.toUpperCase())
+    .filter((s) => isUsSymbol(s));
+  if (usSymbols.length === 0) return;
+
+  const map = loadZhNameMap();
+  const missing = usSymbols.filter((s) => !map.has(s));
+  if (missing.length === 0) return;
+
+  const updates = new Map<string, string>();
+  for (let i = 0; i < missing.length; i += ZH_NAME_US_FETCH_CONCURRENCY) {
+    const batch = missing.slice(i, i + ZH_NAME_US_FETCH_CONCURRENCY);
+    await Promise.all(
+      batch.map(async (symbol) => {
+        try {
+          const quote: any = await yf.quoteSummary(symbol, { modules: ["price"] });
+          const name = String(
+            quote?.price?.longName || quote?.price?.shortName || "",
+          ).trim();
+          if (name) {
+            updates.set(symbol, name);
+          }
+        } catch {
+          // Ignore single-symbol failures to keep batch update robust.
+        }
+      }),
+    );
+  }
+
+  if (updates.size === 0) return;
+  updates.forEach((name, symbol) => {
+    map.set(symbol, name);
+  });
+  await persistZhNameMap(map);
+  console.log(`[ZhName] US targeted update saved=${updates.size}`);
+}
+
+async function runQueuedZhUpdates(uiLang: UILang): Promise<void> {
   if (uiLang !== "zh" || zhUpdateRunning) return;
   if (queuedZhUpdates.size === 0) return;
 
   const batch = Array.from(queuedZhUpdates);
   queuedZhUpdates.clear();
 
-  let includeA = false;
-  let includeHk = false;
-  let includeUs = false;
-  for (const symbol of batch) {
-    if (symbol.endsWith(".SS") || symbol.endsWith(".SZ")) {
-      includeA = true;
-    } else if (symbol.endsWith(".HK")) {
-      includeHk = true;
-    } else {
-      includeUs = true;
-    }
-  }
+  const aOrHkSymbols = batch.filter((s) => !isUsSymbol(s));
+  const usSymbols = batch.filter((s) => isUsSymbol(s));
+  const includeA = aOrHkSymbols.some((s) => s.endsWith(".SS") || s.endsWith(".SZ"));
+  const includeHk = aOrHkSymbols.some((s) => s.endsWith(".HK"));
+  const includeUs = usSymbols.length > 0;
 
   if (!includeA && !includeHk && !includeUs) return;
   batch.forEach((s) => pendingZhUpdates.add(s));
@@ -269,56 +366,29 @@ function runQueuedZhUpdates(uiLang: UILang) {
     `[ZhName] Update start: batch=${batch.length} A=${includeA ? 1 : 0} HK=${includeHk ? 1 : 0} US=${includeUs ? 1 : 0}`,
   );
 
-  const args = [ZH_NAME_SCRIPT, "--out", zhNamePath];
-  if (includeA) args.push("--include-a");
-  if (includeHk) args.push("--include-hk");
-  if (includeUs) args.push("--include-us-cname");
-  args.push("--symbols", batch.join(","));
-
-  const python = process.env.PYTHON || "python";
-  const child = spawn(python, args, {
-    stdio: ["ignore", "ignore", "pipe"],
-    windowsHide: true,
-  });
-
-  if (child.stderr) {
-    child.stderr.on("data", (data: Buffer) => {
-      const msg = data.toString().trim();
-      if (msg) {
-        console.error(`[ZhName] Python stderr: ${msg}`);
+  try {
+    if (aOrHkSymbols.length > 0) {
+      const args = [ZH_NAME_SCRIPT, "--out", zhNamePath];
+      if (includeA) args.push("--include-a");
+      if (includeHk) args.push("--include-hk");
+      args.push("--symbols", aOrHkSymbols.join(","));
+      const code = await runZhNameScript(args, aOrHkSymbols);
+      if (code === 0) {
+        zhNameCacheTime = 0;
       }
-    });
-  }
-
-  child.on("close", (code: number | null) => {
-    if (code !== 0) {
-      console.error(
-        `[ZhName] Python script exited with code ${code} for symbols: ${batch.join(",")}`,
-      );
     }
-    batch.forEach((s) => pendingZhUpdates.delete(s));
-    if (code === 0) {
+
+    if (usSymbols.length > 0) {
+      await fetchUsNamesAndPersist(usSymbols);
       zhNameCacheTime = 0;
     }
-    zhUpdateRunning = false;
-    if (queuedZhUpdates.size > 0) {
-      runQueuedZhUpdates(uiLang);
-    }
-  });
-
-  child.on("error", (err) => {
-    console.error(
-      `[ZhName] Failed to spawn Python process "${python}" with args ${JSON.stringify(
-        args,
-      )} for symbols: ${batch.join(",")}`,
-      err,
-    );
+  } finally {
     batch.forEach((s) => pendingZhUpdates.delete(s));
     zhUpdateRunning = false;
     if (queuedZhUpdates.size > 0) {
-      runQueuedZhUpdates(uiLang);
+      void runQueuedZhUpdates(uiLang);
     }
-  });
+  }
 }
 
 export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
@@ -335,7 +405,7 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   }
 
   if (missing.length === 0) return;
-  runQueuedZhUpdates(uiLang);
+  void runQueuedZhUpdates(uiLang);
 }
 
 function loadQuantMetrics(): Map<string, QuantMetrics> {
@@ -409,87 +479,26 @@ function loadQuantMetrics(): Map<string, QuantMetrics> {
 }
 
 function calculateRSI(prices: number[], period: number = 14): number {
-  if (prices.length < period + 1) return 50;
-
-  let gains = 0;
-  let losses = 0;
-
-  for (let i = 1; i <= period; i++) {
-    const change = prices[i] - prices[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
-
-  for (let i = period + 1; i < prices.length; i++) {
-    const change = prices[i] - prices[i - 1];
-    if (change > 0) {
-      avgGain = (avgGain * (period - 1) + change) / period;
-      avgLoss = (avgLoss * (period - 1)) / period;
-    } else {
-      avgGain = (avgGain * (period - 1)) / period;
-      avgLoss = (avgLoss * (period - 1) - change) / period;
-    }
-  }
-
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - 100 / (1 + rs);
+  return TechnicalIndicators.calculateRSI(prices, period);
 }
 
 function calculateSMA(prices: number[], period: number): number {
-  if (prices.length < period) return prices[prices.length - 1] || 0;
-  const slice = prices.slice(-period);
-  return slice.reduce((a: number, b: number) => a + b, 0) / period;
+  return TechnicalIndicators.calculateSMA(prices, period);
 }
 
 function calculateEMA(prices: number[], period: number): number[] {
-  if (prices.length < period) return [];
-  const k = 2 / (period + 1);
-  const emaValues: number[] = [];
-  let ema = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  emaValues.push(ema);
-  for (let i = period; i < prices.length; i++) {
-    ema = prices[i] * k + ema * (1 - k);
-    emaValues.push(ema);
-  }
-  return emaValues;
+  return TechnicalIndicators.calculateEMA(prices, period);
 }
 
 function calculateMACD(prices: number[]): { macd: number; signal: number } {
-  const ema12 = calculateEMA(prices, 12);
-  const ema26 = calculateEMA(prices, 26);
-  if (ema12.length === 0 || ema26.length === 0) return { macd: 0, signal: 0 };
-
-  const macdLine: number[] = [];
-  const offset = ema12.length - ema26.length;
-  for (let i = 0; i < ema26.length; i++) {
-    macdLine.push(ema12[i + offset] - ema26[i]);
-  }
-
-  const signalLine = calculateEMA(macdLine, 9);
-  return {
-    macd: macdLine[macdLine.length - 1] || 0,
-    signal: signalLine[signalLine.length - 1] || 0,
-  };
+  return TechnicalIndicators.calculateMACD(prices);
 }
 
 function calculateBollingerBands(
   prices: number[],
   period: number = 20
 ): { upper: number; lower: number } {
-  if (prices.length < period) return { upper: 0, lower: 0 };
-  const slice = prices.slice(-period);
-  const sma = slice.reduce((a, b) => a + b, 0) / period;
-  const variance =
-    slice.reduce((sum, p) => sum + Math.pow(p - sma, 2), 0) / period;
-  const stdDev = Math.sqrt(variance);
-  return {
-    upper: sma + 2 * stdDev,
-    lower: sma - 2 * stdDev,
-  };
+  return TechnicalIndicators.calculateBollingerBands(prices, period);
 }
 
 async function getShortFloat(ticker: string): Promise<number> {

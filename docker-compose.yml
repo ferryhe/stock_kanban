@@ -10,6 +10,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOST=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL}
+      - PGSSL=${PGSSL:-false}
+      - PGSSL_REJECT_UNAUTHORIZED=${PGSSL_REJECT_UNAUTHORIZED:-false}
+      - PGPOOL_MAX=${PGPOOL_MAX:-10}
+      - PGPOOL_IDLE_TIMEOUT_MS=${PGPOOL_IDLE_TIMEOUT_MS:-30000}
     expose:
       - 3000
     networks:

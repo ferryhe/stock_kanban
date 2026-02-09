@@ -1,0 +1,195 @@
+﻿# Backtest UI Operation Guide
+
+Date: 2026-02-08
+Scope: New backtest UI pages in `stock_kanban`
+
+## 1. Entry Points
+
+You can enter the new flow in two ways:
+
+1. Dashboard header icons
+- Flask icon -> `/backtest`
+- Chart icon -> `/compare`
+
+2. Direct routes
+- Backtest center: `/backtest`
+- Backtest history: `/backtest/history`
+- Backtest result: `/backtest/:id/results`
+- Compare page: `/compare`
+- Live trading page: `/live`
+
+## 2. Backtest Center (`/backtest`)
+
+Main purpose:
+- Configure one algorithm and run one backtest.
+
+Key fields:
+- `User ID` (used as `x-user-id` for isolated backtest records)
+- `Algorithm`: `US` / `CN` / `HK` (depends on available quant files)
+- `Start Date` / `End Date`
+- `Initial Cash`
+- Position settings:
+  - `Max Position Per Stock`
+  - `Max Total Positions`
+  - `Min Cash Reserve`
+- Execution settings:
+  - `Commission (bps)`
+  - `Slippage (bps)`
+  - `Min Commission`
+- `Rebalance`: `daily` / `weekly` / `monthly`
+
+Operation steps:
+1. Open `/backtest`
+2. Fill parameters
+3. Click `Run Backtest`
+4. Auto jump to `/backtest/:id/results`
+
+Expected behavior:
+- request `POST /api/backtests`
+- successful response returns a backtest id
+
+## 3. Backtest Result Page (`/backtest/:id/results`)
+
+Main purpose:
+- Inspect one run in detail.
+
+What to check:
+- Metric cards:
+  - final value
+  - total return
+  - annualized return
+  - max drawdown
+  - sharpe ratio
+  - volatility
+  - total trades
+  - win rate
+- Equity curve chart
+- Trades table (recent records)
+
+Operation tips:
+- Use `New Backtest` to rerun with changed parameters.
+- Use `Compare` to switch to multi-algorithm view.
+- Use `History` to return to the historical run list.
+
+## 4. Backtest History Page (`/backtest/history`)
+
+Main purpose:
+- Query previous runs from PostgreSQL-backed history records.
+
+Filters:
+- `User ID`
+- `Algorithm`: `All` / `US` / `CN` / `HK`
+- `Status`: `All` / `Pending` / `Running` / `Completed` / `Failed` / `Cancelled`
+- `Run Date From`
+- `Run Date To`
+- `Page Size`
+
+Operation steps:
+1. Open `/backtest/history`
+2. Set algorithm/date filters
+3. Optional: adjust status and page size
+4. Click `Apply Filters`
+5. Click `View` on any row to open `/backtest/:id/results`
+6. Use `Prev` / `Next` for pagination
+
+Expected outputs:
+- Rows sorted by latest run time first
+- Response is user-scoped by `User ID`
+- Key metrics visible in list:
+  - final value
+  - total return
+  - sharpe ratio
+  - max drawdown
+  - total trades
+
+## 5. Compare Page (`/compare`)
+
+Main purpose:
+- Run multiple algorithms under same config and compare outcomes.
+
+Operation steps:
+1. Open `/compare`
+2. Select at least 2 algorithms
+3. Set shared config (date, cash, position/execution params)
+4. Click `Run Compare`
+
+Expected outputs:
+- Multi-line equity chart (one line per algorithm)
+- Summary table with aligned metrics across algorithms
+- Drawdown curve comparison
+- Daily return correlation matrix
+- Monthly return heatmap
+- Export actions:
+  - `Export CSV`
+  - `Export PDF` (browser print/save-as-PDF workflow)
+
+API behind this page:
+- `POST /api/backtests/compare`
+
+## 6. Live Paper Trading Page (`/live`)
+
+Main purpose:
+- Run non-backtest live paper trading cycle and inspect current live portfolio.
+
+Main controls:
+- `User ID` (sent as `x-user-id`)
+- `Algorithm` (`US` / `CN` / `HK`)
+- `Run Now`
+- `Settle Now`
+- `Apply User ID`
+
+Operation steps:
+1. Open `/live`
+2. Set `User ID` and `Algorithm`
+3. Click `Run Now` to execute one rebalance cycle
+4. Verify:
+   - metric cards update
+   - holdings table has latest positions
+   - recent trades table has latest executions
+5. Click `Settle Now` to trigger one settlement run
+
+Expected outputs:
+- `POST /api/live/run` succeeds and returns `tradeCount`
+- `GET /api/live/portfolio` returns snapshot with holdings/trades
+- `POST /api/live/settle-now` returns processed/settled counts
+- per user isolation: different `User ID` maps to different live portfolio
+
+## 7. Recommended Test Script (UI)
+
+1. Run one backtest in `/backtest`
+2. Confirm result page loads chart + table
+3. Open `/compare`, run at least two algorithms
+4. Confirm compare chart and summary table update
+5. Open `/backtest/history`, verify list and filters
+6. Refresh result URL directly and confirm data still loads
+   - with PostgreSQL configured, result remains queryable after service restart
+
+## 8. Common Issues
+
+1. Algorithm list empty
+- check `/api/backtests/algorithms`
+- ensure `data/quant-metrics-*.json` exists
+
+2. Backtest submit fails
+- inspect backend logs
+- verify date range has valid market data
+
+3. Result disappears after restart
+- likely running without `DATABASE_URL`
+- configure PostgreSQL and run `npm run db:prepare && npm run db:push`
+
+4. Compare is slow
+- expected when many tickers/long periods
+- reduce date range or number of algorithms for quick checks
+
+5. History list empty unexpectedly
+- check current `User ID` in backtest pages and history page matches
+- records are isolated by `x-user-id`
+
+6. Live page returns PostgreSQL error
+- ensure `DATABASE_URL` is configured
+- run `npm run db:prepare && npm run db:push`
+
+7. Live run returns no tradable data
+- verify `quant-metrics-*.json` exists for chosen algorithm
+- verify Yahoo price data is reachable from current network
