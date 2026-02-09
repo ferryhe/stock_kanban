@@ -19,6 +19,9 @@ import {
   runLiveSettlementOnce,
   runLiveTradingCycle,
 } from "./liveTrading/service";
+import { register, login, logout, getCurrentUser } from "./routes/auth";
+import { getProfile, updateProfile } from "./routes/profile";
+import { getPortfolios, createPortfolio, getPortfolioDetails } from "./routes/portfolios";
 
 const getUiLang = (req: Request) => {
   const uiHeader = req.headers["x-ui-lang"];
@@ -129,6 +132,21 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // === Authentication Routes ===
+  app.post("/api/auth/register", register);
+  app.post("/api/auth/login", login);
+  app.post("/api/auth/logout", logout);
+  app.get("/api/auth/me", getCurrentUser);
+
+  // === User Profile Routes ===
+  app.get("/api/profile", getProfile);
+  app.put("/api/profile", updateProfile);
+
+  // === Portfolio Routes ===
+  app.get("/api/portfolios", getPortfolios);
+  app.post("/api/portfolios", createPortfolio);
+  app.get("/api/portfolios/:portfolioId", getPortfolioDetails);
+
   // Get stock data for a watchlist
   app.get("/api/stocks/:watchlistId", async (req, res) => {
     try {

@@ -25,6 +25,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -34,6 +35,25 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const userProfiles = pgTable("user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  displayName: varchar("display_name", { length: 100 }),
+  email: varchar("email", { length: 255 }).unique(),
+  riskTolerance: varchar("risk_tolerance", { length: 20 }).default("moderate").notNull(), // conservative | moderate | aggressive
+  notificationsTradeAlerts: boolean("notifications_trade_alerts").default(true).notNull(),
+  notificationsDailyReport: boolean("notifications_daily_report").default(false).notNull(),
+  notificationsWeeklyReport: boolean("notifications_weekly_report").default(false).notNull(),
+  theme: varchar("theme", { length: 10 }).default("light").notNull(), // light | dark
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("idx_user_profiles_user_id").on(table.userId),
+}));
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = typeof userProfiles.$inferInsert;
 
 export const backtestResults = pgTable("backtest_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
