@@ -113,8 +113,15 @@ const resolveStrategyAccountIdOrReject = (
   return accountId;
 };
 
+const getBacktestStrategyAccountIdFromRequest = (req: Request): string | undefined => {
+  const strategyAccountId = getStrategyAccountIdFromRequest(req);
+  if (strategyAccountId) return strategyAccountId;
+  if (isUserIsolationEnabled()) return undefined;
+  return "demo-user";
+};
+
 const getLiveUserIdFromRequest = (req: Request): string | undefined => {
-  const userId = getBacktestUserIdFromRequest(req);
+  const userId = getBacktestStrategyAccountIdFromRequest(req);
   if (userId) return userId;
   if (isUserIsolationEnabled()) return undefined;
   return "demo-user";
@@ -293,8 +300,8 @@ export async function registerRoutes(
   app.post("/api/backtests", async (req, res) => {
     try {
       const config = normalizeBacktestConfig(req.body);
-      const accountId = resolveStrategyAccountIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !accountId) {
+      const strategyAccountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !strategyAccountId) {
         return;
       }
       const available = getBacktestAlgorithms();
@@ -304,7 +311,7 @@ export async function registerRoutes(
         });
       }
 
-      const result = await runBacktest(config, { userId: accountId });
+      const result = await runBacktest(config, { strategyAccountId });
       res.json(result);
     } catch (error) {
       console.error("Error in /api/backtests:", error);
@@ -317,12 +324,12 @@ export async function registerRoutes(
   // Get backtest history list with filters
   app.get("/api/backtests/history", async (req, res) => {
     try {
-      const accountId = resolveStrategyAccountIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !accountId) {
+      const strategyAccountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !strategyAccountId) {
         return;
       }
       const query = normalizeBacktestHistoryQuery(req.query);
-      const response = await getBacktestHistory(query, { userId: accountId });
+      const response = await getBacktestHistory(query, { strategyAccountId });
       res.json(response);
     } catch (error) {
       console.error("Error in /api/backtests/history:", error);
@@ -336,11 +343,11 @@ export async function registerRoutes(
   app.get("/api/backtests/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const accountId = resolveStrategyAccountIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !accountId) {
+      const strategyAccountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !strategyAccountId) {
         return;
       }
-      const result = await getBacktestResult(id, { userId: accountId });
+      const result = await getBacktestResult(id, { strategyAccountId });
       if (!result) {
         return res.status(404).json({ error: "Backtest result not found" });
       }
@@ -358,11 +365,11 @@ export async function registerRoutes(
   app.get("/api/backtests/:id/persistence", async (req, res) => {
     try {
       const { id } = req.params;
-      const accountId = resolveStrategyAccountIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !accountId) {
+      const strategyAccountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !strategyAccountId) {
         return;
       }
-      const summary = await getBacktestPersistenceSummary(id, { userId: accountId });
+      const summary = await getBacktestPersistenceSummary(id, { strategyAccountId });
       if (!summary) {
         return res.status(404).json({ error: "Backtest persistence not found" });
       }
@@ -378,8 +385,8 @@ export async function registerRoutes(
   // Run multiple algorithms for compare view
   app.post("/api/backtests/compare", async (req, res) => {
     try {
-      const accountId = resolveStrategyAccountIdOrReject(req, res);
-      if (isUserIsolationEnabled() && !accountId) {
+      const strategyAccountId = resolveStrategyAccountIdOrReject(req, res);
+      if (isUserIsolationEnabled() && !strategyAccountId) {
         return;
       }
       const rawAlgorithms = Array.isArray(req.body?.algorithms)
@@ -405,7 +412,7 @@ export async function registerRoutes(
       });
       const { algorithm: _ignored, ...baseConfig } = firstConfig;
 
-      const results = await runBacktestCompare(algorithms, baseConfig, { userId: accountId });
+      const results = await runBacktestCompare(algorithms, baseConfig, { strategyAccountId });
       res.json(results);
     } catch (error) {
       console.error("Error in /api/backtests/compare:", error);

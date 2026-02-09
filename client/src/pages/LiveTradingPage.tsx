@@ -190,7 +190,7 @@ export default function LiveTradingPage() {
               type="submit"
               className="h-10 rounded-md border border-border hover:bg-secondary/60"
             >
-              {bt(backtestUi.live.applyUserId, lang)}
+              {bt(backtestUi.live.applyStrategyAccountId, lang)}
             </button>
           </div>
         </form>

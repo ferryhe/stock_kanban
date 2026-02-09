@@ -260,7 +260,7 @@ export default function BacktestHistoryPage() {
                 {bt(backtestUi.history.total, lang)}: {data?.total ?? 0} |{" "}
                 {bt(backtestUi.history.page, lang)} {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
               </span>
-              <span>{bt(backtestUi.history.userScope, lang)}: {getBacktestUserId()}</span>
+              <span>{bt(backtestUi.history.userScope, lang)}: {getStrategyAccountId()}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -1,8 +1,16 @@
 import type { Request, Response } from "express";
 import { eq } from "drizzle-orm";
-import { db, isDatabaseEnabled } from "../db";
+import { db } from "../db";
 import { users, userProfiles } from "../../shared/schema";
 import { hashPassword, comparePassword } from "../auth";
+
+function requireDatabase(res: Response) {
+  if (!db) {
+    res.status(503).json({ error: "Database not available" });
+    return null;
+  }
+  return db;
+}
 
 /**
  * POST /api/auth/register
@@ -10,9 +18,8 @@ import { hashPassword, comparePassword } from "../auth";
  */
 export async function register(req: Request, res: Response) {
   try {
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
     const { username, password } = req.body;
 
@@ -30,7 +37,7 @@ export async function register(req: Request, res: Response) {
     }
 
     // Check if user exists
-    const existingUser = await db
+    const existingUser = await database
       .select()
       .from(users)
       .where(eq(users.username, username))
@@ -44,7 +51,7 @@ export async function register(req: Request, res: Response) {
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    const newUser = await db
+    const newUser = await database
       .insert(users)
       .values({
         username,
@@ -59,7 +66,7 @@ export async function register(req: Request, res: Response) {
     const user = newUser[0];
 
     // Create user profile
-    await db.insert(userProfiles).values({
+    await database.insert(userProfiles).values({
       userId: user.id,
       displayName: username,
       riskTolerance: "moderate",
@@ -84,9 +91,8 @@ export async function register(req: Request, res: Response) {
  */
 export async function login(req: Request, res: Response) {
   try {
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
     const { username, password } = req.body;
 
@@ -96,7 +102,7 @@ export async function login(req: Request, res: Response) {
     }
 
     // Find user
-    const foundUsers = await db
+    const foundUsers = await database
       .select()
       .from(users)
       .where(eq(users.username, username))
@@ -152,11 +158,10 @@ export async function getCurrentUser(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
-    const foundUsers = await db
+    const foundUsers = await database
       .select()
       .from(users)
       .where(eq(users.id, req.session.userId))
@@ -169,7 +174,7 @@ export async function getCurrentUser(req: Request, res: Response) {
 
     const user = foundUsers[0];
 
-    const profiles = await db
+    const profiles = await database
       .select()
       .from(userProfiles)
       .where(eq(userProfiles.userId, user.id))

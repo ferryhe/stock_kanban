@@ -1,7 +1,15 @@
 import type { Request, Response } from "express";
 import { eq } from "drizzle-orm";
-import { db, isDatabaseEnabled } from "../db";
+import { db } from "../db";
 import { userProfiles } from "../../shared/schema";
+
+function requireDatabase(res: Response) {
+  if (!db) {
+    res.status(503).json({ error: "Database not available" });
+    return null;
+  }
+  return db;
+}
 
 /**
  * GET /api/profile
@@ -13,11 +21,10 @@ export async function getProfile(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
-    const profiles = await db
+    const profiles = await database
       .select()
       .from(userProfiles)
       .where(eq(userProfiles.userId, req.session.userId))
@@ -44,9 +51,8 @@ export async function updateProfile(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
     const {
       displayName,
@@ -80,7 +86,7 @@ export async function updateProfile(req: Request, res: Response) {
     if (notificationsWeeklyReport !== undefined) updateData.notificationsWeeklyReport = notificationsWeeklyReport;
     if (theme !== undefined) updateData.theme = theme;
 
-    const updated = await db
+    const updated = await database
       .update(userProfiles)
       .set(updateData)
       .where(eq(userProfiles.userId, req.session.userId))

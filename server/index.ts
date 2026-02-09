@@ -16,14 +16,6 @@ declare module "http" {
   }
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      session: session.Session & Partial<session.SessionData> & { userId?: string };
-    }
-  }
-}
-
 app.use(
   express.json({
     verify: (req, _res, buf) => {

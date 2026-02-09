@@ -1,7 +1,15 @@
 import type { Request, Response } from "express";
 import { and, eq, isNull } from "drizzle-orm";
-import { db, isDatabaseEnabled } from "../db";
+import { db } from "../db";
 import { portfolios, holdings, trades, dailySettlements } from "../../shared/schema";
+
+function requireDatabase(res: Response) {
+  if (!db) {
+    res.status(503).json({ error: "Database not available" });
+    return null;
+  }
+  return db;
+}
 
 /**
  * GET /api/portfolios
@@ -13,11 +21,10 @@ export async function getPortfolios(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
-    const userPortfolios = await db
+    const userPortfolios = await database
       .select()
       .from(portfolios)
       .where(
@@ -44,9 +51,8 @@ export async function createPortfolio(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
-    }
+    const database = requireDatabase(res);
+    if (!database) return;
 
     const { strategyId, name, initialCash, type } = req.body;
 
@@ -63,7 +69,7 @@ export async function createPortfolio(req: Request, res: Response) {
       return res.status(400).json({ error: "type must be 'live' or 'backtest'" });
     }
 
-    const created = await db
+    const created = await database
       .insert(portfolios)
       .values({
         strategyId: strategyId || null,
@@ -97,14 +103,21 @@ export async function getPortfolioDetails(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
+    const database = requireDatabase(res);
+    if (!database) {
+      return;
     }
 
-    const { portfolioId } = req.params;
+    const portfolioIdParam = req.params.portfolioId;
+    const portfolioId = Array.isArray(portfolioIdParam)
+      ? portfolioIdParam[0]
+      : portfolioIdParam;
+    if (!portfolioId) {
+      return res.status(400).json({ error: "portfolioId is required" });
+    }
 
     // Check ownership
-    const portfolio = await db
+    const portfolio = await database
       .select()
       .from(portfolios)
       .where(
@@ -122,13 +135,13 @@ export async function getPortfolioDetails(req: Request, res: Response) {
     const portfolioData = portfolio[0];
 
     // Get holdings
-    const holdingsList = await db
+    const holdingsList = await database
       .select()
       .from(holdings)
       .where(eq(holdings.portfolioId, portfolioId));
 
     // Get recent trades (last 20)
-    const recentTrades = await db
+    const recentTrades = await database
       .select()
       .from(trades)
       .where(eq(trades.portfolioId, portfolioId))
@@ -136,7 +149,7 @@ export async function getPortfolioDetails(req: Request, res: Response) {
       .limit(20);
 
     // Get latest settlement
-    const latestSettlement = await db
+    const latestSettlement = await database
       .select()
       .from(dailySettlements)
       .where(eq(dailySettlements.portfolioId, portfolioId))
@@ -165,14 +178,21 @@ export async function deletePortfolio(req: Request, res: Response) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    if (!isDatabaseEnabled) {
-      return res.status(503).json({ error: "Database not available" });
+    const database = requireDatabase(res);
+    if (!database) {
+      return;
     }
 
-    const { portfolioId } = req.params;
+    const portfolioIdParam = req.params.portfolioId;
+    const portfolioId = Array.isArray(portfolioIdParam)
+      ? portfolioIdParam[0]
+      : portfolioIdParam;
+    if (!portfolioId) {
+      return res.status(400).json({ error: "portfolioId is required" });
+    }
 
     // Check ownership
-    const portfolio = await db
+    const portfolio = await database
       .select()
       .from(portfolios)
       .where(
