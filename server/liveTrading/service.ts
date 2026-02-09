@@ -7,6 +7,7 @@ import {
   strategies,
   trades,
   users,
+  userProfiles,
 } from "../../shared/schema";
 import { type BacktestAlgorithm } from "../../shared/backtest";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../../shared/liveTrading";
 import { loadHistoricalPrices } from "../backtest/priceProvider";
 import { loadSignalSnapshot } from "../backtest/signalProvider";
+import { RiskManager } from "../risk/riskManager";
 
 type LivePositionState = {
   quantity: number;
