@@ -5,19 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
+  const { refetchUser } = useAuth();
 
   const mutation = useMutation({
     mutationFn: ({ username, password }: { username: string; password: string }) =>
       loginUser(username, password),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Refresh user data and navigate
+      await refetchUser();
       setLocation("/");
-      window.location.reload(); // Reload to get user context
     },
+    onError: (error: any) => {
+      // Error is handled by mutation.error display below
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {

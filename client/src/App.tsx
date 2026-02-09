@@ -16,19 +16,37 @@ import PortfoliosPage from "@/pages/PortfoliosPage";
 import { useEffect } from "react";
 import { LanguageProvider } from "./lib/i18n";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AuthProvider, useAuth } from "./lib/auth";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Don't render until we know authentication state
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <Switch>
+      {/* Public routes */}
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
-      <Route path="/" component={Dashboard} />
-      <Route path="/backtest" component={BacktestCenter} />
-      <Route path="/backtest/history" component={BacktestHistoryPage} />
-      <Route path="/backtest/:id/results" component={BacktestResultsPage} />
-      <Route path="/compare" component={ComparePage} />
-      <Route path="/live" component={LiveTradingPage} />
-      <Route path="/portfolios" component={PortfoliosPage} />
+
+      {/* Protected routes - require authentication */}
+      {isAuthenticated && (
+        <>
+          <Route path="/" component={Dashboard} />
+          <Route path="/backtest" component={BacktestCenter} />
+          <Route path="/backtest/history" component={BacktestHistoryPage} />
+          <Route path="/backtest/:id/results" component={BacktestResultsPage} />
+          <Route path="/compare" component={ComparePage} />
+          <Route path="/live" component={LiveTradingPage} />
+          <Route path="/portfolios" component={PortfoliosPage} />
+        </>
+      )}
+
+      {/* Fallback */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -43,12 +61,14 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </LanguageProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

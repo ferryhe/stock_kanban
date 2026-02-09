@@ -7,12 +7,13 @@ import { WatchlistSearchBox } from "@/components/WatchlistSearchBox";
 import { BottomNav } from "@/components/BottomNav";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 // import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
-import { Loader2, Settings2, RefreshCw, FlaskConical, BarChart3, History, Activity } from "lucide-react";
+import { Loader2, Settings2, RefreshCw, FlaskConical, BarChart3, History, Activity, LogOut, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 const LEADERBOARD_ID = "__leaderboard__";
 
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
+  const { user, logout } = useAuth();
 
   // Check if leaderboards are available
   const { data: availableLeaderboards } = useAvailableLeaderboards();
@@ -239,6 +241,24 @@ export default function Dashboard() {
                   >
                     <Activity className="w-4 h-4" />
                   </Link>
+                  <div className="border-l border-border/50 pl-4 flex items-center gap-2">
+                    {user && (
+                      <>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-secondary/50 rounded-lg">
+                          <User className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs font-mono text-muted-foreground">{user.username}</span>
+                        </div>
+                        <button 
+                          onClick={() => logout()}
+                          className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-negative"
+                          data-testid="logout-button"
+                          title="Logout"
+                        >
+                          <LogOut className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                   <button 
                     onClick={() => setIsManagerOpen(true)}
                     className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"

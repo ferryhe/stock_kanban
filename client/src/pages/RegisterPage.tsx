@@ -1,24 +1,30 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { registerUser } from "@/lib/stockApi";
+import { registerUser, loginUser } from "@/lib/stockApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [, setLocation] = useLocation();
+  const { refetchUser } = useAuth();
 
   const mutation = useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
-      registerUser(username, password),
-    onSuccess: () => {
-      // Automatically login after registration
+    mutationFn: async ({ username, password }: { username: string; password: string }) => {
+      // Register first
+      await registerUser(username, password);
+      // Then automatically log in
+      return loginUser(username, password);
+    },
+    onSuccess: async () => {
+      // Refresh user data and navigate
+      await refetchUser();
       setLocation("/");
-      window.location.reload();
     },
   });
 
