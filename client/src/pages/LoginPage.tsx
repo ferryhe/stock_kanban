@@ -4,12 +4,12 @@ import { loginUser } from "@/lib/stockApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { useRouter } from "wouter";
+import { useLocation } from "wouter";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [, setLocation] = useRouter();
+  const [, setLocation] = useLocation();
 
   const mutation = useMutation({
     mutationFn: ({ username, password }: { username: string; password: string }) =>
