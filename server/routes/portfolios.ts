@@ -207,20 +207,23 @@ export async function deletePortfolio(req: Request, res: Response) {
       return res.status(404).json({ error: "Portfolio not found" });
     }
 
-    // Soft delete by setting updatedAt to mark as deleted
-    // Note: In production, you should add a deletedAt column to the schema
-    // For now, we'll update the portfolio's updatedAt timestamp
-    await database
-      .update(portfolios)
-      .set({ updatedAt: new Date() })
+    // Delete the portfolio from database
+    // Note: In production with complex relationships, consider soft-delete with deletedAt column
+    const deleted = await database
+      .delete(portfolios)
       .where(
         and(
           eq(portfolios.id, portfolioId),
           eq(portfolios.userId, req.session.userId),
         ),
-      );
+      )
+      .returning();
 
-    return res.json({ message: "Portfolio marked for deletion", portfolioId });
+    if (deleted.length === 0) {
+      return res.status(500).json({ error: "Failed to delete portfolio" });
+    }
+
+    return res.json({ message: "Portfolio deleted successfully", portfolioId });
   } catch (error) {
     console.error("Delete portfolio error:", error);
     return res.status(500).json({ error: "Internal server error" });
