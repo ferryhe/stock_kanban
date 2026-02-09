@@ -2,7 +2,7 @@
 # Stock Kanban - Linux Environment Pre-flight Check
 # ═══════════════════════════════════════════════════════════════════
 # 用途: 在部署前检查 Linux 环境是否满足所有要求
-# 用法: ./check-linux-environment.sh
+# 用法: bash check-linux-environment.sh
 # ═══════════════════════════════════════════════════════════════════
 
 set -Eeuo pipefail
@@ -272,25 +272,25 @@ else
     log_error "Neither .env.production nor .env.production.example found"
 fi
 
-if [ -f "stock_kanban_update_and_run.sh" ]; then
+if [ -f "../stock_kanban_update_and_run.sh" ]; then
     log_success "Deployment script found"
-    if [ -x "stock_kanban_update_and_run.sh" ]; then
+    if [ -x "../stock_kanban_update_and_run.sh" ]; then
         log_success "Deployment script is executable"
     else
         log_warning "Deployment script exists but is not executable"
-        log_info "Run: chmod +x stock_kanban_update_and_run.sh"
+        log_info "Run: chmod +x ../stock_kanban_update_and_run.sh"
     fi
 else
-    log_error "Deployment script not found (stock_kanban_update_and_run.sh)"
+    log_error "Deployment script not found (../stock_kanban_update_and_run.sh)"
 fi
 
-if [ -f "docker-compose.yml" ]; then
+if [ -f "../docker-compose.yml" ]; then
     log_success "docker-compose.yml exists"
 else
     log_warning "docker-compose.yml not found"
 fi
 
-if [ -f "Dockerfile" ]; then
+if [ -f "../Dockerfile" ]; then
     log_success "Dockerfile exists"
 else
     log_error "Dockerfile not found"
@@ -334,13 +334,13 @@ if [ "$CHECKS_FAILED" -eq 0 ]; then
     echo "     nano .env.production"
     echo ""
     echo "  2. Run the deployment script:"
-    echo "     chmod +x stock_kanban_update_and_run.sh"
-    echo "     ./stock_kanban_update_and_run.sh"
+    echo "     chmod +x ../stock_kanban_update_and_run.sh"
+    echo "     ../stock_kanban_update_and_run.sh"
     echo ""
     echo "  3. Verify deployment:"
     echo "     docker logs -f stock-kanban-app"
     echo ""
-    echo "  For detailed deployment guide, see: LINUX_DEPLOYMENT_GUIDE.md"
+    echo "  For detailed deployment guide, see: docs/DEPLOYMENT_INDEX.md"
     echo ""
 else
     echo -e "${RED}${BOLD}✗ Some critical checks failed!${NC}"

@@ -17,31 +17,53 @@ Frontend and API are served by one Node process.
 - Persistent storage uses PostgreSQL when `DATABASE_URL` is set
 - If `DATABASE_URL` is missing, backtest/live data falls back to in-memory mode
 
-## Scripts in Project Root
+## 🚀 Quick Start
 
-- `stock_kanban_update_and_run.sh`:
-  One-command Linux deploy/update flow for your current Docker + Caddy setup.
-  It does: `git restore .` -> `git pull` -> ensure PostgreSQL -> rebuild/start `stock-kanban-app`.
-  
-- `verify-database.sh`:
-  Verify PostgreSQL is correctly initialized with all required tables.
-  
-- `check-linux-environment.sh`:  
-  Pre-flight check for Linux deployment environment (Docker, Git, ports, disk space, etc).
-  
-- `start-dev.bat`:
-  Windows-only local development launcher (opens backend + frontend terminals).
+### For Linux Deployment
 
-## Scripts in `deploy/`
+```bash
+# Step 1: Pre-flight check (optional)
+bash deploy/check-linux-environment.sh
 
-- `deploy/docker-deploy-simple.sh`:
-  Docker deploy script (uses `.env.production`, rebuilds and restarts `stock-kanban-app`).
-- `deploy/start-production.sh`:
-  PM2 production startup (non-Docker mode).
-- `deploy/ec2-setup.sh`:
-  First-time EC2 environment bootstrap helper.
-- `deploy/deploy-to-ec2.bat`:
-  Windows helper for EC2 deployment steps (Windows-only).
+# Step 2: Configure environment
+cp .env.production.example .env.production
+nano .env.production
+
+# Step 3: Deploy
+chmod +x stock_kanban_update_and_run.sh
+./stock_kanban_update_and_run.sh
+
+# Step 4: Verify
+bash deploy/verify-database.sh
+```
+
+**Documentation**: [Linux Deployment Guide](./docs/DEPLOYMENT_INDEX.md)
+
+### For Windows Local Development
+
+```bash
+start-dev.bat
+```
+
+This opens two terminals:
+- **Backend**: Node.js API (http://localhost:3000)
+- **Frontend**: Vite dev server (http://localhost:5000)
+
+**Documentation**: [Local Development](./docs/LOCAL_DEVELOPMENT.md)
+
+## 📂 Project Scripts
+
+### Root Scripts
+- `stock_kanban_update_and_run.sh` - One-command Linux deploy & update
+- `start-dev.bat` - Windows local development launcher
+
+### Deploy Scripts
+Located in `deploy/`:
+- `check-linux-environment.sh` - Pre-flight environment check
+- `verify-database.sh` - Database initialization verification
+- `sql/` - Database initialization scripts
+
+See [PROJECT_CLEANUP.md](./PROJECT_CLEANUP.md) for file organization guide.
 
 ## Removed Obsolete Scripts
 
@@ -71,43 +93,72 @@ start-dev.bat
 
 ## Docker Production (Current EC2 Layout)
 
-Your current routing is:
-
-- Caddy -> `stock-kanban-app:3000`
-- Domain: `stockkanban.aixintelligence.com`
-
-### Quick Linux Deployment
-
-**For first-time deployment**, follow: [LINUX_QUICKSTART.md](./LINUX_QUICKSTART.md)
-
-**For detailed setup guide**, see: [LINUX_DEPLOYMENT_GUIDE.md](./LINUX_DEPLOYMENT_GUIDE.md)
-
-**For environment variable configuration**, check: [ENV_CONFIGURATION_GUIDE.md](./ENV_CONFIGURATION_GUIDE.md)
-
-**For complete review and summary**, read: [DEPLOYMENT_SUMMARY.md](./DEPLOYMENT_SUMMARY.md)
+Your current routing:
+- **Caddy** reverse proxy → `stock-kanban-app:3000`
+- **Domain**: `stockkanban.aixintelligence.com` (HTTPS via Caddy)
 
 ### One-Command Update
 
-Once deployed, update with a single command:
+After initial deployment, update anytime with:
 
 ```bash
 ./stock_kanban_update_and_run.sh
 ```
 
+This automatically:
+1. Pulls latest code
+2. Checks database connection
+3. Rebuilds Docker image
+4. Restarts application
+
 ## Required Production Env (`.env.production`)
 
-Minimum:
+See [ENV_CONFIGURATION_GUIDE](./docs/ENV_CONFIGURATION_GUIDE.md) for all options.
+
+Minimum required:
 
 ```env
 NODE_ENV=production
 PORT=3000
 HOST=0.0.0.0
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/stock_kanban
-PGSSL=false
-LIVE_SETTLEMENT_SCHEDULER=true
+
+# Database (choose one):
+# Option A: Auto-create (leave empty)
+# Option B: Existing PostgreSQL
+DATABASE_URL=postgresql://stock_user:password@host:5432/stock_kanban
+# Option C: Cloud database (RDS, Azure, etc.)
+
+# Frontend & Security
+VITE_API_BASE_URL=https://stockkanban.aixintelligence.com
+ADMIN_SECRET=<generate: openssl rand -base64 32>
 ENABLE_USER_ISOLATION=true
-ADMIN_SECRET=change-me
 ```
+
+## 📚 Documentation Index
+
+### Getting Started
+| Document | Purpose |
+|----------|---------|
+| [Linux Quick Start](./docs/LINUX_QUICKSTART.md) | 5-minute deployment guide |
+| [Local Development](./docs/LOCAL_DEVELOPMENT.md) | Windows/Linux dev setup |
+| [Deployment Index](./docs/DEPLOYMENT_INDEX.md) | All deployment docs |
+
+### Configuration & Reference
+| Document | Content |
+|----------|---------|
+| [Environment Variables](./docs/ENV_CONFIGURATION_GUIDE.md) | All .env options explained |
+| [Linux Deployment Guide](./docs/LINUX_DEPLOYMENT_GUIDE.md) | Comprehensive deployment guide |
+| [PostgreSQL Config](./docs/LINUX_FRONTEND_PGSQL_CONFIG.md) | Database & frontend setup |
+
+### Development
+| Document | Topic |
+|----------|-------|
+| [Development Docs](./docs/DEVELOPMENT_GUIDE.md) | Development docs index |
+| [Architecture](./docs/CONSOLIDATED_DESIGN.md) | System architecture & design |
+| [Backtest Guide](./docs/BACKTEST_UI_OPERATION_GUIDE.md) | Backtest functionality |
+
+### Cleanup
+- [Project Cleanup Guide](./PROJECT_CLEANUP.md) - File organization & cleanup instructions
 
 ## DB Initialization (Manual Option)
 
