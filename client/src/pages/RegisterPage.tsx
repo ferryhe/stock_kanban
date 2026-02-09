@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useI18n } from "@/lib/i18n";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -13,16 +14,14 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [, setLocation] = useLocation();
   const { refetchUser } = useAuth();
+  const { lang, setLang, t } = useI18n();
 
   const mutation = useMutation({
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
-      // Register first
       await registerUser(username, password);
-      // Then automatically log in
       return loginUser(username, password);
     },
     onSuccess: async () => {
-      // Refresh user data and navigate
       await refetchUser();
       setLocation("/");
     },
@@ -32,69 +31,82 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      alert(t("registerPasswordMismatch"));
       return;
     }
 
     if (password.length < 6) {
-      alert("Password must be at least 6 characters");
+      alert(t("registerPasswordTooShort"));
       return;
     }
 
     if (username.length < 3) {
-      alert("Username must be at least 3 characters");
+      alert(t("registerUsernameTooShort"));
       return;
     }
 
     mutation.mutate({ username, password });
   };
+  const errorMessage =
+    mutation.error instanceof Error
+      ? mutation.error.message
+      : mutation.error
+        ? String(mutation.error)
+        : "";
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      <button
+        onClick={() => setLang(lang === "en" ? "zh" : "en")}
+        className="absolute right-4 top-4 rounded-md border border-slate-300 bg-white/90 px-3 py-1 text-sm text-slate-700 hover:bg-white"
+      >
+        {t("langToggle")}
+      </button>
+
       <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">Create Account</h1>
-        
+        <h1 className="text-2xl font-bold mb-6 text-center">{t("registerTitle")}</h1>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
+            <label className="block text-sm font-medium mb-1">{t("authUsername")}</label>
             <Input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Choose a username"
+              placeholder={t("registerUsernamePlaceholder")}
               required
               minLength={3}
             />
-            <p className="text-xs text-slate-500 mt-1">At least 3 characters</p>
+            <p className="text-xs text-slate-500 mt-1">{t("registerUsernameHint")}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block text-sm font-medium mb-1">{t("authPassword")}</label>
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Choose a password"
+              placeholder={t("registerPasswordPlaceholder")}
               required
               minLength={6}
             />
-            <p className="text-xs text-slate-500 mt-1">At least 6 characters</p>
+            <p className="text-xs text-slate-500 mt-1">{t("registerPasswordHint")}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Confirm Password</label>
+            <label className="block text-sm font-medium mb-1">{t("registerConfirmPassword")}</label>
             <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password"
+              placeholder={t("registerConfirmPasswordPlaceholder")}
               required
             />
           </div>
 
-          {mutation.error && (
+          {errorMessage && (
             <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-              {mutation.error.message}
+              {errorMessage}
             </div>
           )}
 
@@ -103,18 +115,14 @@ export default function RegisterPage() {
             className="w-full"
             disabled={mutation.isPending || !username || !password || !confirmPassword}
           >
-            {mutation.isPending ? "Creating account..." : "Create Account"}
+            {mutation.isPending ? t("registerSubmitting") : t("registerSubmit")}
           </Button>
         </form>
 
         <div className="mt-6 pt-6 border-t">
-          <p className="text-sm text-center mb-4">Already have an account?</p>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setLocation("/login")}
-          >
-            Login
+          <p className="text-sm text-center mb-4">{t("registerHasAccount")}</p>
+          <Button variant="outline" className="w-full" onClick={() => setLocation("/login")}>
+            {t("registerLogin")}
           </Button>
         </div>
       </Card>
