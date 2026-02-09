@@ -25,7 +25,7 @@ import {
 
 const MAX_RESULT_CACHE = 100;
 const resultStore = new Map<string, BacktestResult>();
-const resultUserStore = new Map<string, string>();
+const resultStrategyAccountStore = new Map<string, string>();
 
 const DEFAULT_POSITION_PARAMS: BacktestPositionParams = {
   maxPositionPerStock: 0.1,
@@ -45,7 +45,7 @@ const DEFAULT_OPTIONS: BacktestOptions = {
 };
 
 export interface BacktestRequestContext {
-  userId?: string;
+  strategyAccountId?: string;
 }
 
 function assertFinitePositive(value: number, name: string): void {
@@ -120,18 +120,18 @@ function normalizePositiveInt(
   return Math.min(max, Math.floor(n));
 }
 
-export function normalizeBacktestUserId(value: unknown): string | undefined {
+export function normalizeStrategyAccountId(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  const userId = value.trim();
-  if (userId.length === 0) {
+  const accountId = value.trim();
+  if (accountId.length === 0) {
     return undefined;
   }
-  if (userId.length > 64) {
-    throw new Error("userId must be <= 64 characters");
+  if (accountId.length > 64) {
+    throw new Error("strategyAccountId must be <= 64 characters");
   }
-  return userId;
+  return accountId;
 }
 
 function normalizeOptionalDate(value: unknown, name: string): string | undefined {
@@ -259,17 +259,17 @@ export function normalizeBacktestConfig(input: unknown): BacktestConfig {
   };
 }
 
-function putResult(result: BacktestResult, userId?: string): void {
+function putResult(result: BacktestResult, strategyAccountId?: string): void {
   resultStore.set(result.id, result);
-  if (userId) {
-    resultUserStore.set(result.id, userId);
+  if (strategyAccountId) {
+    resultStrategyAccountStore.set(result.id, strategyAccountId);
   }
 
   if (resultStore.size > MAX_RESULT_CACHE) {
     const firstKey = resultStore.keys().next().value;
     if (firstKey) {
       resultStore.delete(firstKey);
-      resultUserStore.delete(firstKey);
+      resultStrategyAccountStore.delete(firstKey);
     }
   }
 }
@@ -315,9 +315,9 @@ export async function runBacktest(
     priceSeries: prices,
   });
 
-  putResult(result, context?.userId);
+  putResult(result, context?.strategyAccountId);
   try {
-    await saveBacktestResultToDb(result, context?.userId);
+    await saveBacktestResultToDb(result, context?.strategyAccountId);
   } catch (error) {
     console.error("[Backtest] Failed to persist result to PostgreSQL:", error);
   }
@@ -330,37 +330,37 @@ export async function getBacktestResult(
 ): Promise<BacktestResult | null> {
   const cached = resultStore.get(id);
   if (cached) {
-    if (context?.userId) {
-      const owner = resultUserStore.get(id);
-      if (owner && owner !== context.userId) {
+    if (context?.strategyAccountId) {
+      const owner = resultStrategyAccountStore.get(id);
+      if (owner && owner !== context.strategyAccountId) {
         return null;
       }
       if (!owner) {
         // Owner unknown in cache, verify against DB using caller identity.
-        const fromDb = await getBacktestResultFromDb(id, context.userId);
+        const fromDb = await getBacktestResultFromDb(id, context.strategyAccountId);
         if (!fromDb) {
           return null;
         }
-        putResult(fromDb, context.userId);
+        putResult(fromDb, context.strategyAccountId);
         return fromDb;
       }
     }
     return cached;
   }
 
-  const fromDb = await getBacktestResultFromDb(id, context?.userId);
+  const fromDb = await getBacktestResultFromDb(id, context?.strategyAccountId);
   if (fromDb) {
-    putResult(fromDb, context?.userId);
+    putResult(fromDb, context?.strategyAccountId);
   }
   return fromDb;
 }
 
-function toHistoryItem(result: BacktestResult, userId?: string): BacktestHistoryItem {
+function toHistoryItem(result: BacktestResult, strategyAccountId?: string): BacktestHistoryItem {
   return {
     backtestResultId: result.id,
     portfolioId: result.id,
     strategyId: null,
-    userId: userId ?? null,
+    userId: strategyAccountId ?? null,
     algorithm: result.summary.algorithm,
     status: "completed",
     runAt: result.createdAt,
@@ -380,7 +380,7 @@ export async function getBacktestHistory(
   query: BacktestHistoryQuery,
   context?: BacktestRequestContext,
 ): Promise<BacktestHistoryResponse> {
-  const dbItems = await listBacktestHistoryFromDb(query, context?.userId);
+  const dbItems = await listBacktestHistoryFromDb(query, context?.strategyAccountId);
   if (dbItems) {
     return dbItems;
   }
@@ -400,10 +400,10 @@ export async function getBacktestHistory(
     .filter((result) => (query.algorithm ? result.config.algorithm === query.algorithm : true))
     .filter((result) => (status ? "completed" === status : true))
     .filter((result) => {
-      if (!context?.userId) return true;
-      const owner = resultUserStore.get(result.id);
+      if (!context?.strategyAccountId) return true;
+      const owner = resultStrategyAccountStore.get(result.id);
       // Require exact match: only show results owned by this user
-      return owner === context.userId;
+      return owner === context.strategyAccountId;
     })
     .filter((result) => {
       const runMs = new Date(result.createdAt).getTime();
@@ -412,7 +412,7 @@ export async function getBacktestHistory(
       return true;
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((result) => toHistoryItem(result, resultUserStore.get(result.id)));
+    .map((result) => toHistoryItem(result, resultStrategyAccountStore.get(result.id)));
 
   const items = allItems.slice(start, start + pageSize);
   const total = allItems.length;
@@ -430,7 +430,7 @@ export async function getBacktestPersistenceSummary(
   id: string,
   context?: BacktestRequestContext,
 ): Promise<BacktestPersistenceSummary | null> {
-  const dbSummary = await getBacktestPersistenceSummaryByResultId(id, context?.userId);
+  const dbSummary = await getBacktestPersistenceSummaryByResultId(id, context?.strategyAccountId);
   if (dbSummary) {
     return dbSummary;
   }
@@ -439,9 +439,9 @@ export async function getBacktestPersistenceSummary(
   if (!cached) {
     return null;
   }
-  if (context?.userId) {
-    const owner = resultUserStore.get(id);
-    if (!owner || owner !== context.userId) {
+  if (context?.strategyAccountId) {
+    const owner = resultStrategyAccountStore.get(id);
+    if (!owner || owner !== context.strategyAccountId) {
       return null;
     }
   }

@@ -7,12 +7,13 @@ import { WatchlistSearchBox } from "@/components/WatchlistSearchBox";
 import { BottomNav } from "@/components/BottomNav";
 import { LeaderboardPanel } from "@/components/LeaderboardPanel";
 // import generatedImage from "@assets/generated_images/subtle_dark_tactical_grid_background.png";
-import { Loader2, Settings2, RefreshCw, FlaskConical, BarChart3, History, Activity } from "lucide-react";
+import { Loader2, Settings2, RefreshCw, FlaskConical, BarChart3, History, Activity, LogOut, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 const LEADERBOARD_ID = "__leaderboard__";
 
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const { lang, setLang, t } = useI18n();
   const queryClient = useQueryClient();
+  const { user, logout } = useAuth();
 
   // Check if leaderboards are available
   const { data: availableLeaderboards } = useAvailableLeaderboards();
@@ -182,8 +184,9 @@ export default function Dashboard() {
                   </div>
               </div>
               
-              <div className="flex items-center gap-4">
-                  <div className="flex gap-6 border-l border-border/50 pl-6 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 md:gap-4 flex-wrap md:flex-nowrap">
+                  {/* Market tickers - hidden on mobile, visible on md and up */}
+                  <div className="hidden md:flex gap-6 border-l border-border/50 pl-6 overflow-x-auto no-scrollbar">
                       {currentMarketIndexData && (
                         <MarketTicker 
                           symbol={currentMarketIndexData.symbol} 
@@ -199,50 +202,93 @@ export default function Dashboard() {
                         change={marketData?.vix.change || 0}
                       />
                   </div>
+                  
+                  {/* Navigation buttons - hidden on mobile, visible on md and up */}
+                  <div className="hidden md:flex items-center gap-2">
+                    <button 
+                      onClick={() => refetch()}
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                      disabled={isFetching}
+                      data-testid="refresh-button"
+                      title="Refresh"
+                    >
+                      <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
+                    </button>
+                    <Link
+                      href="/backtest"
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                      data-testid="backtest-link"
+                      title="Backtest Center"
+                    >
+                      <FlaskConical className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/compare"
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                      data-testid="compare-link"
+                      title="Algorithm Compare"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/backtest/history"
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                      data-testid="backtest-history-link"
+                      title="Backtest History"
+                    >
+                      <History className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/live"
+                      className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                      data-testid="live-link"
+                      title="Live Paper Trading"
+                    >
+                      <Activity className="w-4 h-4" />
+                    </Link>
+                  </div>
+                  
+                  {/* Refresh button - always visible on mobile */}
                   <button 
                     onClick={() => refetch()}
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                    className="md:hidden p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                     disabled={isFetching}
                     data-testid="refresh-button"
+                    title="Refresh"
                   >
                     <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
                   </button>
-                  <Link
-                    href="/backtest"
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                    data-testid="backtest-link"
-                    title="Backtest Center"
-                  >
-                    <FlaskConical className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/compare"
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                    data-testid="compare-link"
-                    title="Algorithm Compare"
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/backtest/history"
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                    data-testid="backtest-history-link"
-                    title="Backtest History"
-                  >
-                    <History className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/live"
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                    data-testid="live-link"
-                    title="Live Paper Trading"
-                  >
-                    <Activity className="w-4 h-4" />
-                  </Link>
+
+                  {/* User section - always visible */}
+                  <div className="border-l border-border/50 pl-2 md:pl-4 flex items-center gap-2">
+                    {user && (
+                      <>
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-secondary/50 rounded-lg">
+                          <User className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs font-mono text-muted-foreground">{user.username}</span>
+                        </div>
+                        {/* Show user avatar on mobile */}
+                        <div className="sm:hidden w-7 h-7 flex items-center justify-center bg-secondary/50 rounded-lg">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <button 
+                          onClick={() => logout()}
+                          className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-negative"
+                          data-testid="logout-button"
+                          title="Logout"
+                        >
+                          <LogOut className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Settings button - always visible */}
                   <button 
                     onClick={() => setIsManagerOpen(true)}
                     className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                     data-testid="settings-button"
+                    title="Settings"
                   >
                     <Settings2 className="w-5 h-5" />
                   </button>

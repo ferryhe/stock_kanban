@@ -1,8 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "wouter";
 import {
-  getBacktestUserId,
-  setBacktestUserId,
+  getStrategyAccountId,
+  setStrategyAccountId,
   useBacktestAlgorithms,
   useBacktestHistory,
 } from "@/lib/stockApi";
@@ -60,7 +60,7 @@ function metricClass(value: number | null): string {
 export default function BacktestHistoryPage() {
   const { data: algorithms = [] } = useBacktestAlgorithms();
   const { lang, setLang } = useI18n();
-  const [userId, setUserId] = useState<string>(getBacktestUserId());
+  const [accountId, setAccountId] = useState<string>(getStrategyAccountId());
   const [algorithm, setAlgorithm] = useState<AlgorithmFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [runDateFrom, setRunDateFrom] = useState<string>(getDefaultDate(-60));
@@ -78,7 +78,7 @@ export default function BacktestHistoryPage() {
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    setBacktestUserId(userId);
+    setStrategyAccountId(accountId);
     setQuery({
       algorithm: algorithm === "all" ? undefined : algorithm,
       status: status === "all" ? undefined : status,
@@ -140,11 +140,11 @@ export default function BacktestHistoryPage() {
 
         <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 rounded-xl border border-border p-4 bg-card">
           <label className="text-sm grid gap-1">
-            <span>{bt(backtestUi.center.userId, lang)}</span>
+            <span>{bt(backtestUi.center.strategyAccountId, lang)}</span>
             <input
               className="h-10 px-3 rounded-md bg-background border border-input"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
               placeholder="demo-user"
             />
           </label>
@@ -260,7 +260,7 @@ export default function BacktestHistoryPage() {
                 {bt(backtestUi.history.total, lang)}: {data?.total ?? 0} |{" "}
                 {bt(backtestUi.history.page, lang)} {(data?.page ?? 1)} / {(data?.totalPages ?? 1)}
               </span>
-              <span>{bt(backtestUi.history.userScope, lang)}: {getBacktestUserId()}</span>
+              <span>{bt(backtestUi.history.userScope, lang)}: {getStrategyAccountId()}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAvailableLeaderboards, useLeaderboardData } from "@/lib/stockApi";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence, PanInfo, useMotionValue, animate } from "framer-motion";
-import { Trophy, Loader2 } from "lucide-react";
+import { Trophy, Loader2, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BacktestQuickLinks } from "@/components/BacktestQuickLinks";
 
@@ -25,6 +26,7 @@ const MedalIcon = ({ rank }: { rank?: number | null }) => {
 
 export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
   const { leaderboard, lang, t, setLang } = useI18n();
+  const { user, logout } = useAuth();
   const { data: availableMarkets, isLoading: marketsLoading } = useAvailableLeaderboards();
   const [selectedMarket, setSelectedMarket] = useState<string>("");
   const [selectedMarketIndex, setSelectedMarketIndex] = useState(0);
@@ -165,6 +167,25 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
                   {leaderboard.title}
                 </h1>
               </div>
+              {/* User section - show username and logout */}
+              {user && (
+                <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                  <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-secondary/50 rounded-lg">
+                    <User className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-xs font-mono text-muted-foreground">{user.username}</span>
+                  </div>
+                  <div className="sm:hidden w-6 h-6 flex items-center justify-center bg-secondary/50 rounded">
+                    <User className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                  <button
+                    onClick={() => logout()}
+                    className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-negative"
+                    title="Logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
             <BacktestQuickLinks lang={lang} compact />
           </div>
