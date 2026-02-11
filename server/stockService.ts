@@ -144,7 +144,7 @@ function normalizeHkTicker(ticker: string): string {
 function getLocalZhName(ticker: string, uiLang: UILang) {
   if (uiLang !== "zh") return undefined;
   const map = loadZhNameMap();
-  const normalizedTicker = normalizeHkTicker(ticker.toUpperCase());
+  const normalizedTicker = normalizeHkTicker(ticker);
   return map.get(normalizedTicker);
 }
 
@@ -411,7 +411,7 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   const map = loadZhNameMap();
   const missing: string[] = [];
   for (const raw of symbols) {
-    const symbol = normalizeHkTicker(raw.toUpperCase());
+    const symbol = normalizeHkTicker(raw);
     if (map.has(symbol) || pendingZhUpdates.has(symbol) || queuedZhUpdates.has(symbol)) {
       continue;
     }
