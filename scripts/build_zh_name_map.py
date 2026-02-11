@@ -84,6 +84,11 @@ def add_hk_share(mapping: dict[str, str], target_symbols: set[str] | None) -> tu
     if not code_col or not name_col:
         raise RuntimeError("HK columns not found.")
 
+    # Normalize target symbols once before the loop
+    normalized_targets = None
+    if target_symbols is not None:
+        normalized_targets = {normalize_hk_symbol(s) for s in target_symbols if ".HK" in s.upper()}
+
     added = 0
     skipped = 0
     for _, row in df.iterrows():
@@ -94,13 +99,10 @@ def add_hk_share(mapping: dict[str, str], target_symbols: set[str] | None) -> tu
             continue
         # Normalize to 5-digit format (handles both 4-digit and 5-digit inputs)
         symbol = normalize_hk_symbol(code)
-        # Also normalize target_symbols for comparison if provided
-        if target_symbols is not None:
-            # Check if the normalized symbol matches any normalized target symbol
-            normalized_targets = {normalize_hk_symbol(s) for s in target_symbols if ".HK" in s.upper()}
-            if symbol not in normalized_targets:
-                skipped += 1
-                continue
+        # Check if the normalized symbol matches any normalized target symbol
+        if normalized_targets is not None and symbol not in normalized_targets:
+            skipped += 1
+            continue
         if mapping.get(symbol) != name:
             mapping[symbol] = name
             added += 1
