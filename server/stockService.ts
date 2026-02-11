@@ -127,10 +127,25 @@ function getMarketInfo(ticker: string): MarketInfo {
   return US_MARKET;
 }
 
+function normalizeHkTicker(ticker: string): string {
+  const upper = ticker.toUpperCase();
+  if (!upper.endsWith(".HK")) return upper;
+  
+  // Extract the numeric part before .HK
+  const match = upper.match(/^(\d+)\.HK$/);
+  if (!match) return upper;
+  
+  const code = match[1];
+  // Pad to 5 digits for consistency with stored format
+  const paddedCode = code.padStart(5, "0");
+  return `${paddedCode}.HK`;
+}
+
 function getLocalZhName(ticker: string, uiLang: UILang) {
   if (uiLang !== "zh") return undefined;
   const map = loadZhNameMap();
-  return map.get(ticker.toUpperCase());
+  const normalizedTicker = normalizeHkTicker(ticker.toUpperCase());
+  return map.get(normalizedTicker);
 }
 
 function buildFixedTimes(sessions: MarketSession[], stepMinutes: number = 5): string[] {
@@ -396,7 +411,7 @@ export function scheduleZhNameUpdate(symbols: string[], uiLang: UILang) {
   const map = loadZhNameMap();
   const missing: string[] = [];
   for (const raw of symbols) {
-    const symbol = raw.toUpperCase();
+    const symbol = normalizeHkTicker(raw.toUpperCase());
     if (map.has(symbol) || pendingZhUpdates.has(symbol) || queuedZhUpdates.has(symbol)) {
       continue;
     }
