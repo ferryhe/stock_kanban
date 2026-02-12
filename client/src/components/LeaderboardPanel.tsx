@@ -268,7 +268,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
                       "font-mono font-bold text-sm",
                       typeof entry.rank === "number" && entry.rank <= 3 ? "text-foreground" : "text-muted-foreground"
                     )}>
-                      {typeof entry.rank === "number" ? entry.rank : "—"}
+                      {typeof entry.rank === "number" ? Math.round(entry.rank) : "—"}
                     </span>
                   </div>
 
@@ -313,7 +313,7 @@ export function LeaderboardPanel({ onStockClick }: LeaderboardPanelProps) {
                             "font-mono font-bold text-sm",
                             typeof entry.rank === "number" && entry.rank <= 3 ? "text-foreground" : "text-muted-foreground"
                           )}>
-                            {typeof entry.rank === "number" ? entry.rank : "—"}
+                            {typeof entry.rank === "number" ? Math.round(entry.rank) : "—"}
                           </span>
                         </div>
 

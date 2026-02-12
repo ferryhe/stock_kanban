@@ -1217,7 +1217,7 @@ async function fetchStockNamesWithCache(sortedData: any[], uiLang: UILang): Prom
     const batchPromises = batch.map(async (item) => {
       const ticker = item.ticker.toUpperCase();
       
-      // Try to get Chinese name first
+      // Try to get Chinese name first (if UI language is Chinese)
       let longName: string = getLocalZhName(ticker, uiLang) || "";
       
       // If no Chinese name, check cache or fetch from Yahoo Finance
@@ -1238,6 +1238,15 @@ async function fetchStockNamesWithCache(sortedData: any[], uiLang: UILang): Prom
             });
           } catch {
             longName = ticker;
+          }
+        }
+        
+        // For HK stocks, prefer Chinese name from map even if English name was fetched
+        // This ensures HK stocks always show Chinese names when available
+        if (ticker.endsWith('.HK')) {
+          const zhName = getLocalZhName(ticker, "zh");
+          if (zhName) {
+            longName = zhName;
           }
         }
       }

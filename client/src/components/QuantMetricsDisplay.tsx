@@ -44,7 +44,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
         {(metrics.rank !== undefined || metrics.score !== undefined || metrics.signal) && (
           <div className="grid grid-cols-3 gap-3">
             {typeof metrics.rank === "number" && (
-              <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
+              <IndicatorTooltip indicator="rank" value={Math.round(metrics.rank).toString()}>
                 <div className={cn(
                   "flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-medium font-mono border h-full",
                   rankStyle?.bg || "bg-muted",
@@ -52,7 +52,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
                   rankStyle?.border || "border-border"
                 )}>
                   <Award className="w-3 h-3" />
-                  <span>R{metrics.rank}</span>
+                  <span>R{Math.round(metrics.rank)}</span>
                 </div>
               </IndicatorTooltip>
             )}
@@ -143,7 +143,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
       {/* 顶行：Rank, Signal - 按钮形式 */}
       <div className="grid grid-cols-3 gap-1.5">
         {typeof metrics.rank === "number" && (
-          <IndicatorTooltip indicator="rank" value={metrics.rank.toString()}>
+          <IndicatorTooltip indicator="rank" value={Math.round(metrics.rank).toString()}>
             <div className={cn(
               "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium font-mono border",
               rankStyle?.bg || "bg-muted",
@@ -151,7 +151,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
               rankStyle?.border || "border-border"
             )}>
               <Award className="w-3 h-3" />
-              <span>R{metrics.rank}</span>
+              <span>R{Math.round(metrics.rank)}</span>
             </div>
           </IndicatorTooltip>
         )}
