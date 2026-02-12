@@ -9,6 +9,11 @@ import { startLiveSettlementScheduler } from "./liveTrading/service";
 const app = express();
 const httpServer = createServer(app);
 
+if (process.env.NODE_ENV === "production") {
+  // Behind Caddy/Nginx in production, trust X-Forwarded-* so secure cookies work.
+  app.set("trust proxy", 1);
+}
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;

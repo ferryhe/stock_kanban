@@ -1240,15 +1240,6 @@ async function fetchStockNamesWithCache(sortedData: any[], uiLang: UILang): Prom
             longName = ticker;
           }
         }
-        
-        // For HK stocks, prefer Chinese name from map even if English name was fetched
-        // This ensures HK stocks always show Chinese names when available
-        if (ticker.endsWith('.HK')) {
-          const zhName = getLocalZhName(ticker, "zh");
-          if (zhName) {
-            longName = zhName;
-          }
-        }
       }
 
       // Validate and normalize predictedReturn

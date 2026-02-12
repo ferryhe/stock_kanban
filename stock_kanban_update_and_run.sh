@@ -9,6 +9,7 @@ APP_CONTAINER="stock-kanban-app"
 APP_IMAGE="stock-kanban:latest"
 APP_PORT="3000"
 ENV_FILE=".env.production"
+EXTERNAL_DB_CONTAINER="${EXTERNAL_DB_CONTAINER:-}"
 
 # PostgreSQL 容器配置
 PG_IMAGE="postgres:16-alpine"
@@ -86,7 +87,10 @@ bootstrap_schema() {
     sh -ec '
       set -e
       psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
-      psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS users (id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text, username text NOT NULL UNIQUE, password text NOT NULL);"
+      psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS users (id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text, username text NOT NULL UNIQUE, password text NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());"
+      psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();"
+      psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS user_profiles (id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text, user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE, display_name varchar(100), email varchar(255), risk_tolerance varchar(20) NOT NULL DEFAULT \$\$moderate\$\$, notifications_trade_alerts boolean NOT NULL DEFAULT true, notifications_daily_report boolean NOT NULL DEFAULT false, notifications_weekly_report boolean NOT NULL DEFAULT false, theme varchar(10) NOT NULL DEFAULT \$\$light\$\$, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), CONSTRAINT user_profiles_user_id_unique UNIQUE (user_id), CONSTRAINT user_profiles_email_unique UNIQUE (email));"
+      psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles (user_id);"
       psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /sql/001_backtest_results.sql
       psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /sql/002_core_trading_tables.sql
     '
@@ -129,6 +133,20 @@ if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then
   docker network create "$DOCKER_NETWORK" >/dev/null
 fi
 
+# Optional: attach an existing external DB container to this network.
+# Example:
+#   EXTERNAL_DB_CONTAINER=meal_score-db-1 bash stock_kanban_update_and_run.sh
+if [ -n "$EXTERNAL_DB_CONTAINER" ]; then
+  if docker inspect "$EXTERNAL_DB_CONTAINER" >/dev/null 2>&1; then
+    if ! docker network inspect "$DOCKER_NETWORK" --format '{{json .Containers}}' | grep -q "\"$EXTERNAL_DB_CONTAINER\""; then
+      docker network connect "$DOCKER_NETWORK" "$EXTERNAL_DB_CONTAINER" >/dev/null || true
+      log "Attached external DB container to ${DOCKER_NETWORK}: $EXTERNAL_DB_CONTAINER"
+    fi
+  else
+    log "WARNING: EXTERNAL_DB_CONTAINER not found: $EXTERNAL_DB_CONTAINER"
+  fi
+fi
+
 log "Step 4/7: Prepare .env.production"
 if [ ! -f "$ENV_FILE" ]; then
   if [ ! -f ".env.production.example" ]; then
@@ -144,6 +162,18 @@ fi
 if ! grep -q "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null; then
   log "⚠ WARNING: DATABASE_URL not set in $ENV_FILE"
   log "You need to set DATABASE_URL before continuing"
+fi
+
+# Ensure required production secret exists to prevent crash loop on boot.
+SESSION_SECRET="$(get_env_value "SESSION_SECRET" "$ENV_FILE")"
+if [ -z "${SESSION_SECRET:-}" ]; then
+  if command -v openssl >/dev/null 2>&1; then
+    SESSION_SECRET="$(openssl rand -base64 48 | tr -d '\r\n')"
+  else
+    SESSION_SECRET="$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)"
+  fi
+  set_env_value "SESSION_SECRET" "$SESSION_SECRET" "$ENV_FILE"
+  log "Generated missing SESSION_SECRET in $ENV_FILE"
 fi
 
 DATABASE_URL="$(get_env_value "DATABASE_URL" "$ENV_FILE")"
