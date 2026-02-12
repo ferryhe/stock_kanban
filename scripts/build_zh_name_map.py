@@ -87,7 +87,11 @@ def add_hk_share(mapping: dict[str, str], target_symbols: set[str] | None) -> tu
     # Normalize target symbols once before the loop
     normalized_targets = None
     if target_symbols is not None:
-        normalized_targets = {normalize_hk_symbol(s) for s in target_symbols if ".HK" in s.upper()}
+        normalized_targets = {
+            normalize_hk_symbol(s)
+            for s in target_symbols
+            if s.upper().endswith(".HK")
+        }
 
     added = 0
     skipped = 0
