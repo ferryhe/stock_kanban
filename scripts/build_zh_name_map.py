@@ -65,12 +65,33 @@ def add_a_share(mapping: dict[str, str], target_symbols: set[str] | None) -> tup
     return added, skipped
 
 
+def normalize_hk_symbol(code: str) -> str:
+    """Normalize HK stock code to 5-digit format with .HK suffix."""
+    code = code.strip().upper()
+    # If already has .HK suffix, extract the numeric part
+    if code.endswith(".HK"):
+        code = code[:-3]
+    # Pad numeric codes to 5 digits
+    if code.isdigit():
+        code = code.zfill(5)
+    return f"{code}.HK"
+
+
 def add_hk_share(mapping: dict[str, str], target_symbols: set[str] | None) -> tuple[int, int]:
     df = ak.stock_hk_spot()
     code_col = pick_column(df.columns.tolist(), [CODE_ZH, "symbol", "code"])
     name_col = pick_column(df.columns.tolist(), [NAME_ZH, NAME_ZH_CN, "cname"])
     if not code_col or not name_col:
         raise RuntimeError("HK columns not found.")
+
+    # Normalize target symbols once before the loop
+    normalized_targets = None
+    if target_symbols is not None:
+        normalized_targets = {
+            normalize_hk_symbol(s)
+            for s in target_symbols
+            if s.upper().endswith(".HK")
+        }
 
     added = 0
     skipped = 0
@@ -80,9 +101,10 @@ def add_hk_share(mapping: dict[str, str], target_symbols: set[str] | None) -> tu
         if not code or not name or code == "nan" or name == "nan":
             skipped += 1
             continue
-        code = code.zfill(5) if code.isdigit() else code
-        symbol = f"{code}.HK" if not code.upper().endswith(".HK") else code.upper()
-        if target_symbols is not None and symbol not in target_symbols:
+        # Normalize to 5-digit format (handles both 4-digit and 5-digit inputs)
+        symbol = normalize_hk_symbol(code)
+        # Check if the normalized symbol matches any normalized target symbol
+        if normalized_targets is not None and symbol not in normalized_targets:
             skipped += 1
             continue
         if mapping.get(symbol) != name:
