@@ -1,0 +1,276 @@
+import express from "express";
+import { authenticate, requireAuth, requireAdmin, requireSuperAdmin } from "../middleware/auth";
+import { db } from "../db";
+import { users, userProfiles } from "../../shared/schema";
+import { eq, sql } from "drizzle-orm";
+import { logAuditEvent, AuditActions, getAllAuditLogs } from "../services/auditLogService";
+import { hashPassword } from "../auth";
+
+const router = express.Router();
+
+// All routes require authentication and admin role
+router.use(authenticate);
+router.use(requireAuth);
+router.use(requireAdmin);
+
+/**
+ * GET /api/admin/users
+ * List all users (admin only)
+ */
+router.get("/users", async (req, res) => {
+  try {
+    const allUsers = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        role: users.role,
+        isActive: users.isActive,
+        createdAt: users.createdAt,
+        displayName: userProfiles.displayName,
+        email: userProfiles.email,
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId));
+
+    res.json({ users: allUsers, count: allUsers.length });
+  } catch (error) {
+    console.error("Error listing users:", error);
+    res.status(500).json({ error: "Failed to list users" });
+  }
+});
+
+/**
+ * GET /api/admin/users/:userId
+ * Get detailed user information (admin only)
+ */
+router.get("/users/:userId", async (req, res) => {
+  try {
+    const [user] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        role: users.role,
+        isActive: users.isActive,
+        createdAt: users.createdAt,
+        displayName: userProfiles.displayName,
+        email: userProfiles.email,
+        riskTolerance: userProfiles.riskTolerance,
+        theme: userProfiles.theme,
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(eq(users.id, req.params.userId))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error("Error getting user:", error);
+    res.status(500).json({ error: "Failed to get user" });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/role
+ * Update user role (superadmin only)
+ */
+router.patch("/users/:userId/role", requireSuperAdmin, async (req, res) => {
+  try {
+    const { role } = req.body;
+    const { userId } = req.params;
+
+    if (!role || !["user", "analyst", "admin", "superadmin"].includes(role)) {
+      res.status(400).json({ error: "Invalid role" });
+      return;
+    }
+
+    // Prevent changing own role
+    if (userId === req.user!.id) {
+      res.status(400).json({ error: "Cannot change your own role" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({ role: role as any })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Log the role change
+    await logAuditEvent(
+      req.user!.id,
+      AuditActions.UPDATE_USER_ROLE,
+      "user",
+      userId,
+      { newRole: role, oldRole: updated.role },
+      req,
+    );
+
+    res.json({ 
+      message: "User role updated successfully",
+      user: {
+        id: updated.id,
+        username: updated.username,
+        role: updated.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).json({ error: "Failed to update user role" });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:userId/status
+ * Activate or deactivate a user (admin only)
+ */
+router.patch("/users/:userId/status", async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    const { userId } = req.params;
+
+    if (typeof isActive !== "boolean") {
+      res.status(400).json({ error: "isActive must be a boolean" });
+      return;
+    }
+
+    // Prevent deactivating own account
+    if (userId === req.user!.id) {
+      res.status(400).json({ error: "Cannot change your own status" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({ isActive })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Log the status change
+    await logAuditEvent(
+      req.user!.id,
+      isActive ? AuditActions.ACTIVATE_USER : AuditActions.DEACTIVATE_USER,
+      "user",
+      userId,
+      { isActive },
+      req,
+    );
+
+    res.json({ 
+      message: `User ${isActive ? "activated" : "deactivated"} successfully`,
+      user: {
+        id: updated.id,
+        username: updated.username,
+        isActive: updated.isActive,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user status:", error);
+    res.status(500).json({ error: "Failed to update user status" });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/reset-password
+ * Reset a user's password (superadmin only)
+ */
+router.post("/users/:userId/reset-password", requireSuperAdmin, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const { userId } = req.params;
+
+    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+      res.status(400).json({ error: "New password must be at least 6 characters" });
+      return;
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    const [updated] = await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Log the password reset (don't include the password!)
+    await logAuditEvent(
+      req.user!.id,
+      AuditActions.PASSWORD_CHANGE,
+      "user",
+      userId,
+      { resetByAdmin: true },
+      req,
+    );
+
+    res.json({ 
+      message: "Password reset successfully",
+      username: updated.username,
+    });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs
+ * Get audit logs (admin only)
+ */
+router.get("/audit-logs", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 100;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const logs = await getAllAuditLogs(limit, offset);
+
+    res.json({ logs, count: logs.length });
+  } catch (error) {
+    console.error("Error getting audit logs:", error);
+    res.status(500).json({ error: "Failed to get audit logs" });
+  }
+});
+
+/**
+ * GET /api/admin/stats
+ * Get system statistics (admin only)
+ */
+router.get("/stats", async (req, res) => {
+  try {
+    const [userStats] = await db
+      .select({
+        totalUsers: sql<number>`count(*)`,
+        activeUsers: sql<number>`count(*) filter (where ${users.isActive} = true)`,
+      })
+      .from(users);
+
+    res.json({ 
+      stats: {
+        users: userStats,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting stats:", error);
+    res.status(500).json({ error: "Failed to get stats" });
+  }
+});
+
+export default router;

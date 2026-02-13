@@ -21,6 +21,9 @@ import {
 import { register, login, logout, getCurrentUser } from "./routes/auth";
 import { getProfile, updateProfile } from "./routes/profile";
 import { getPortfolios, createPortfolio, getPortfolioDetails } from "./routes/portfolios";
+import apiKeysRouter from "./routes/apiKeys";
+import rankingsRouter from "./routes/rankings";
+import adminRouter from "./routes/admin";
 
 const getUiLang = (req: Request) => {
   const uiHeader = req.headers["x-ui-lang"];
@@ -151,6 +154,15 @@ export async function registerRoutes(
   app.get("/api/portfolios", getPortfolios);
   app.post("/api/portfolios", createPortfolio);
   app.get("/api/portfolios/:portfolioId", getPortfolioDetails);
+
+  // === API Key Management Routes ===
+  app.use("/api/api-keys", apiKeysRouter);
+
+  // === User Rankings Routes ===
+  app.use("/api/rankings", rankingsRouter);
+
+  // === Admin Routes ===
+  app.use("/api/admin", adminRouter);
 
   // Get stock data for a watchlist
   app.get("/api/stocks/:watchlistId", async (req, res) => {
