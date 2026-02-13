@@ -94,16 +94,26 @@ router.patch("/users/:userId/role", requireSuperAdmin, async (req, res) => {
       return;
     }
 
+    // Get current user to record old role
+    const [currentUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!currentUser) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const oldRole = currentUser.role;
+
+    // Update the role
     const [updated] = await db
       .update(users)
       .set({ role: role as any })
       .where(eq(users.id, userId))
       .returning();
-
-    if (!updated) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
 
     // Log the role change
     await logAuditEvent(
@@ -111,7 +121,7 @@ router.patch("/users/:userId/role", requireSuperAdmin, async (req, res) => {
       AuditActions.UPDATE_USER_ROLE,
       "user",
       userId,
-      { newRole: role, oldRole: updated.role },
+      { newRole: role, oldRole },
       req,
     );
 

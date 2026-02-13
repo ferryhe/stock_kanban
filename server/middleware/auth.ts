@@ -79,9 +79,11 @@ export async function authenticate(
 
     // Not authenticated
     res.status(401).json({ error: "Authentication required" });
+    return;
   } catch (error) {
     console.error("Authentication error:", error);
     res.status(500).json({ error: "Authentication failed" });
+    return;
   }
 }
 
