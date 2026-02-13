@@ -81,7 +81,7 @@ router.get("/users/:userId", async (req, res) => {
 router.patch("/users/:userId/role", requireSuperAdmin, async (req, res) => {
   try {
     const { role } = req.body;
-    const { userId } = req.params;
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
     if (!role || !["user", "analyst", "admin", "superadmin"].includes(role)) {
       res.status(400).json({ error: "Invalid role" });
@@ -136,7 +136,7 @@ router.patch("/users/:userId/role", requireSuperAdmin, async (req, res) => {
 router.patch("/users/:userId/status", async (req, res) => {
   try {
     const { isActive } = req.body;
-    const { userId } = req.params;
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
     if (typeof isActive !== "boolean") {
       res.status(400).json({ error: "isActive must be a boolean" });
@@ -191,7 +191,7 @@ router.patch("/users/:userId/status", async (req, res) => {
 router.post("/users/:userId/reset-password", requireSuperAdmin, async (req, res) => {
   try {
     const { newPassword } = req.body;
-    const { userId } = req.params;
+    const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
     if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
       res.status(400).json({ error: "New password must be at least 6 characters" });
