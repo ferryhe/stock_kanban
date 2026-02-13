@@ -17,7 +17,7 @@ export function generateApiKey(): string {
  * Hash an API key for secure storage
  */
 export async function hashApiKey(key: string): Promise<string> {
-  return bcrypt.hash(key, "10");
+  return bcrypt.hash(key, 10);
 }
 
 /**

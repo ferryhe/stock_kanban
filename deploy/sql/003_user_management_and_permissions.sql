@@ -89,7 +89,7 @@ CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 -- Step 8: Create default superadmin user (password: admin123 - CHANGE IN PRODUCTION!)
 -- Password hash is for 'admin123' with bcrypt salt rounds 10
 INSERT INTO users (username, password, role, is_active)
-VALUES ('admin', '$2b$10$rXKqVx5w9q1JZlQX5qW8xOGr7N3Z8p8LKjGYvYj1XZqF3YZxLQZHS', 'superadmin', true)
+VALUES ('admin', '$2a$10$7GS8aCjhCEHaxgMEGnbbL.fblBPGCRNXkQnlm/ymn1OvY/IcLclQ.', 'superadmin', true)
 ON CONFLICT (username) DO NOTHING;
 
 -- Add comment on password security
