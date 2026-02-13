@@ -18,7 +18,7 @@ import {
   runLiveSettlementOnce,
   runLiveTradingCycle,
 } from "./liveTrading/service";
-import { register, login, logout, getCurrentUser } from "./routes/auth";
+import { register, login, logout, getCurrentUser, verifyEmail, resendVerification, forgotPassword, resetPassword } from "./routes/auth";
 import { getProfile, updateProfile } from "./routes/profile";
 import { getPortfolios, createPortfolio, getPortfolioDetails } from "./routes/portfolios";
 import apiKeysRouter from "./routes/apiKeys";
@@ -145,6 +145,10 @@ export async function registerRoutes(
   app.post("/api/auth/login", login);
   app.post("/api/auth/logout", logout);
   app.get("/api/auth/me", getCurrentUser);
+  app.post("/api/auth/verify-email", verifyEmail);
+  app.post("/api/auth/resend-verification", resendVerification);
+  app.post("/api/auth/forgot-password", forgotPassword);
+  app.post("/api/auth/reset-password", resetPassword);
 
   // === User Profile Routes ===
   app.get("/api/profile", getProfile);

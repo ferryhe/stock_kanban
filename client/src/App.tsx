@@ -13,6 +13,8 @@ import ComparePage from "@/pages/ComparePage";
 import LiveTradingPage from "@/pages/LiveTradingPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import PortfoliosPage from "@/pages/PortfoliosPage";
 import { useEffect } from "react";
 import { LanguageProvider } from "./lib/i18n";
@@ -32,6 +34,8 @@ function Router() {
       {/* Public routes */}
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       
       {/* Dashboard always accessible (public) */}
       <Route path="/" component={Dashboard} />

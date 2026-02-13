@@ -28,9 +28,15 @@ export const userRoleEnum = pgEnum("user_role", ["user", "analyst", "admin", "su
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
   username: text("username").notNull().unique(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
   password: text("password").notNull(),
   role: userRoleEnum("role").default("user").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  emailVerificationToken: varchar("email_verification_token", { length: 255 }),
+  emailVerificationExpiry: timestamp("email_verification_expiry", { withTimezone: true }),
+  passwordResetToken: varchar("password_reset_token", { length: 255 }),
+  passwordResetExpiry: timestamp("password_reset_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
