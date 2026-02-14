@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -31,6 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     mutation.mutate({ username, password });
   };
+  
   const errorMessage =
     mutation.error instanceof Error
       ? mutation.error.message
@@ -48,7 +50,17 @@ export default function LoginPage() {
       </button>
 
       <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">{t("authAppName")}</h1>
+        <div className="flex items-center mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/")}
+            className="mr-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">{t("authAppName")}</h1>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -60,6 +72,7 @@ export default function LoginPage() {
               placeholder={t("loginUsernamePlaceholder")}
               required
             />
+            <p className="text-xs text-slate-500 mt-1">You can also use your email</p>
           </div>
 
           <div>
@@ -71,6 +84,16 @@ export default function LoginPage() {
               placeholder={t("loginPasswordPlaceholder")}
               required
             />
+          </div>
+
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => setLocation("/forgot-password")}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Forgot password?
+            </button>
           </div>
 
           {errorMessage && (

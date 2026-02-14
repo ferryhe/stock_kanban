@@ -11,6 +11,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -21,15 +22,27 @@ import {
   type BacktestTrade,
 } from "./backtest";
 
+// User role enum
+export const userRoleEnum = pgEnum("user_role", ["user", "analyst", "admin", "superadmin"]);
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
   username: text("username").notNull().unique(),
+  email: varchar("email", { length: 255 }).unique(),
   password: text("password").notNull(),
+  role: userRoleEnum("role").default("user").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  emailVerificationToken: varchar("email_verification_token", { length: 255 }),
+  emailVerificationExpiry: timestamp("email_verification_expiry", { withTimezone: true }),
+  passwordResetToken: varchar("password_reset_token", { length: 255 }),
+  passwordResetExpiry: timestamp("password_reset_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
 });
 
@@ -54,6 +67,53 @@ export const userProfiles = pgTable("user_profiles", {
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = typeof userProfiles.$inferInsert;
+
+// API Keys for programmatic access
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(), // friendly name for the key
+  keyHash: text("key_hash").notNull(), // hashed API key (never store plaintext)
+  scope: jsonb("scope").$type<{
+    portfolios?: string[]; // specific portfolio IDs or "*" for all
+    permissions?: string[]; // read, write, admin
+  }>().default(sql`'{}'::jsonb`).notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("idx_api_keys_user").on(table.userId),
+  activeIdx: index("idx_api_keys_active").on(table.isActive),
+}));
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;
+
+// Portfolio visibility enum
+export const portfolioVisibilityEnum = pgEnum("portfolio_visibility", ["private", "shared", "public"]);
+
+// Portfolio permissions for sharing
+export const portfolioPermissionEnum = pgEnum("portfolio_permission", ["view", "trade", "admin"]);
+
+export const portfolioPermissions = pgTable("portfolio_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  portfolioId: varchar("portfolio_id").notNull().references(() => portfolios.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  permission: portfolioPermissionEnum("permission").notNull(),
+  grantedBy: varchar("granted_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  uniquePortfolioUser: uniqueIndex("uidx_portfolio_permissions_portfolio_user").on(
+    table.portfolioId,
+    table.userId,
+  ),
+  portfolioIdx: index("idx_portfolio_permissions_portfolio").on(table.portfolioId),
+  userIdx: index("idx_portfolio_permissions_user").on(table.userId),
+}));
+
+export type PortfolioPermission = typeof portfolioPermissions.$inferSelect;
+export type InsertPortfolioPermission = typeof portfolioPermissions.$inferInsert;
 
 export const backtestResults = pgTable("backtest_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
@@ -97,6 +157,7 @@ export const portfolios = pgTable("portfolios", {
   userId: varchar("user_id").references(() => users.id),
   name: varchar("name", { length: 100 }).notNull(),
   type: varchar("type", { length: 20 }).notNull(), // backtest | live
+  visibility: portfolioVisibilityEnum("visibility").default("private").notNull(),
   initialCash: numeric("initial_cash", { precision: 15, scale: 2 }).notNull(),
   currentCash: numeric("current_cash", { precision: 15, scale: 2 }).notNull(),
   totalValue: numeric("total_value", { precision: 15, scale: 2 }).notNull(),
@@ -109,6 +170,7 @@ export const portfolios = pgTable("portfolios", {
 }, (table) => ({
   userIdx: index("idx_portfolios_user").on(table.userId),
   typeIdx: index("idx_portfolios_type").on(table.type),
+  visibilityIdx: index("idx_portfolios_visibility").on(table.visibility),
   sourceBacktestIdx: index("idx_portfolios_source_backtest").on(table.sourceBacktestResultId),
 }));
 
@@ -190,3 +252,49 @@ export const strategyPerformance = pgTable("strategy_performance", {
     table.calculationDate,
   ),
 }));
+
+// User rankings for leaderboard
+export const userRankings = pgTable("user_rankings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  portfolioId: varchar("portfolio_id").notNull().references(() => portfolios.id, { onDelete: "cascade" }),
+  rankingDate: date("ranking_date").notNull(),
+  totalReturn: numeric("total_return", { precision: 10, scale: 6 }),
+  annualizedReturn: numeric("annualized_return", { precision: 10, scale: 6 }),
+  sharpeRatio: numeric("sharpe_ratio", { precision: 10, scale: 6 }),
+  totalValue: numeric("total_value", { precision: 15, scale: 2 }),
+  rank: integer("rank"),
+  percentile: numeric("percentile", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  uniquePortfolioDate: uniqueIndex("uidx_user_rankings_portfolio_date").on(
+    table.portfolioId,
+    table.rankingDate,
+  ),
+  userDateIdx: index("idx_user_rankings_user_date").on(table.userId, table.rankingDate),
+  dateRankIdx: index("idx_user_rankings_date_rank").on(table.rankingDate, table.rank),
+}));
+
+export type UserRanking = typeof userRankings.$inferSelect;
+export type InsertUserRanking = typeof userRankings.$inferInsert;
+
+// Audit log for security and compliance
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  userId: varchar("user_id").references(() => users.id),
+  action: varchar("action", { length: 100 }).notNull(), // login, logout, create_portfolio, trade, etc.
+  resourceType: varchar("resource_type", { length: 50 }), // portfolio, trade, user, etc.
+  resourceId: varchar("resource_id", { length: 255 }), // ID of affected resource
+  details: jsonb("details").$type<Record<string, unknown>>(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("idx_audit_logs_user").on(table.userId),
+  actionIdx: index("idx_audit_logs_action").on(table.action),
+  dateIdx: index("idx_audit_logs_date").on(table.createdAt),
+  resourceIdx: index("idx_audit_logs_resource").on(table.resourceType, table.resourceId),
+}));
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;

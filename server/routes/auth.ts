@@ -3,6 +3,18 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { users, userProfiles } from "../../shared/schema";
 import { hashPassword, comparePassword } from "../auth";
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  generateToken,
+} from "../services/emailService";
+import {
+  validatePassword,
+  validateEmail,
+  isDisposableEmail,
+  isCommonPassword,
+} from "../utils/passwordValidation";
+import { logAuditEvent, AuditActions } from "../services/auditLogService";
 
 function requireDatabase(res: Response) {
   if (!db) {
@@ -14,38 +26,88 @@ function requireDatabase(res: Response) {
 
 /**
  * POST /api/auth/register
- * Register a new user
+ * Register a new user with email verification
  */
 export async function register(req: Request, res: Response) {
   try {
     const database = requireDatabase(res);
     if (!database) return;
 
-    const { username, password } = req.body;
+    const { username, email, password } = req.body;
 
     // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password are required" });
+    if (!username || !email || !password) {
+      return res.status(400).json({ 
+        error: "Username, email, and password are required" 
+      });
     }
 
+    // Normalize email (lowercase, trim)
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Validate username
     if (username.length < 3) {
-      return res.status(400).json({ error: "Username must be at least 3 characters" });
+      return res.status(400).json({ 
+        error: "Username must be at least 3 characters" 
+      });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    // Validate email format
+    if (!validateEmail(normalizedEmail)) {
+      return res.status(400).json({ 
+        error: "Invalid email format" 
+      });
     }
 
-    // Check if user exists
-    const existingUser = await database
+    // Check for disposable email
+    if (isDisposableEmail(normalizedEmail)) {
+      return res.status(400).json({ 
+        error: "Disposable email addresses are not allowed" 
+      });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ 
+        error: "Password requirements not met",
+        details: passwordValidation.errors,
+      });
+    }
+
+    // Check for common passwords
+    if (isCommonPassword(password)) {
+      return res.status(400).json({ 
+        error: "This password is too common. Please choose a more unique password" 
+      });
+    }
+
+    // Check if username exists
+    const existingUsername = await database
       .select()
       .from(users)
       .where(eq(users.username, username))
       .limit(1);
 
-    if (existingUser.length > 0) {
+    if (existingUsername.length > 0) {
       return res.status(409).json({ error: "Username already exists" });
     }
+
+    // Check if email exists
+    const existingEmail = await database
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+
+    if (existingEmail.length > 0) {
+      return res.status(409).json({ error: "Email already registered" });
+    }
+
+    // Generate verification token
+    const verificationToken = generateToken();
+    const verificationExpiry = new Date();
+    verificationExpiry.setHours(verificationExpiry.getHours() + 24); // 24 hours
 
     // Hash password
     const hashedPassword = await hashPassword(password);
@@ -55,7 +117,11 @@ export async function register(req: Request, res: Response) {
       .insert(users)
       .values({
         username,
+        email: normalizedEmail,
         password: hashedPassword,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpiry: verificationExpiry,
+        emailVerified: false,
       })
       .returning();
 
@@ -69,16 +135,35 @@ export async function register(req: Request, res: Response) {
     await database.insert(userProfiles).values({
       userId: user.id,
       displayName: username,
+      email: normalizedEmail,
       riskTolerance: "moderate",
     });
 
-    // Set session
-    req.session.userId = user.id;
+    // Send verification email
+    const emailResult = await sendVerificationEmail(normalizedEmail, username, verificationToken);
 
-    return res.status(201).json({
-      message: "User registered successfully",
-      user: { id: user.id, username: user.username },
-    });
+    // Log the registration
+    await logAuditEvent(
+      user.id,
+      AuditActions.REGISTER,
+      "user",
+      user.id,
+      { email: normalizedEmail, emailSent: emailResult.success },
+      req,
+    );
+
+    // For development, include preview URL
+    const response: any = {
+      message: "User registered successfully. Please check your email to verify your account.",
+      user: { id: user.id, username: user.username, email: user.email },
+      emailSent: emailResult.success,
+    };
+
+    if (emailResult.previewUrl) {
+      response.emailPreviewUrl = emailResult.previewUrl;
+    }
+
+    return res.status(201).json(response);
   } catch (error) {
     console.error("Register error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -101,32 +186,62 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ error: "Username and password are required" });
     }
 
-    // Find user
+    // Find user (allow login with username or email)
+    const isEmail = validateEmail(username);
+    const normalizedUsername = isEmail ? username.trim().toLowerCase() : username;
     const foundUsers = await database
       .select()
       .from(users)
-      .where(eq(users.username, username))
+      .where(isEmail ? eq(users.email, normalizedUsername) : eq(users.username, normalizedUsername))
       .limit(1);
 
     if (foundUsers.length === 0) {
-      return res.status(401).json({ error: "Invalid username or password" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const user = foundUsers[0];
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({ error: "Account is deactivated" });
+    }
+
+    // Check if email is verified (allow login but remind)
+    if (!user.emailVerified) {
+      // We'll still allow login but include a warning
+      console.warn(`User ${user.username} logging in without email verification`);
+    }
 
     // Compare passwords
     const isValid = await comparePassword(password, user.password);
 
     if (!isValid) {
-      return res.status(401).json({ error: "Invalid username or password" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Set session
     req.session.userId = user.id;
 
+    // Log the login
+    await logAuditEvent(
+      user.id,
+      AuditActions.LOGIN,
+      "user",
+      user.id,
+      undefined,
+      req,
+    );
+
     return res.json({
       message: "Login successful",
-      user: { id: user.id, username: user.username },
+      user: { 
+        id: user.id, 
+        username: user.username,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        role: user.role,
+      },
+      emailVerified: user.emailVerified,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -186,11 +301,304 @@ export async function getCurrentUser(req: Request, res: Response) {
       user: {
         id: user.id,
         username: user.username,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        role: user.role,
         profile,
       },
     });
   } catch (error) {
     console.error("Get current user error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * POST /api/auth/verify-email
+ * Verify user's email address
+ */
+export async function verifyEmail(req: Request, res: Response) {
+  try {
+    const database = requireDatabase(res);
+    if (!database) return;
+
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "Verification token is required" });
+    }
+
+    // Find user with this token
+    const foundUsers = await database
+      .select()
+      .from(users)
+      .where(eq(users.emailVerificationToken, token))
+      .limit(1);
+
+    if (foundUsers.length === 0) {
+      return res.status(400).json({ error: "Invalid or expired verification token" });
+    }
+
+    const user = foundUsers[0];
+
+    // Check if token is expired
+    if (user.emailVerificationExpiry && new Date() > user.emailVerificationExpiry) {
+      return res.status(400).json({ error: "Verification token has expired" });
+    }
+
+    // Mark email as verified
+    await database
+      .update(users)
+      .set({
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
+      })
+      .where(eq(users.id, user.id));
+
+    // Log the verification
+    await logAuditEvent(
+      user.id,
+      AuditActions.EMAIL_VERIFIED,
+      "user",
+      user.id,
+      undefined,
+      req,
+    );
+
+    return res.json({
+      message: "Email verified successfully",
+      user: { id: user.id, username: user.username, email: user.email },
+    });
+  } catch (error) {
+    console.error("Email verification error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * POST /api/auth/resend-verification
+ * Resend verification email
+ */
+export async function resendVerification(req: Request, res: Response) {
+  try {
+    const database = requireDatabase(res);
+    if (!database) return;
+
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Find user
+    const foundUsers = await database
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+
+    if (foundUsers.length === 0) {
+      // Don't reveal if email exists
+      return res.json({ 
+        message: "If that email is registered, a verification email has been sent" 
+      });
+    }
+
+    const user = foundUsers[0];
+
+    // Check if already verified
+    if (user.emailVerified) {
+      return res.status(400).json({ error: "Email is already verified" });
+    }
+
+    // Generate new token
+    const verificationToken = generateToken();
+    const verificationExpiry = new Date();
+    verificationExpiry.setHours(verificationExpiry.getHours() + 24);
+
+    // Update user
+    await database
+      .update(users)
+      .set({
+        emailVerificationToken: verificationToken,
+        emailVerificationExpiry: verificationExpiry,
+      })
+      .where(eq(users.id, user.id));
+
+    // Send email
+    const emailResult = await sendVerificationEmail(normalizedEmail, user.username, verificationToken);
+
+    const response: any = {
+      message: "Verification email sent",
+      emailSent: emailResult.success,
+    };
+
+    if (emailResult.previewUrl) {
+      response.emailPreviewUrl = emailResult.previewUrl;
+    }
+
+    return res.json(response);
+  } catch (error) {
+    console.error("Resend verification error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * POST /api/auth/forgot-password
+ * Request password reset
+ */
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    const database = requireDatabase(res);
+    if (!database) return;
+
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Find user
+    const foundUsers = await database
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+
+    // Always return success to prevent email enumeration
+    if (foundUsers.length === 0) {
+      return res.json({ 
+        message: "If that email is registered, a password reset link has been sent" 
+      });
+    }
+
+    const user = foundUsers[0];
+
+    // Generate reset token
+    const resetToken = generateToken();
+    const resetExpiry = new Date();
+    resetExpiry.setHours(resetExpiry.getHours() + 1); // 1 hour
+
+    // Update user
+    await database
+      .update(users)
+      .set({
+        passwordResetToken: resetToken,
+        passwordResetExpiry: resetExpiry,
+      })
+      .where(eq(users.id, user.id));
+
+    // Send email
+    const emailResult = await sendPasswordResetEmail(normalizedEmail, user.username, resetToken);
+
+    // Log the request
+    await logAuditEvent(
+      user.id,
+      AuditActions.PASSWORD_RESET_REQUESTED,
+      "user",
+      user.id,
+      undefined,
+      req,
+    );
+
+    const response: any = {
+      message: "If that email is registered, a password reset link has been sent",
+      emailSent: emailResult.success,
+    };
+
+    if (emailResult.previewUrl) {
+      response.emailPreviewUrl = emailResult.previewUrl;
+    }
+
+    return res.json(response);
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password with token
+ */
+export async function resetPassword(req: Request, res: Response) {
+  try {
+    const database = requireDatabase(res);
+    if (!database) return;
+
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: "Token and new password are required" });
+    }
+
+    // Validate new password
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ 
+        error: "Password requirements not met",
+        details: passwordValidation.errors,
+      });
+    }
+
+    if (isCommonPassword(newPassword)) {
+      return res.status(400).json({ 
+        error: "This password is too common. Please choose a more unique password" 
+      });
+    }
+
+    // Find user with this token
+    const foundUsers = await database
+      .select()
+      .from(users)
+      .where(eq(users.passwordResetToken, token))
+      .limit(1);
+
+    if (foundUsers.length === 0) {
+      return res.status(400).json({ error: "Invalid or expired reset token" });
+    }
+
+    const user = foundUsers[0];
+
+    // Check if token is expired
+    if (user.passwordResetExpiry && new Date() > user.passwordResetExpiry) {
+      return res.status(400).json({ error: "Reset token has expired" });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update user
+    await database
+      .update(users)
+      .set({
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+      })
+      .where(eq(users.id, user.id));
+
+    // Log the reset
+    await logAuditEvent(
+      user.id,
+      AuditActions.PASSWORD_CHANGE,
+      "user",
+      user.id,
+      { resetViaToken: true },
+      req,
+    );
+
+    return res.json({
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

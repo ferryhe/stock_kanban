@@ -1,22 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { registerUser, loginUser } from "@/lib/stockApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { useAuth } from "@/lib/auth";
-import { useI18n } from "@/lib/i18n";
-import { CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 
-export default function RegisterPage() {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [token, setToken] = useState("");
   const [, setLocation] = useLocation();
-  const { refetchUser } = useAuth();
-  const { lang, setLang, t } = useI18n();
+
+  useEffect(() => {
+    // Get token from URL
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get("token");
+    if (tokenParam) {
+      setToken(tokenParam);
+    } else {
+      // Redirect if no token
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   // Password strength calculation
   const calculatePasswordStrength = (pwd: string) => {
@@ -37,25 +43,22 @@ export default function RegisterPage() {
   const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
 
   const mutation = useMutation({
-    mutationFn: async ({ username, email, password }: { username: string; email: string; password: string }) => {
-      const response = await fetch("/api/auth/register", {
+    mutationFn: async ({ token, newPassword }: { token: string; newPassword: string }) => {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ token, newPassword }),
       });
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Registration failed");
+        throw new Error(error.error || "Failed to reset password");
       }
       
       return response.json();
     },
-    onSuccess: async (data) => {
-      // Show success message about email verification
-      alert(data.message || "Registration successful! Please check your email to verify your account.");
-      // Redirect to login
-      setLocation("/login");
+    onSuccess: () => {
+      // Success is handled in the render
     },
   });
 
@@ -72,20 +75,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (username.length < 3) {
-      alert("Username must be at least 3 characters");
-      return;
-    }
-
-    mutation.mutate({ username, email, password });
+    mutation.mutate({ token, newPassword: password });
   };
-
-  const errorMessage =
-    mutation.error instanceof Error
-      ? mutation.error.message
-      : mutation.error
-        ? String(mutation.error)
-        : "";
 
   const getStrengthColor = (strength: number) => {
     if (strength < 30) return "bg-red-500";
@@ -101,61 +92,40 @@ export default function RegisterPage() {
     return "Strong";
   };
 
+  if (mutation.isSuccess) {
+    return (
+      <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+        <Card className="w-full max-w-md p-8">
+          <div className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Password Reset Successful</h2>
+            <p className="text-slate-600 mb-6">
+              Your password has been successfully reset. You can now login with your new password.
+            </p>
+            <Button onClick={() => setLocation("/login")} className="w-full">
+              Go to Login
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      <button
-        onClick={() => setLang(lang === "en" ? "zh" : "en")}
-        className="absolute right-4 top-4 rounded-md border border-slate-300 bg-white/90 px-3 py-1 text-sm text-slate-700 hover:bg-white"
-      >
-        {t("langToggle")}
-      </button>
-
       <Card className="w-full max-w-md p-8">
-        <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/login")}
-            className="mr-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-bold">{t("registerTitle")}</h1>
-        </div>
+        <h1 className="text-2xl font-bold mb-6">Reset Your Password</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t("authUsername")}</label>
-            <Input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={t("registerUsernamePlaceholder")}
-              required
-              minLength={3}
-            />
-            <p className="text-xs text-slate-500 mt-1">{t("registerUsernameHint")}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-            />
-            <p className="text-xs text-slate-500 mt-1">We'll send a verification email</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">{t("authPassword")}</label>
+            <label className="block text-sm font-medium mb-1">New Password</label>
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={t("registerPasswordPlaceholder")}
+              placeholder="Enter new password"
               required
               minLength={8}
             />
@@ -237,36 +207,41 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">{t("registerConfirmPassword")}</label>
+            <label className="block text-sm font-medium mb-1">Confirm New Password</label>
             <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder={t("registerConfirmPasswordPlaceholder")}
+              placeholder="Confirm new password"
               required
             />
           </div>
 
-          {errorMessage && (
+          {mutation.error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-              {errorMessage}
+              {mutation.error instanceof Error ? mutation.error.message : "An error occurred"}
             </div>
           )}
 
           <Button
             type="submit"
             className="w-full"
-            disabled={mutation.isPending || !username || !email || !password || !confirmPassword || passwordStrength < 60}
+            disabled={mutation.isPending || !password || !confirmPassword || passwordStrength < 60}
           >
-            {mutation.isPending ? t("registerSubmitting") : t("registerSubmit")}
+            {mutation.isPending ? "Resetting..." : "Reset Password"}
           </Button>
         </form>
 
         <div className="mt-6 pt-6 border-t">
-          <p className="text-sm text-center mb-4">{t("registerHasAccount")}</p>
-          <Button variant="outline" className="w-full" onClick={() => setLocation("/login")}>
-            {t("registerLogin")}
-          </Button>
+          <p className="text-sm text-center">
+            Remember your password?{" "}
+            <button
+              onClick={() => setLocation("/login")}
+              className="text-indigo-600 hover:text-indigo-500 font-medium"
+            >
+              Back to Login
+            </button>
+          </p>
         </div>
       </Card>
     </div>
