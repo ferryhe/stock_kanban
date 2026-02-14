@@ -119,6 +119,12 @@ export async function updateApiKeyLastUsed(keyId: string): Promise<void> {
 /**
  * Verify an API key and return the associated key record if valid
  * Checks if key is active and not expired
+ * 
+ * TODO: Optimize to avoid O(n) bcrypt comparisons. Consider:
+ * 1. Embedding a keyId in the token (e.g., sk_live_<keyId>_<secret>) to query single row
+ * 2. Storing a fast non-reversible digest for indexing
+ * Current implementation loads all active keys and bcrypt-compares each one,
+ * which scales poorly and creates DOS vulnerability with intentionally expensive bcrypt.
  */
 export async function authenticateApiKey(keyString: string): Promise<{
   valid: boolean;

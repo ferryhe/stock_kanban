@@ -9,12 +9,9 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticate);
-
 /**
  * GET /api/rankings
- * Get current user rankings leaderboard
+ * Get current user rankings leaderboard (public - no auth required)
  */
 router.get("/", async (req, res) => {
   try {
@@ -85,27 +82,22 @@ router.get("/me", requireAuth, async (req, res) => {
 
 /**
  * GET /api/rankings/portfolio/:portfolioId
- * Get ranking for a specific portfolio
+ * Get ranking for a specific portfolio (requires auth)
  */
-router.get("/portfolio/:portfolioId", async (req, res) => {
+router.get("/portfolio/:portfolioId", requireAuth, async (req, res) => {
   try {
     const { portfolioId } = req.params;
     const dateParam = req.query.date as string;
     const rankingDate = dateParam ? new Date(dateParam) : new Date();
 
-    // If authenticated, return their ranking
-    if (req.user) {
-      const ranking = await getUserRanking(req.user.id, portfolioId, rankingDate);
-      
-      if (!ranking) {
-        res.status(404).json({ error: "Ranking not found for this portfolio" });
-        return;
-      }
-
-      res.json({ ranking });
-    } else {
-      res.status(401).json({ error: "Authentication required" });
+    const ranking = await getUserRanking(req.user!.id, portfolioId, rankingDate);
+    
+    if (!ranking) {
+      res.status(404).json({ error: "Ranking not found for this portfolio" });
+      return;
     }
+
+    res.json({ ranking });
   } catch (error) {
     console.error("Error getting portfolio ranking:", error);
     res.status(500).json({ error: "Failed to get portfolio ranking" });

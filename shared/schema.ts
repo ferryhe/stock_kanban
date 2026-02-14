@@ -28,7 +28,7 @@ export const userRoleEnum = pgEnum("user_role", ["user", "analyst", "admin", "su
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
   username: text("username").notNull().unique(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
+  email: varchar("email", { length: 255 }).unique(),
   password: text("password").notNull(),
   role: userRoleEnum("role").default("user").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
@@ -42,6 +42,7 @@ export const users = pgTable("users", {
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
 });
 

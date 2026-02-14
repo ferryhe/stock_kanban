@@ -2,7 +2,7 @@
 -- Description: Add email, email verification, and password reset functionality
 -- Date: 2026-02-13
 
--- Step 1: Add email column to users table (required and unique)
+-- Step 1: Add email column to users table (nullable to allow existing users)
 ALTER TABLE users ADD COLUMN email VARCHAR(255);
 
 -- Step 2: Add email verification fields
@@ -14,13 +14,12 @@ ALTER TABLE users ADD COLUMN email_verification_expiry TIMESTAMP WITH TIME ZONE;
 ALTER TABLE users ADD COLUMN password_reset_token VARCHAR(255);
 ALTER TABLE users ADD COLUMN password_reset_expiry TIMESTAMP WITH TIME ZONE;
 
--- Step 4: For existing users, set email to username@localhost (temporary)
--- This allows the migration to work, but users should update their email
+-- Step 4: For existing users without email, set placeholder (they can update later)
+-- New users will be required to provide email during registration
 UPDATE users SET email = username || '@localhost.local' WHERE email IS NULL;
 
--- Step 5: Make email NOT NULL and add unique constraint
-ALTER TABLE users ALTER COLUMN email SET NOT NULL;
-CREATE UNIQUE INDEX idx_users_email ON users(email);
+-- Step 5: Add unique constraint on email (allowing NULL values)
+CREATE UNIQUE INDEX idx_users_email ON users(email) WHERE email IS NOT NULL;
 
 -- Step 6: Create indexes for token lookups
 CREATE INDEX idx_users_email_verification_token ON users(email_verification_token) WHERE email_verification_token IS NOT NULL;

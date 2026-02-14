@@ -17,22 +17,26 @@ const APP_URL = process.env.APP_URL || "http://localhost:5000";
 // Create transporter
 let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter(): nodemailer.Transporter {
+async function getTransporter(): Promise<nodemailer.Transporter> {
   if (!transporter) {
-    // If email credentials are not configured, use a test account
+    // If email credentials are not configured, fail in production or create test account in development
     if (!EMAIL_USER || !EMAIL_PASSWORD) {
-      console.warn("⚠️  Email credentials not configured. Email functionality will be simulated.");
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("Email credentials not configured. Set EMAIL_USER and EMAIL_PASSWORD environment variables.");
+      }
+      
+      console.warn("⚠️  Email credentials not configured. Using test account for development.");
       console.warn("   Set EMAIL_USER and EMAIL_PASSWORD environment variables for production.");
       
-      // Create ethereal test account for development
-      // In production, this should throw an error
+      // Create real ethereal test account for development
+      const testAccount = await nodemailer.createTestAccount();
       transporter = nodemailer.createTransport({
-        host: "ethereal.email",
-        port: 587,
-        secure: false,
+        host: testAccount.smtp.host,
+        port: testAccount.smtp.port,
+        secure: testAccount.smtp.secure,
         auth: {
-          user: "test@ethereal.email",
-          pass: "test",
+          user: testAccount.user,
+          pass: testAccount.pass,
         },
       });
     } else {
@@ -124,7 +128,8 @@ export async function sendVerificationEmail(
       `,
     };
 
-    const info = await getTransporter().sendMail(mailOptions);
+    const transporter = await getTransporter();
+    const info = await transporter.sendMail(mailOptions);
     
     // Get preview URL for development (ethereal.email)
     const previewUrl = nodemailer.getTestMessageUrl(info);
@@ -214,7 +219,8 @@ export async function sendPasswordResetEmail(
       `,
     };
 
-    const info = await getTransporter().sendMail(mailOptions);
+    const transporter = await getTransporter();
+    const info = await transporter.sendMail(mailOptions);
     
     // Get preview URL for development
     const previewUrl = nodemailer.getTestMessageUrl(info);
@@ -239,7 +245,8 @@ export async function sendPasswordResetEmail(
  */
 export async function verifyEmailConfig(): Promise<boolean> {
   try {
-    await getTransporter().verify();
+    const transporter = await getTransporter();
+    await transporter.verify();
     console.log("✅ Email service is ready");
     return true;
   } catch (error) {

@@ -42,6 +42,9 @@ export async function register(req: Request, res: Response) {
       });
     }
 
+    // Normalize email (lowercase, trim)
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Validate username
     if (username.length < 3) {
       return res.status(400).json({ 
@@ -50,14 +53,14 @@ export async function register(req: Request, res: Response) {
     }
 
     // Validate email format
-    if (!validateEmail(email)) {
+    if (!validateEmail(normalizedEmail)) {
       return res.status(400).json({ 
         error: "Invalid email format" 
       });
     }
 
     // Check for disposable email
-    if (isDisposableEmail(email)) {
+    if (isDisposableEmail(normalizedEmail)) {
       return res.status(400).json({ 
         error: "Disposable email addresses are not allowed" 
       });
@@ -94,7 +97,7 @@ export async function register(req: Request, res: Response) {
     const existingEmail = await database
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (existingEmail.length > 0) {
@@ -114,7 +117,7 @@ export async function register(req: Request, res: Response) {
       .insert(users)
       .values({
         username,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         emailVerificationToken: verificationToken,
         emailVerificationExpiry: verificationExpiry,
@@ -132,12 +135,12 @@ export async function register(req: Request, res: Response) {
     await database.insert(userProfiles).values({
       userId: user.id,
       displayName: username,
-      email: email,
+      email: normalizedEmail,
       riskTolerance: "moderate",
     });
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(email, username, verificationToken);
+    const emailResult = await sendVerificationEmail(normalizedEmail, username, verificationToken);
 
     // Log the registration
     await logAuditEvent(
@@ -145,7 +148,7 @@ export async function register(req: Request, res: Response) {
       AuditActions.REGISTER,
       "user",
       user.id,
-      { email, emailSent: emailResult.success },
+      { email: normalizedEmail, emailSent: emailResult.success },
       req,
     );
 
@@ -185,10 +188,11 @@ export async function login(req: Request, res: Response) {
 
     // Find user (allow login with username or email)
     const isEmail = validateEmail(username);
+    const normalizedUsername = isEmail ? username.trim().toLowerCase() : username;
     const foundUsers = await database
       .select()
       .from(users)
-      .where(isEmail ? eq(users.email, username) : eq(users.username, username))
+      .where(isEmail ? eq(users.email, normalizedUsername) : eq(users.username, normalizedUsername))
       .limit(1);
 
     if (foundUsers.length === 0) {
@@ -355,7 +359,7 @@ export async function verifyEmail(req: Request, res: Response) {
     // Log the verification
     await logAuditEvent(
       user.id,
-      "email_verified",
+      AuditActions.EMAIL_VERIFIED,
       "user",
       user.id,
       undefined,
@@ -387,11 +391,13 @@ export async function resendVerification(req: Request, res: Response) {
       return res.status(400).json({ error: "Email is required" });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Find user
     const foundUsers = await database
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (foundUsers.length === 0) {
@@ -423,7 +429,7 @@ export async function resendVerification(req: Request, res: Response) {
       .where(eq(users.id, user.id));
 
     // Send email
-    const emailResult = await sendVerificationEmail(email, user.username, verificationToken);
+    const emailResult = await sendVerificationEmail(normalizedEmail, user.username, verificationToken);
 
     const response: any = {
       message: "Verification email sent",
@@ -456,11 +462,13 @@ export async function forgotPassword(req: Request, res: Response) {
       return res.status(400).json({ error: "Email is required" });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Find user
     const foundUsers = await database
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     // Always return success to prevent email enumeration
@@ -487,12 +495,12 @@ export async function forgotPassword(req: Request, res: Response) {
       .where(eq(users.id, user.id));
 
     // Send email
-    const emailResult = await sendPasswordResetEmail(email, user.username, resetToken);
+    const emailResult = await sendPasswordResetEmail(normalizedEmail, user.username, resetToken);
 
     // Log the request
     await logAuditEvent(
       user.id,
-      "password_reset_requested",
+      AuditActions.PASSWORD_RESET_REQUESTED,
       "user",
       user.id,
       undefined,

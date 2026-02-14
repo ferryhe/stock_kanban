@@ -39,6 +39,8 @@ export async function calculateUserRankings(rankingDate: Date): Promise<UserRank
         eq(portfolios.type, "live"),
         // Portfolio must be public or shared to be ranked
         sql`${portfolios.visibility} IN ('public', 'shared')`,
+        // Exclude portfolios without userId (system/legacy portfolios)
+        sql`${portfolios.userId} IS NOT NULL`,
       ),
     )
     .orderBy(desc(strategyPerformance.calculationDate));

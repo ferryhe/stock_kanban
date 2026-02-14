@@ -5,6 +5,7 @@ import { users, userProfiles } from "../../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { logAuditEvent, AuditActions, getAllAuditLogs } from "../services/auditLogService";
 import { hashPassword } from "../auth";
+import { validatePassword, isCommonPassword } from "../utils/passwordValidation";
 
 const router = express.Router();
 
@@ -203,8 +204,26 @@ router.post("/users/:userId/reset-password", requireSuperAdmin, async (req, res)
     const { newPassword } = req.body;
     const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
-    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
-      res.status(400).json({ error: "New password must be at least 6 characters" });
+    if (!newPassword || typeof newPassword !== "string") {
+      res.status(400).json({ error: "New password is required" });
+      return;
+    }
+
+    // Validate password strength (same as registration)
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      res.status(400).json({ 
+        error: "Password requirements not met",
+        details: passwordValidation.errors,
+      });
+      return;
+    }
+
+    // Check for common passwords
+    if (isCommonPassword(newPassword)) {
+      res.status(400).json({ 
+        error: "This password is too common. Please choose a more unique password" 
+      });
       return;
     }
 

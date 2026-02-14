@@ -121,6 +121,8 @@ export const AuditActions = {
   LOGOUT: "logout",
   REGISTER: "register",
   PASSWORD_CHANGE: "password_change",
+  EMAIL_VERIFIED: "email_verified",
+  PASSWORD_RESET_REQUESTED: "password_reset_requested",
   
   // Portfolio actions
   CREATE_PORTFOLIO: "create_portfolio",
