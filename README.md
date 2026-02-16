@@ -166,9 +166,7 @@ This automatically:
 
 ## Required Production Env (`.env.production`)
 
-See [ENV_CONFIGURATION_GUIDE](./docs/ENV_CONFIGURATION_GUIDE.md) for all options.
-
-Minimum required:
+Minimum required environment variables:
 
 ```env
 NODE_ENV=production
@@ -185,7 +183,16 @@ DATABASE_URL=postgresql://stock_user:password@host:5432/stock_kanban
 VITE_API_BASE_URL=https://stockkanban.aixintelligence.com
 ADMIN_SECRET=<generate: openssl rand -base64 32>
 ENABLE_USER_ISOLATION=true
+
+# Email Configuration (for authentication)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_FROM=noreply@stockkanban.com
 ```
+
+See `.env.production.example` in the repository for complete configuration options.
 
 ## 📚 Documentation
 
