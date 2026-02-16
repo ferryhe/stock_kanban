@@ -1,21 +1,78 @@
 ﻿# Stock Kanban
 
-Stock Kanban is a full-stack stock dashboard + backtest/live-paper-trading service.
-Frontend and API are served by one Node process.
+> **A Full-Stack Stock Dashboard with Backtesting & Live Paper Trading**  
+> Version 1.0 | Last Updated: February 16, 2026
 
-## Core Features
+Stock Kanban is a comprehensive stock market analysis and trading simulation platform. It combines real-time market data, algorithmic backtesting, and live paper trading with a robust user authentication and multi-tenant architecture.
 
-- Watchlists and stock data dashboard
-- Backtest center (`/backtest`)
-- Backtest history with pagination/status filter/user scope (`/backtest/history`)
-- Compare page with correlation/heatmap/CSV/PDF export (`/compare`)
-- Live paper trading page (`/live`)
+Frontend and API are served by one Node process with PostgreSQL persistence.
 
-## Runtime Model
+## ✨ Core Features
 
-- API + frontend static are served together
-- Persistent storage uses PostgreSQL when `DATABASE_URL` is set
-- If `DATABASE_URL` is missing, backtest/live data falls back to in-memory mode
+### 📊 Stock Market Analysis
+- **Real-time Dashboard** - Live stock data with technical indicators (RSI, MACD, SMA, EMA, Bollinger Bands)
+- **Watchlists** - Track and monitor multiple stocks
+- **Compare Page** - Correlation analysis, heatmaps, CSV/PDF export
+- **Multi-Market Support** - US and Hong Kong stocks with localized names
+
+### 🔬 Backtesting Engine
+- **Multi-Algorithm Support** - Test multiple trading strategies simultaneously
+- **Historical Analysis** - Backtest with historical market data
+- **Performance Metrics** - Sharpe ratio, max drawdown, win rate, profit factor
+- **Backtest History** - Paginated history with status filters and user scope (`/backtest/history`)
+- **Results Comparison** - Side-by-side algorithm performance analysis
+
+### 📈 Live Paper Trading
+- **Virtual Trading** - Real-time paper trading with simulated capital
+- **Portfolio Management** - Multi-portfolio support with visibility controls
+- **Risk Management** - Position limits, daily loss limits, exposure controls
+- **Daily Settlements** - Automated end-of-day portfolio valuation
+- **Trade History** - Complete audit trail of all trades
+
+### 👥 User Management
+- **Email Authentication** - Secure registration, login, password reset
+- **Role-Based Permissions** - User, Analyst, Admin, SuperAdmin roles
+- **Multi-Tenant Architecture** - Complete user data isolation
+- **API Keys** - Programmatic access with scoped permissions
+- **Rankings & Leaderboards** - Public/private ranking system
+
+## 🏗️ Architecture
+
+- **Frontend**: React 19 + Vite + TailwindCSS + shadcn/ui
+- **Backend**: Node.js + Express + TypeScript
+- **Database**: PostgreSQL with Drizzle ORM
+- **Real-time**: WebSocket for live updates
+- **API**: RESTful endpoints with session-based authentication
+
+### Runtime Model
+- API + frontend static assets served by single Node process
+- PostgreSQL for persistent storage (configurable via `DATABASE_URL`)
+- Automatic fallback to in-memory mode when database unavailable
+- Production deployment via Docker + Caddy reverse proxy
+
+## 📊 Project Status
+
+**Current Version**: 1.0 (Production Ready)  
+**Last Major Update**: February 16, 2026
+
+### ✅ Completed Features (Phases 1-5)
+- ✅ **Phase 1**: Backtest engine core implementation
+- ✅ **Phase 2**: PostgreSQL persistence layer
+- ✅ **Phase 3**: Multi-algorithm comparison
+- ✅ **Phase 4**: Backtest history UI
+- ✅ **Phase 5**: Live trading & user authentication
+
+### 🚀 Next Steps (Phase 6)
+See [Phase 6 Development Plan](./docs/Plans/20260216 DEVELOPMENT_PLAN_PHASE6.md) for details:
+- Performance optimization (frontend & backend)
+- Enhanced user experience (customizable dashboards, PWA)
+- Advanced trading features (strategy builder, analytics)
+- Infrastructure improvements (monitoring, testing, CI/CD)
+- Security hardening (rate limiting, audits)
+
+**Target Timeline**: Q2 2026 (16 weeks)
+
+---
 
 ## 🚀 Quick Start
 
@@ -37,7 +94,7 @@ chmod +x stock_kanban_update_and_run.sh
 bash deploy/verify-database.sh
 ```
 
-**Documentation**: [Linux Deployment Guide](./docs/DEPLOYMENT_INDEX.md)
+**Documentation**: [Deployment Index](./docs/Summaries/DEPLOYMENT_INDEX.md)
 
 ### For Windows Local Development
 
@@ -49,31 +106,27 @@ This opens two terminals:
 - **Backend**: Node.js API (http://localhost:3000)
 - **Frontend**: Vite dev server (http://localhost:5000)
 
-**Documentation**: [Local Development](./docs/LOCAL_DEVELOPMENT.md)
+**Documentation**: [Local Development Guide](./docs/Guides/LOCAL_DEVELOPMENT.md)
 
-## 📂 Project Scripts
+## 📂 Project Structure
 
 ### Root Scripts
 - `stock_kanban_update_and_run.sh` - One-command Linux deploy & update
 - `start-dev.bat` - Windows local development launcher
 
+### Key Directories
+- `client/` - React frontend application
+- `server/` - Express backend API
+- `shared/` - Shared TypeScript types and schemas
+- `docs/` - Comprehensive documentation (reorganized Feb 2026)
+- `deploy/` - Deployment scripts and SQL migrations
+- `scripts/` - Utility scripts for development
+
 ### Deploy Scripts
 Located in `deploy/`:
 - `check-linux-environment.sh` - Pre-flight environment check
 - `verify-database.sh` - Database initialization verification
-- `sql/` - Database initialization scripts
-
-See [PROJECT_CLEANUP.md](./PROJECT_CLEANUP.md) for file organization guide.
-
-## Removed Obsolete Scripts
-
-The following scripts were removed because they were outdated/unreferenced:
-
-- `deploy/docker-check.sh`
-- `deploy/verify-deployment.sh`
-- `scripts/update-quant-metrics.sh`
-- `scripts/update-quant-metrics.bat`
-- `diagnose.bat`
+- `sql/` - Database migration scripts
 
 ## Local Development
 
@@ -134,31 +187,29 @@ ADMIN_SECRET=<generate: openssl rand -base64 32>
 ENABLE_USER_ISOLATION=true
 ```
 
-## 📚 Documentation Index
+## 📚 Documentation
 
-### Getting Started
-| Document | Purpose |
-|----------|---------|
-| [Linux Quick Start](./docs/LINUX_QUICKSTART.md) | 5-minute deployment guide |
-| [Local Development](./docs/LOCAL_DEVELOPMENT.md) | Windows/Linux dev setup |
-| [Deployment Index](./docs/DEPLOYMENT_INDEX.md) | All deployment docs |
+> **New!** Documentation has been reorganized for easier navigation. See [docs/README.md](./docs/README.md) for the complete index.
 
-### Configuration & Reference
-| Document | Content |
-|----------|---------|
-| [Environment Variables](./docs/ENV_CONFIGURATION_GUIDE.md) | All .env options explained |
-| [Linux Deployment Guide](./docs/LINUX_DEPLOYMENT_GUIDE.md) | Comprehensive deployment guide |
-| [PostgreSQL Config](./docs/LINUX_FRONTEND_PGSQL_CONFIG.md) | Database & frontend setup |
+### 🚀 Quick Links
 
-### Development
-| Document | Topic |
-|----------|-------|
-| [Development Docs](./docs/DEVELOPMENT_GUIDE.md) | Development docs index |
-| [Architecture](./docs/CONSOLIDATED_DESIGN.md) | System architecture & design |
-| [Backtest Guide](./docs/BACKTEST_UI_OPERATION_GUIDE.md) | Backtest functionality |
+| Category | Document | Description |
+|----------|----------|-------------|
+| **Getting Started** | [Local Development](./docs/Guides/LOCAL_DEVELOPMENT.md) | Windows/Linux dev setup |
+| **Getting Started** | [Deployment Index](./docs/Summaries/DEPLOYMENT_INDEX.md) | Production deployment guides |
+| **Architecture** | [Consolidated Design](./docs/Summaries/CONSOLIDATED_DESIGN.md) | Complete system architecture |
+| **User Management** | [User Permissions](./docs/Summaries/USER_PERMISSION_MANAGEMENT.md) | Authentication & authorization |
+| **Development** | [Development Guide](./docs/Guides/DEVELOPMENT_GUIDE.md) | Developer documentation index |
+| **Planning** | [Phase 6 Development Plan](./docs/Plans/20260216 DEVELOPMENT_PLAN_PHASE6.md) | Next development priorities |
 
-### Cleanup
-- [Project Cleanup Guide](./PROJECT_CLEANUP.md) - File organization & cleanup instructions
+### 📂 Documentation Structure
+
+- **[Plans/](./docs/Plans)** - Development roadmaps and feature planning
+- **[Reports/](./docs/Reports)** - Implementation and testing reports
+- **[Guides/](./docs/Guides)** - User and developer guides
+- **[Summaries/](./docs/Summaries)** - Architecture and system overviews
+- **[References/](./docs/References)** - Technical references and best practices
+- **[Archive/](./docs/Archive)** - Historical documentation
 
 ## DB Initialization (Manual Option)
 
@@ -168,11 +219,122 @@ npm run db:prepare
 npm run db:push
 ```
 
-## Useful Endpoints
+## 🌐 API Endpoints
 
-- `GET /api/watchlists`
-- `GET /api/backtests/algorithms`
-- `GET /api/backtests/history?page=1&pageSize=20`
-- `POST /api/live/run`
-- `GET /api/live/portfolio?algorithm=us`
-- `POST /api/live/settle-now` (protected when `ADMIN_SECRET` is set)
+### Core Services
+```
+Stock Data & Watchlists
+GET  /api/watchlists              # Get user watchlists
+POST /api/watchlists              # Create watchlist
+GET  /api/stock/:symbol           # Get stock details
+
+Backtesting
+GET  /api/backtests/algorithms    # List available algorithms
+POST /api/backtests/run           # Run backtest
+GET  /api/backtests/history       # Backtest history (paginated)
+
+Live Trading
+POST /api/live/run                # Start live trading
+GET  /api/live/portfolio          # Get portfolio status
+POST /api/live/settle-now         # Trigger settlement (admin)
+
+Authentication
+POST /api/auth/register           # Register new user
+POST /api/auth/login              # Login
+POST /api/auth/logout             # Logout
+GET  /api/auth/me                 # Get current user
+POST /api/auth/verify-email       # Verify email
+POST /api/auth/forgot-password    # Request password reset
+POST /api/auth/reset-password     # Reset password
+
+User Management
+GET  /api/profile                 # Get user profile
+PUT  /api/profile                 # Update profile
+GET  /api/rankings                # Get leaderboard
+POST /api/api-keys                # Create API key
+GET  /api/api-keys                # List API keys
+```
+
+See [API Documentation](./docs/Summaries/USER_PERMISSION_MANAGEMENT.md) for complete endpoint reference.
+
+---
+
+## 🔒 Security Features
+
+- **Password Security**: Bcrypt hashing with salt rounds
+- **Email Verification**: Required for new accounts
+- **Session Management**: Secure cookie-based sessions
+- **Password Reset**: Time-limited reset tokens
+- **Password Requirements**: Strong password validation (8+ chars, mixed case, numbers, special chars)
+- **API Keys**: Scoped access with permission levels
+- **CSRF Protection**: Built-in CSRF token validation
+- **User Isolation**: Complete multi-tenant data separation
+- **Role-Based Access**: Hierarchical permission system
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+- **Framework**: React 19
+- **Build Tool**: Vite 7
+- **Styling**: TailwindCSS 4
+- **UI Components**: shadcn/ui (Radix UI)
+- **State Management**: TanStack Query (React Query)
+- **Routing**: Wouter
+- **Charts**: Recharts
+- **Form Handling**: React Hook Form + Zod
+
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express 5
+- **Language**: TypeScript
+- **Database**: PostgreSQL
+- **ORM**: Drizzle
+- **Authentication**: Passport.js + bcryptjs
+- **Email**: Nodemailer
+- **Real-time**: WebSocket (ws)
+- **Market Data**: Yahoo Finance 2
+
+### DevOps
+- **Containerization**: Docker
+- **Reverse Proxy**: Caddy
+- **Process Manager**: PM2
+- **Database Migrations**: Drizzle Kit
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read the [Development Guide](./docs/Guides/DEVELOPMENT_GUIDE.md) first.
+
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly (local dev environment)
+5. Submit a pull request
+
+### Code Quality
+- Follow TypeScript best practices
+- Add tests for new features
+- Update documentation as needed
+- Ensure all existing tests pass
+
+---
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+---
+
+## 📮 Support & Feedback
+
+- **Issues**: GitHub Issues for bugs and feature requests
+- **Documentation**: See [docs/README.md](./docs/README.md)
+- **Development Plan**: [Phase 6 Roadmap](./docs/Plans/20260216 DEVELOPMENT_PLAN_PHASE6.md)
+
+---
+
+**Built with ❤️ for traders and developers**
