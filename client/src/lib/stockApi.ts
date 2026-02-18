@@ -791,13 +791,13 @@ export const registerUser = async (
 };
 
 export const loginUser = async (
-  username: string,
+  email: string,
   password: string,
-): Promise<{ message: string; user: { id: string; username: string } }> => {
+): Promise<{ message: string; user: { id: string; email: string; displayName?: string } }> => {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {

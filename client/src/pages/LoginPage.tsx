@@ -10,15 +10,15 @@ import { useI18n } from "@/lib/i18n";
 import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const { refetchUser } = useAuth();
   const { lang, setLang, t } = useI18n();
 
   const mutation = useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
-      loginUser(username, password),
+    mutationFn: ({ email, password }: { email: string; password: string }) =>
+      loginUser(email, password),
     onSuccess: async () => {
       await refetchUser();
       setLocation("/");
@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({ username, password });
+    mutation.mutate({ email, password });
   };
   
   const errorMessage =
@@ -64,15 +64,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t("authUsername")}</label>
+            <label className="block text-sm font-medium mb-1">Email</label>
             <Input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={t("loginUsernamePlaceholder")}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
               required
             />
-            <p className="text-xs text-slate-500 mt-1">You can also use your email</p>
           </div>
 
           <div>
@@ -102,7 +101,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={mutation.isPending || !username || !password}>
+          <Button type="submit" className="w-full" disabled={mutation.isPending || !email || !password}>
             {mutation.isPending ? t("loginSubmitting") : t("loginSubmit")}
           </Button>
         </form>
