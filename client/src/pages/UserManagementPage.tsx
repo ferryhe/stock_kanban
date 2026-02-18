@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { Search, Trash2, Key, UserCog, CheckCircle, XCircle } from "lucide-react";
 
 interface User {
@@ -20,7 +21,11 @@ export default function UserManagementPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const limit = 20;
 
   const { data, isLoading } = useQuery({
@@ -55,10 +60,17 @@ export default function UserManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      alert("User role updated successfully");
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
     },
     onError: (error: Error) => {
-      alert(error.message);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -77,10 +89,17 @@ export default function UserManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      alert("User status updated successfully");
+      toast({
+        title: "Success",
+        description: "User status updated successfully",
+      });
     },
     onError: (error: Error) => {
-      alert(error.message);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -98,10 +117,17 @@ export default function UserManagementPage() {
       return res.json();
     },
     onSuccess: () => {
-      alert("Password reset successfully");
+      toast({
+        title: "Success",
+        description: "Password reset successfully",
+      });
     },
     onError: (error: Error) => {
-      alert(error.message);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -118,37 +144,52 @@ export default function UserManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      alert("User deleted successfully");
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
     },
     onError: (error: Error) => {
-      alert(error.message);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   const handleResetPassword = (user: User) => {
-    const newPassword = prompt(`Enter new password for ${user.displayName || user.email}:`);
+    const newPassword = prompt(`Enter new password for ${user.displayName || user.email}:\n\nMust be at least 8 characters with uppercase, lowercase, number, and special character.`);
     if (newPassword && newPassword.length >= 8) {
       resetPasswordMutation.mutate({ userId: user.id, newPassword });
     } else if (newPassword) {
-      alert("Password must be at least 8 characters");
+      toast({
+        title: "Invalid Password",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDeleteUser = (user: User) => {
-    if (confirm(`Are you sure you want to delete user: ${user.displayName || user.email}?`)) {
+    if (confirm(`⚠️ WARNING: This action cannot be undone!\n\nAre you sure you want to permanently delete user:\n${user.displayName || user.email} (${user.email})?`)) {
       deleteUserMutation.mutate(user.id);
     }
   };
 
   const handleUpdateRole = (user: User) => {
     const newRole = prompt(
-      `Select new role for ${user.displayName || user.email}:\n\nOptions: user, analyst, admin, superadmin\n\nCurrent: ${user.role}`,
+      `Change role for: ${user.displayName || user.email}\n\nCurrent role: ${user.role}\n\nEnter new role:\n• user - Basic user access\n• analyst - Data analyst access\n• admin - Admin access\n• superadmin - Full system access`,
       user.role
     );
     if (newRole && ["user", "analyst", "admin", "superadmin"].includes(newRole)) {
       updateRoleMutation.mutate({ userId: user.id, role: newRole });
     } else if (newRole) {
-      alert("Invalid role. Must be: user, analyst, admin, or superadmin");
+      toast({
+        title: "Invalid Role",
+        description: "Must be: user, analyst, admin, or superadmin",
+        variant: "destructive",
+      });
     }
   };
 

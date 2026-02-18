@@ -54,10 +54,25 @@ router.get("/users", async (req, res) => {
 
     const allUsers = await query.limit(limit).offset(offset);
 
-    // Get total count
-    const [{ count }] = await db
+    // Get total count with same search filter
+    let countQuery = db
       .select({ count: sql<number>`count(*)::int` })
       .from(users);
+
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      countQuery = countQuery
+        .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+        .where(
+          or(
+            ilike(users.email, searchTerm),
+            ilike(users.username, searchTerm),
+            ilike(userProfiles.displayName, searchTerm)
+          )
+        ) as any;
+    }
+
+    const [{ count }] = await countQuery;
 
     res.json({ users: allUsers, count: allUsers.length, total: count });
   } catch (error) {
