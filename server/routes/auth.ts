@@ -15,6 +15,7 @@ import {
   isCommonPassword,
 } from "../utils/passwordValidation";
 import { logAuditEvent, AuditActions } from "../services/auditLogService";
+import { logBackendEvent, LogLevel, LogCategory } from "../services/backendLogService";
 
 function requireDatabase(res: Response) {
   if (!db) {
@@ -140,6 +141,16 @@ export async function register(req: Request, res: Response) {
       { email: normalizedEmail, emailSent: emailResult.success },
       req,
     );
+    
+    // Log to backend logs
+    await logBackendEvent(
+      LogLevel.INFO,
+      LogCategory.AUTH,
+      `New user registered: ${normalizedEmail}`,
+      { userId: user.id, emailVerified: false },
+      user.id,
+      req,
+    );
 
     // For development, include preview URL
     const response: any = {
@@ -155,6 +166,17 @@ export async function register(req: Request, res: Response) {
     return res.status(201).json(response);
   } catch (error) {
     console.error("Register error:", error);
+    
+    // Log registration error
+    logBackendEvent(
+      LogLevel.ERROR,
+      LogCategory.AUTH,
+      `Registration failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { error: error instanceof Error ? error.stack : String(error) },
+      undefined,
+      req,
+    ).catch(console.error);
+    
     return res.status(500).json({ error: "Internal server error" });
   }
 }
@@ -230,6 +252,16 @@ export async function login(req: Request, res: Response) {
       "user",
       user.id,
       undefined,
+      req,
+    );
+    
+    // Log successful login to backend logs
+    await logBackendEvent(
+      LogLevel.INFO,
+      LogCategory.AUTH,
+      `User logged in successfully: ${user.email}`,
+      { userId: user.id, role: user.role },
+      user.id,
       req,
     );
 

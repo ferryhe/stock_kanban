@@ -5,6 +5,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { scheduleZhNameUpdate } from "./stockService";
 import { startLiveSettlementScheduler } from "./liveTrading/service";
+import { logBackendEvent, LogLevel, LogCategory } from "./services/backendLogService";
 
 const app = express();
 const httpServer = createServer(app);
@@ -103,6 +104,21 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     console.error("Internal Server Error:", err);
+    
+    // Log to backend logs
+    logBackendEvent(
+      LogLevel.ERROR,
+      LogCategory.ERROR,
+      `Internal server error: ${message}`,
+      {
+        status,
+        stack: err.stack,
+        path: _req.path,
+        method: _req.method,
+      },
+      undefined,
+      _req,
+    ).catch(console.error);
 
     if (res.headersSent) {
       return next(err);
@@ -135,6 +151,18 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      
+      // Log server startup to backend logs
+      logBackendEvent(
+        LogLevel.INFO,
+        LogCategory.SYSTEM,
+        `Server started successfully on port ${port}`,
+        {
+          port,
+          nodeEnv: process.env.NODE_ENV || "development",
+          platform: process.platform,
+        },
+      ).catch(console.error);
     },
   );
 })();
