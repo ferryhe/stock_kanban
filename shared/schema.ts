@@ -298,3 +298,22 @@ export const auditLogs = pgTable("audit_logs", {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+// Backend/System logs for admin monitoring
+export const backendLogs = pgTable("backend_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  level: varchar("level", { length: 20 }).notNull(), // info, warn, error, debug
+  category: varchar("category", { length: 50 }).notNull(), // system, database, api, auth, etc.
+  message: text("message").notNull(),
+  details: jsonb("details").$type<Record<string, unknown>>(),
+  userId: varchar("user_id").references(() => users.id), // Optional: if log is related to a user
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  levelIdx: index("idx_backend_logs_level").on(table.level),
+  categoryIdx: index("idx_backend_logs_category").on(table.category),
+  dateIdx: index("idx_backend_logs_date").on(table.createdAt),
+}));
+
+export type BackendLog = typeof backendLogs.$inferSelect;
+export type InsertBackendLog = typeof backendLogs.$inferInsert;

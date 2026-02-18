@@ -33,24 +33,20 @@ export async function register(req: Request, res: Response) {
     const database = requireDatabase(res);
     if (!database) return;
 
-    const { username, email, password } = req.body;
+    const { email, password, displayName } = req.body;
 
     // Validation
-    if (!username || !email || !password) {
+    if (!email || !password) {
       return res.status(400).json({ 
-        error: "Username, email, and password are required" 
+        error: "Email and password are required" 
       });
     }
 
     // Normalize email (lowercase, trim)
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Validate username
-    if (username.length < 3) {
-      return res.status(400).json({ 
-        error: "Username must be at least 3 characters" 
-      });
-    }
+    // Generate random username (will be internal identifier)
+    const username = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     // Validate email format
     if (!validateEmail(normalizedEmail)) {
@@ -80,17 +76,6 @@ export async function register(req: Request, res: Response) {
       return res.status(400).json({ 
         error: "This password is too common. Please choose a more unique password" 
       });
-    }
-
-    // Check if username exists
-    const existingUsername = await database
-      .select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-
-    if (existingUsername.length > 0) {
-      return res.status(409).json({ error: "Username already exists" });
     }
 
     // Check if email exists
@@ -131,16 +116,20 @@ export async function register(req: Request, res: Response) {
 
     const user = newUser[0];
 
-    // Create user profile
+    // Create user profile with display name or default random code
+    const userDisplayName = displayName && displayName.trim() 
+      ? displayName.trim() 
+      : `User#${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
     await database.insert(userProfiles).values({
       userId: user.id,
-      displayName: username,
+      displayName: userDisplayName,
       email: normalizedEmail,
       riskTolerance: "moderate",
     });
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(normalizedEmail, username, verificationToken);
+    const emailResult = await sendVerificationEmail(normalizedEmail, userDisplayName, verificationToken);
 
     // Log the registration
     await logAuditEvent(
@@ -155,7 +144,7 @@ export async function register(req: Request, res: Response) {
     // For development, include preview URL
     const response: any = {
       message: "User registered successfully. Please check your email to verify your account.",
-      user: { id: user.id, username: user.username, email: user.email },
+      user: { id: user.id, email: user.email, displayName: userDisplayName },
       emailSent: emailResult.success,
     };
 
@@ -179,20 +168,25 @@ export async function login(req: Request, res: Response) {
     const database = requireDatabase(res);
     if (!database) return;
 
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Find user (allow login with username or email)
-    const isEmail = validateEmail(username);
-    const normalizedUsername = isEmail ? username.trim().toLowerCase() : username;
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Validate email format
+    if (!validateEmail(normalizedEmail)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+    
     const foundUsers = await database
       .select()
       .from(users)
-      .where(isEmail ? eq(users.email, normalizedUsername) : eq(users.username, normalizedUsername))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     if (foundUsers.length === 0) {
@@ -222,6 +216,13 @@ export async function login(req: Request, res: Response) {
     // Set session
     req.session.userId = user.id;
 
+    // Get user profile for displayName
+    const [profile] = await database
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, user.id))
+      .limit(1);
+
     // Log the login
     await logAuditEvent(
       user.id,
@@ -236,8 +237,8 @@ export async function login(req: Request, res: Response) {
       message: "Login successful",
       user: { 
         id: user.id, 
-        username: user.username,
         email: user.email,
+        displayName: profile?.displayName,
         emailVerified: user.emailVerified,
         role: user.role,
       },
@@ -300,8 +301,8 @@ export async function getCurrentUser(req: Request, res: Response) {
     return res.json({
       user: {
         id: user.id,
-        username: user.username,
         email: user.email,
+        displayName: profile?.displayName,
         emailVerified: user.emailVerified,
         role: user.role,
         profile,
