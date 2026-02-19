@@ -14,7 +14,7 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
 
   // Check if user is admin
-  const { data: currentUser, isLoading } = useQuery({
+  const { data: currentUser, isLoading, error } = useQuery({
     queryKey: ["currentUser"],
     queryFn: async () => {
       const res = await fetch("/api/auth/me");
@@ -24,6 +24,12 @@ export default function AdminDashboard() {
       return res.json();
     },
   });
+
+  // Redirect to login if not authenticated
+  if (error && !isLoading) {
+    setLocation("/admin/login");
+    return null;
+  }
 
   if (isLoading) {
     return (

@@ -353,7 +353,18 @@ router.get("/backend-logs", async (req, res) => {
     const offset = parseInt(req.query.offset as string) || 0;
     const level = req.query.level as string;
     const category = req.query.category as string;
-    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    
+    // Validate startDate parameter
+    let startDate: Date | undefined;
+    const startDateParam = req.query.startDate as string | undefined;
+    if (startDateParam) {
+      const parsedStartDate = new Date(startDateParam);
+      if (isNaN(parsedStartDate.getTime())) {
+        res.status(400).json({ error: "Invalid startDate parameter" });
+        return;
+      }
+      startDate = parsedStartDate;
+    }
 
     const { logs, total } = await getBackendLogs({
       level,
@@ -372,7 +383,7 @@ router.get("/backend-logs", async (req, res) => {
 
 /**
  * DELETE /api/admin/users/:userId
- * Delete a user (superadmin only)
+ * Soft-delete a user by deactivating their account (superadmin only)
  */
 router.delete("/users/:userId", requireSuperAdmin, async (req, res) => {
   try {
@@ -384,9 +395,10 @@ router.delete("/users/:userId", requireSuperAdmin, async (req, res) => {
       return;
     }
 
-    // Delete user (cascades to user_profiles due to foreign key)
+    // Soft-delete user by deactivating (avoids FK constraint issues)
     const [deleted] = await db
-      .delete(users)
+      .update(users)
+      .set({ isActive: false })
       .where(eq(users.id, userId))
       .returning();
 
@@ -401,12 +413,12 @@ router.delete("/users/:userId", requireSuperAdmin, async (req, res) => {
       "DELETE_USER",
       "user",
       userId,
-      { deletedUsername: deleted.username },
+      { deletedEmail: deleted.email, softDelete: true },
       req,
     );
 
     res.json({ 
-      message: "User deleted successfully",
+      message: "User deactivated successfully",
       deletedUser: {
         id: deleted.id,
         email: deleted.email,

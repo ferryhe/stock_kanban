@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { registerUser, loginUser } from "@/lib/stockApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";

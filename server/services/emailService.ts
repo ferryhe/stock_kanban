@@ -66,7 +66,7 @@ export function generateToken(): string {
  */
 export async function sendVerificationEmail(
   email: string,
-  username: string,
+  displayName: string,
   token: string
 ): Promise<{ success: boolean; messageId?: string; previewUrl?: string }> {
   try {
@@ -96,7 +96,7 @@ export async function sendVerificationEmail(
               <h1>Stock Kanban</h1>
             </div>
             <div class="content">
-              <h2>Welcome, ${username}!</h2>
+              <h2>Welcome, ${displayName}!</h2>
               <p>Thank you for registering with Stock Kanban. Please verify your email address to activate your account.</p>
               <p>Click the button below to verify your email:</p>
               <a href="${verificationUrl}" class="button">Verify Email</a>

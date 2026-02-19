@@ -20,10 +20,6 @@ interface User {
 export default function UserManagementPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const limit = 20;

@@ -306,7 +306,7 @@ export const backendLogs = pgTable("backend_logs", {
   category: varchar("category", { length: 50 }).notNull(), // system, database, api, auth, etc.
   message: text("message").notNull(),
   details: jsonb("details").$type<Record<string, unknown>>(),
-  userId: varchar("user_id").references(() => users.id), // Optional: if log is related to a user
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }), // Optional: if log is related to a user
   ipAddress: varchar("ip_address", { length: 45 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({

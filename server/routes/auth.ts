@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { db } from "../db";
 import { users, userProfiles } from "../../shared/schema";
 import { hashPassword, comparePassword } from "../auth";
@@ -46,8 +47,8 @@ export async function register(req: Request, res: Response) {
     // Normalize email (lowercase, trim)
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Generate random username (will be internal identifier)
-    const username = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Generate unique random username (collision-resistant)
+    const username = `user_${Date.now()}_${randomBytes(8).toString('hex')}`;
 
     // Validate email format
     if (!validateEmail(normalizedEmail)) {
@@ -335,6 +336,7 @@ export async function getCurrentUser(req: Request, res: Response) {
         id: user.id,
         email: user.email,
         displayName: profile?.displayName,
+        username: profile?.displayName || user.email, // Backward-compatible alias
         emailVerified: user.emailVerified,
         role: user.role,
         profile,
@@ -461,8 +463,17 @@ export async function resendVerification(req: Request, res: Response) {
       })
       .where(eq(users.id, user.id));
 
+    // Get user profile for displayName
+    const [profile] = await database
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, user.id))
+      .limit(1);
+
+    const displayName = profile?.displayName || user.email;
+
     // Send email
-    const emailResult = await sendVerificationEmail(normalizedEmail, user.username, verificationToken);
+    const emailResult = await sendVerificationEmail(normalizedEmail, displayName, verificationToken);
 
     const response: any = {
       message: "Verification email sent",

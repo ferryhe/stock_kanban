@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS backend_logs (
   category VARCHAR(50) NOT NULL,
   message TEXT NOT NULL,
   details JSONB,
-  user_id VARCHAR REFERENCES users(id),
+  user_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
   ip_address VARCHAR(45),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
