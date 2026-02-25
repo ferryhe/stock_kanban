@@ -8,7 +8,7 @@ import { Search, Trash2, Key, UserCog, CheckCircle, XCircle } from "lucide-react
 
 interface User {
   id: string;
-  email: string;
+  email: string | null;
   username?: string;
   displayName?: string;
   role: string;
@@ -142,7 +142,7 @@ export default function UserManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "User account deactivated successfully",
       });
     },
     onError: (error: Error) => {
@@ -168,7 +168,7 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = (user: User) => {
-    if (confirm(`⚠️ WARNING: This action cannot be undone!\n\nAre you sure you want to permanently delete user:\n${user.displayName || user.email} (${user.email})?`)) {
+    if (confirm(`⚠️ Deactivate User Account\n\nAre you sure you want to deactivate this user?\n${user.displayName || user.email || 'Unknown user'} (${user.email || 'No email'})\n\nThe account will be deactivated (not permanently deleted) and can be reactivated later.`)) {
       deleteUserMutation.mutate(user.id);
     }
   };
@@ -283,7 +283,7 @@ export default function UserManagementPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleDeleteUser(user)}
-                    title="Delete User"
+                    title="Deactivate User"
                     className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />

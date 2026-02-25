@@ -2,7 +2,7 @@ import express from "express";
 import { authenticate, requireAuth, requireAdmin, requireSuperAdmin } from "../middleware/auth";
 import { db } from "../db";
 import { users, userProfiles } from "../../shared/schema";
-import { eq, sql, or, ilike } from "drizzle-orm";
+import { eq, sql, or, ilike, desc } from "drizzle-orm";
 import { logAuditEvent, AuditActions, getAllAuditLogs } from "../services/auditLogService";
 import { getBackendLogs } from "../services/backendLogService";
 import { hashPassword } from "../auth";
@@ -52,7 +52,10 @@ router.get("/users", async (req, res) => {
       ) as any;
     }
 
-    const allUsers = await query.limit(limit).offset(offset);
+    const allUsers = await query
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     // Get total count with same search filter
     let countQuery = db

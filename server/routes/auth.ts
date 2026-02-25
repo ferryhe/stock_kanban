@@ -184,7 +184,7 @@ export async function register(req: Request, res: Response) {
 
 /**
  * POST /api/auth/login
- * Login a user
+ * Login a user with email or username (for backward compatibility)
  */
 export async function login(req: Request, res: Response) {
   try {
@@ -199,18 +199,27 @@ export async function login(req: Request, res: Response) {
     }
 
     // Normalize email
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedIdentifier = email.trim().toLowerCase();
     
-    // Validate email format
-    if (!validateEmail(normalizedEmail)) {
-      return res.status(400).json({ error: "Invalid email format" });
+    // Check if it's an email or username
+    const isEmail = validateEmail(normalizedIdentifier);
+    
+    let foundUsers;
+    if (isEmail) {
+      // Login with email
+      foundUsers = await database
+        .select()
+        .from(users)
+        .where(eq(users.email, normalizedIdentifier))
+        .limit(1);
+    } else {
+      // Fallback to username for backward compatibility
+      foundUsers = await database
+        .select()
+        .from(users)
+        .where(eq(users.username, normalizedIdentifier))
+        .limit(1);
     }
-    
-    const foundUsers = await database
-      .select()
-      .from(users)
-      .where(eq(users.email, normalizedEmail))
-      .limit(1);
 
     if (foundUsers.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });

@@ -29,6 +29,15 @@ export default function AdminLoginPage() {
       
       // Check if user has admin role
       if (!data.user?.role || !["admin", "superadmin"].includes(data.user.role)) {
+        // User is authenticated but lacks admin privileges; clear the session
+        try {
+          await fetch("/api/auth/logout", { 
+            method: "POST",
+            credentials: "include",
+          });
+        } catch {
+          // Best-effort logout; ignore logout errors
+        }
         throw new Error("Access denied: Admin privileges required");
       }
       

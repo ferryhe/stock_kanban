@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,11 +25,12 @@ export default function AdminDashboard() {
     },
   });
 
-  // Redirect to login if not authenticated
-  if (error && !isLoading) {
-    setLocation("/admin/login");
-    return null;
-  }
+  // Redirect to login if not authenticated (using useEffect to avoid render side effects)
+  useEffect(() => {
+    if (error && !isLoading) {
+      setLocation("/admin/login");
+    }
+  }, [error, isLoading, setLocation]);
 
   if (isLoading) {
     return (
