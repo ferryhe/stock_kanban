@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { db } from "../db";
 import { users, userProfiles } from "../../shared/schema";
 import { hashPassword, comparePassword } from "../auth";
@@ -15,6 +16,7 @@ import {
   isCommonPassword,
 } from "../utils/passwordValidation";
 import { logAuditEvent, AuditActions } from "../services/auditLogService";
+import { logBackendEvent, LogLevel, LogCategory } from "../services/backendLogService";
 
 function requireDatabase(res: Response) {
   if (!db) {
@@ -33,24 +35,20 @@ export async function register(req: Request, res: Response) {
     const database = requireDatabase(res);
     if (!database) return;
 
-    const { username, email, password } = req.body;
+    const { email, password, displayName } = req.body;
 
     // Validation
-    if (!username || !email || !password) {
+    if (!email || !password) {
       return res.status(400).json({ 
-        error: "Username, email, and password are required" 
+        error: "Email and password are required" 
       });
     }
 
     // Normalize email (lowercase, trim)
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Validate username
-    if (username.length < 3) {
-      return res.status(400).json({ 
-        error: "Username must be at least 3 characters" 
-      });
-    }
+    // Generate unique random username (collision-resistant)
+    const username = `user_${Date.now()}_${randomBytes(8).toString('hex')}`;
 
     // Validate email format
     if (!validateEmail(normalizedEmail)) {
@@ -80,17 +78,6 @@ export async function register(req: Request, res: Response) {
       return res.status(400).json({ 
         error: "This password is too common. Please choose a more unique password" 
       });
-    }
-
-    // Check if username exists
-    const existingUsername = await database
-      .select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-
-    if (existingUsername.length > 0) {
-      return res.status(409).json({ error: "Username already exists" });
     }
 
     // Check if email exists
@@ -131,16 +118,20 @@ export async function register(req: Request, res: Response) {
 
     const user = newUser[0];
 
-    // Create user profile
+    // Create user profile with display name or default random code
+    const userDisplayName = displayName && displayName.trim() 
+      ? displayName.trim() 
+      : `User#${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
     await database.insert(userProfiles).values({
       userId: user.id,
-      displayName: username,
+      displayName: userDisplayName,
       email: normalizedEmail,
       riskTolerance: "moderate",
     });
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(normalizedEmail, username, verificationToken);
+    const emailResult = await sendVerificationEmail(normalizedEmail, userDisplayName, verificationToken);
 
     // Log the registration
     await logAuditEvent(
@@ -151,11 +142,21 @@ export async function register(req: Request, res: Response) {
       { email: normalizedEmail, emailSent: emailResult.success },
       req,
     );
+    
+    // Log to backend logs
+    await logBackendEvent(
+      LogLevel.INFO,
+      LogCategory.AUTH,
+      `New user registered: ${normalizedEmail}`,
+      { userId: user.id, emailVerified: false },
+      user.id,
+      req,
+    );
 
     // For development, include preview URL
     const response: any = {
       message: "User registered successfully. Please check your email to verify your account.",
-      user: { id: user.id, username: user.username, email: user.email },
+      user: { id: user.id, email: user.email, displayName: userDisplayName },
       emailSent: emailResult.success,
     };
 
@@ -166,34 +167,59 @@ export async function register(req: Request, res: Response) {
     return res.status(201).json(response);
   } catch (error) {
     console.error("Register error:", error);
+    
+    // Log registration error
+    logBackendEvent(
+      LogLevel.ERROR,
+      LogCategory.AUTH,
+      `Registration failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { error: error instanceof Error ? error.stack : String(error) },
+      undefined,
+      req,
+    ).catch(console.error);
+    
     return res.status(500).json({ error: "Internal server error" });
   }
 }
 
 /**
  * POST /api/auth/login
- * Login a user
+ * Login a user with email or username (for backward compatibility)
  */
 export async function login(req: Request, res: Response) {
   try {
     const database = requireDatabase(res);
     if (!database) return;
 
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Find user (allow login with username or email)
-    const isEmail = validateEmail(username);
-    const normalizedUsername = isEmail ? username.trim().toLowerCase() : username;
-    const foundUsers = await database
-      .select()
-      .from(users)
-      .where(isEmail ? eq(users.email, normalizedUsername) : eq(users.username, normalizedUsername))
-      .limit(1);
+    // Normalize email
+    const normalizedIdentifier = email.trim().toLowerCase();
+    
+    // Check if it's an email or username
+    const isEmail = validateEmail(normalizedIdentifier);
+    
+    let foundUsers;
+    if (isEmail) {
+      // Login with email
+      foundUsers = await database
+        .select()
+        .from(users)
+        .where(eq(users.email, normalizedIdentifier))
+        .limit(1);
+    } else {
+      // Fallback to username for backward compatibility
+      foundUsers = await database
+        .select()
+        .from(users)
+        .where(eq(users.username, normalizedIdentifier))
+        .limit(1);
+    }
 
     if (foundUsers.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -222,6 +248,13 @@ export async function login(req: Request, res: Response) {
     // Set session
     req.session.userId = user.id;
 
+    // Get user profile for displayName
+    const [profile] = await database
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, user.id))
+      .limit(1);
+
     // Log the login
     await logAuditEvent(
       user.id,
@@ -231,13 +264,23 @@ export async function login(req: Request, res: Response) {
       undefined,
       req,
     );
+    
+    // Log successful login to backend logs
+    await logBackendEvent(
+      LogLevel.INFO,
+      LogCategory.AUTH,
+      `User logged in successfully: ${user.email}`,
+      { userId: user.id, role: user.role },
+      user.id,
+      req,
+    );
 
     return res.json({
       message: "Login successful",
       user: { 
         id: user.id, 
-        username: user.username,
         email: user.email,
+        displayName: profile?.displayName,
         emailVerified: user.emailVerified,
         role: user.role,
       },
@@ -300,8 +343,9 @@ export async function getCurrentUser(req: Request, res: Response) {
     return res.json({
       user: {
         id: user.id,
-        username: user.username,
         email: user.email,
+        displayName: profile?.displayName,
+        username: profile?.displayName || user.email, // Backward-compatible alias
         emailVerified: user.emailVerified,
         role: user.role,
         profile,
@@ -428,8 +472,17 @@ export async function resendVerification(req: Request, res: Response) {
       })
       .where(eq(users.id, user.id));
 
+    // Get user profile for displayName
+    const [profile] = await database
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, user.id))
+      .limit(1);
+
+    const displayName = profile?.displayName || user.email;
+
     // Send email
-    const emailResult = await sendVerificationEmail(normalizedEmail, user.username, verificationToken);
+    const emailResult = await sendVerificationEmail(normalizedEmail, displayName, verificationToken);
 
     const response: any = {
       message: "Verification email sent",

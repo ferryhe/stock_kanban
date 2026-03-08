@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { registerUser, loginUser } from "@/lib/stockApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -10,10 +9,10 @@ import { useI18n } from "@/lib/i18n";
 import { CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [, setLocation] = useLocation();
   const { refetchUser } = useAuth();
   const { lang, setLang, t } = useI18n();
@@ -37,11 +36,11 @@ export default function RegisterPage() {
   const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
 
   const mutation = useMutation({
-    mutationFn: async ({ username, email, password }: { username: string; email: string; password: string }) => {
+    mutationFn: async ({ email, password, displayName }: { email: string; password: string; displayName?: string }) => {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ email, password, displayName }),
       });
       
       if (!response.ok) {
@@ -72,12 +71,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (username.length < 3) {
-      alert("Username must be at least 3 characters");
-      return;
-    }
-
-    mutation.mutate({ username, email, password });
+    mutation.mutate({ email, password, displayName: displayName || undefined });
   };
 
   const errorMessage =
@@ -125,19 +119,6 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t("authUsername")}</label>
-            <Input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={t("registerUsernamePlaceholder")}
-              required
-              minLength={3}
-            />
-            <p className="text-xs text-slate-500 mt-1">{t("registerUsernameHint")}</p>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <Input
               type="email"
@@ -147,6 +128,17 @@ export default function RegisterPage() {
               required
             />
             <p className="text-xs text-slate-500 mt-1">We'll send a verification email</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Display Name (Optional)</label>
+            <Input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="How you want to be called"
+            />
+            <p className="text-xs text-slate-500 mt-1">Leave empty for a random code</p>
           </div>
 
           <div>
@@ -256,7 +248,7 @@ export default function RegisterPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={mutation.isPending || !username || !email || !password || !confirmPassword || passwordStrength < 60}
+            disabled={mutation.isPending || !email || !password || !confirmPassword || passwordStrength < 60}
           >
             {mutation.isPending ? t("registerSubmitting") : t("registerSubmit")}
           </Button>

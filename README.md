@@ -29,9 +29,12 @@ Frontend and API are served by one Node process with PostgreSQL persistence.
 - **Daily Settlements** - Automated end-of-day portfolio valuation
 - **Trade History** - Complete audit trail of all trades
 
-### 👥 User Management
-- **Email Authentication** - Secure registration, login, password reset
+### 👥 User Management & Admin Panel
+- **Email Authentication** - Secure registration, login, password reset with email verification
 - **Role-Based Permissions** - User, Analyst, Admin, SuperAdmin roles
+- **Admin Panel** - Comprehensive admin interface at `/admin` for user management and system monitoring
+  - User Management: Search, modify roles, activate/deactivate accounts, reset passwords
+  - Backend Logs: View system logs with filtering by level and category
 - **Multi-Tenant Architecture** - Complete user data isolation
 - **API Keys** - Programmatic access with scoped permissions
 - **Rankings & Leaderboards** - Public/private ranking system
@@ -193,6 +196,51 @@ EMAIL_FROM=noreply@stockkanban.com
 ```
 
 See `.env.production.example` in the repository for complete configuration options.
+
+## 🔐 Admin Panel Setup
+
+The admin panel is available at `/admin` for users with admin or superadmin roles.
+
+### First-Time Admin Setup
+
+1. **Create your first admin user** via the regular registration flow at `/register`
+
+2. **Promote user to admin** using database SQL:
+   ```sql
+   -- Connect to your database
+   psql $DATABASE_URL
+   
+   -- Promote user to admin (replace with your email)
+   UPDATE users SET role = 'admin' WHERE email = 'your@email.com';
+   
+   -- Or promote to superadmin for full permissions
+   UPDATE users SET role = 'superadmin' WHERE email = 'your@email.com';
+   ```
+
+3. **Access admin panel** at `https://your-domain.com/admin` and login with admin credentials
+
+### Admin Panel Features
+
+- **User Management**: Search, view, and manage all users
+  - Change user roles (user, analyst, admin, superadmin)
+  - Activate/deactivate accounts
+  - Reset user passwords
+  - Soft-delete users (deactivates rather than hard-delete)
+  
+- **Backend Logs**: Monitor system events and errors
+  - Filter by log level (debug, info, warn, error)
+  - Filter by category (system, database, api, auth, security)
+  - Auto-refresh every 10 seconds
+  - View detailed log information
+
+### Role Hierarchy
+
+- **user**: Basic access to trading features
+- **analyst**: Extended data access
+- **admin**: User management and system monitoring
+- **superadmin**: Full system control including user deletion and password resets
+
+**Note**: Admin panel is only visible to users with admin or superadmin roles. Regular users cannot access `/admin` routes.
 
 ## 📚 Documentation
 

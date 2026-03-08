@@ -14,6 +14,20 @@ const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const APP_URL = process.env.APP_URL || "http://localhost:5000";
 
+/**
+ * HTML escape helper to prevent XSS in emails
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
 // Create transporter
 let transporter: nodemailer.Transporter | null = null;
 
@@ -66,11 +80,14 @@ export function generateToken(): string {
  */
 export async function sendVerificationEmail(
   email: string,
-  username: string,
+  displayName: string,
   token: string
 ): Promise<{ success: boolean; messageId?: string; previewUrl?: string }> {
   try {
     const verificationUrl = `${APP_URL}/verify-email?token=${token}`;
+    
+    // Sanitize displayName to prevent HTML injection
+    const safeDisplayName = escapeHtml(displayName);
     
     const mailOptions = {
       from: EMAIL_FROM,
@@ -96,7 +113,7 @@ export async function sendVerificationEmail(
               <h1>Stock Kanban</h1>
             </div>
             <div class="content">
-              <h2>Welcome, ${username}!</h2>
+              <h2>Welcome, ${safeDisplayName}!</h2>
               <p>Thank you for registering with Stock Kanban. Please verify your email address to activate your account.</p>
               <p>Click the button below to verify your email:</p>
               <a href="${verificationUrl}" class="button">Verify Email</a>
@@ -117,7 +134,7 @@ export async function sendVerificationEmail(
         </html>
       `,
       text: `
-        Welcome to Stock Kanban, ${username}!
+        Welcome to Stock Kanban, ${displayName}!
         
         Please verify your email address by clicking the link below:
         ${verificationUrl}
