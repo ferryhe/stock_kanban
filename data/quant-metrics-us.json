@@ -1,363 +1,363 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-02-07T05:13:24.279365+00:00",
-    "generated_at_local": "2026-02-07T00:13:24.279365-05:00",
+    "generated_at_utc": "2026-06-16T05:05:28.744181+00:00",
+    "generated_at_local": "2026-06-16T01:05:28.744181-04:00",
     "timezone": "America/New_York",
-    "data_date": "2026-02-06T14:30:00",
+    "data_date": "2026-06-15T13:30:00",
     "config_file": "config_us.yaml",
     "total_stocks": 32
   },
   "data": [
     {
       "ticker": "AAPL",
-      "score": 0.28125,
-      "rank": 9.0,
-      "predictedReturn": 0.58273648987119,
-      "signal": "BUY",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -1.175081582523911,
-        "maxdd252": 0.9300127821600103
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "AMD",
-      "score": 0.21875,
-      "rank": 7.0,
-      "predictedReturn": 0.5962793811119491,
-      "signal": "BUY",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": 0.3267933056952661,
-        "maxdd252": 0.22950978633191463
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "AMZN",
-      "score": 0.25,
-      "rank": 8.0,
-      "predictedReturn": 0.585358409945733,
-      "signal": "BUY",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -0.8431109917830075,
-        "maxdd252": 0.38040336144904346
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "ASML",
-      "score": 0.84375,
-      "rank": 27.0,
-      "predictedReturn": 0.4148073319221035,
-      "signal": "SELL",
+      "score": 0.34782608695652173,
+      "rank": 8.0,
+      "predictedReturn": 0.5244330601089866,
+      "signal": "HOLD",
       "risk": {
-        "vol60": -0.36406040598581835,
-        "maxdd252": 0.9270775105004938
+        "vol60": -0.4158343202447087,
+        "maxdd252": 1.2823544170935766
       }
     },
     {
       "ticker": "ASTS",
-      "score": 1.0,
-      "rank": 32.0,
-      "predictedReturn": 0.3194470117284852,
+      "score": 0.7391304347826086,
+      "rank": 17.0,
+      "predictedReturn": 0.4737337716082164,
       "signal": "SELL",
       "risk": {
-        "vol60": 2.132302497300367,
-        "maxdd252": 0.4021847758848597
+        "vol60": 1.6113281213199917,
+        "maxdd252": 0.16004505327983526
       }
     },
     {
       "ticker": "BILI",
-      "score": 0.875,
-      "rank": 28.0,
-      "predictedReturn": 0.41361067719283406,
-      "signal": "SELL",
+      "score": 0.13043478260869565,
+      "rank": 3.0,
+      "predictedReturn": 0.5892887248036497,
+      "signal": "BUY",
       "risk": {
-        "vol60": -0.09826455591039318,
-        "maxdd252": 0.5705985937621846
+        "vol60": -0.5867767106453633,
+        "maxdd252": -0.3739874408930981
       }
     },
     {
       "ticker": "CCJ",
-      "score": 0.8125,
-      "rank": 26.0,
-      "predictedReturn": 0.43035822847843597,
-      "signal": "SELL",
+      "score": 0.4782608695652174,
+      "rank": 11.0,
+      "predictedReturn": 0.5148562179454506,
+      "signal": "HOLD",
       "risk": {
-        "vol60": -0.041944739107672775,
-        "maxdd252": 0.454506547779234
+        "vol60": -0.29892732776303454,
+        "maxdd252": 0.6247914518808275
       }
     },
     {
       "ticker": "DUO",
-      "score": 0.0625,
-      "rank": 2.0,
-      "predictedReturn": 0.6602923555427969,
-      "signal": "BUY",
+      "score": 0.8695652173913043,
+      "rank": 20.0,
+      "predictedReturn": 0.42063356119118045,
+      "signal": "SELL",
       "risk": {
-        "vol60": 1.4318728932151903,
-        "maxdd252": -2.353872280352696
+        "vol60": 0.14885781543759666,
+        "maxdd252": -1.4600705116848562
       }
     },
     {
       "ticker": "FNKO",
-      "score": 0.46875,
-      "rank": 15.0,
-      "predictedReturn": 0.5290326614433136,
-      "signal": "HOLD",
+      "score": 1.0,
+      "rank": 23.0,
+      "predictedReturn": 0.39548877530281934,
+      "signal": "SELL",
       "risk": {
-        "vol60": 0.4714352096079481,
-        "maxdd252": -1.7094246642133646
+        "vol60": -0.15002182407672487,
+        "maxdd252": 1.1774939303517364
       }
     },
     {
       "ticker": "FUTU",
-      "score": 0.15625,
-      "rank": 5.0,
-      "predictedReturn": 0.6003002469930145,
-      "signal": "BUY",
+      "score": 0.5217391304347826,
+      "rank": 12.0,
+      "predictedReturn": 0.5127359531441414,
+      "signal": "SELL",
       "risk": {
-        "vol60": -0.3576790005693822,
-        "maxdd252": 0.12454849798818335
+        "vol60": 0.6273514551793968,
+        "maxdd252": -0.3270835231550614
       }
     },
     {
       "ticker": "GLD",
-      "score": 0.5,
-      "rank": 16.0,
-      "predictedReturn": 0.5257555912896201,
-      "signal": "HOLD",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -0.6682125351821883,
-        "maxdd252": 0.7260625339506441
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "GOOGL",
-      "score": 0.4375,
-      "rank": 14.0,
-      "predictedReturn": 0.5298617571159306,
-      "signal": "HOLD",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -0.9187182283400445,
-        "maxdd252": 0.8061190904858916
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "IQ",
-      "score": 0.3125,
-      "rank": 10.0,
-      "predictedReturn": 0.5708673230764125,
+      "score": 0.21739130434782608,
+      "rank": 5.0,
+      "predictedReturn": 0.539116203440941,
       "signal": "BUY",
       "risk": {
-        "vol60": -0.42990626830506457,
-        "maxdd252": -0.085745768796659
+        "vol60": -0.5497629391628656,
+        "maxdd252": -0.7738982878535063
       }
     },
     {
       "ticker": "IWM",
-      "score": 0.40625,
-      "rank": 13.0,
-      "predictedReturn": 0.5313288601257509,
-      "signal": "HOLD",
+      "score": 0.043478260869565216,
+      "rank": 1.0,
+      "predictedReturn": 0.6053995580306768,
+      "signal": "BUY",
       "risk": {
-        "vol60": -1.1603481870111523,
-        "maxdd252": 0.9702196966723928
+        "vol60": -1.4237907632440359,
+        "maxdd252": 1.292149022900716
       }
     },
     {
       "ticker": "KC",
-      "score": 0.78125,
-      "rank": 25.0,
-      "predictedReturn": 0.45224704694146495,
+      "score": 0.6521739130434783,
+      "rank": 15.0,
+      "predictedReturn": 0.49605174665547513,
       "signal": "SELL",
       "risk": {
-        "vol60": 0.5746174700396862,
-        "maxdd252": -0.4097582317499077
+        "vol60": 0.2695247455413668,
+        "maxdd252": 0.04317926297179249
       }
     },
     {
       "ticker": "META",
-      "score": 0.34375,
-      "rank": 11.0,
-      "predictedReturn": 0.551151159949498,
+      "score": 0.43478260869565216,
+      "rank": 10.0,
+      "predictedReturn": 0.518846289992919,
       "signal": "HOLD",
       "risk": {
-        "vol60": -0.6507552819059982,
-        "maxdd252": 0.42057409016844866
+        "vol60": -0.7656917247757892,
+        "maxdd252": 0.4774932629388499
       }
     },
     {
       "ticker": "MNSO",
-      "score": 0.625,
-      "rank": 20.0,
-      "predictedReturn": 0.49926947709900227,
+      "score": 0.6956521739130435,
+      "rank": 16.0,
+      "predictedReturn": 0.4867568517568527,
       "signal": "SELL",
       "risk": {
-        "vol60": -0.8311426436028164,
-        "maxdd252": -0.07042312664256824
+        "vol60": -1.0324822618286522,
+        "maxdd252": -0.3820270428753544
       }
     },
     {
       "ticker": "MSFT",
-      "score": 0.5625,
-      "rank": 18.0,
-      "predictedReturn": 0.5110705760148475,
-      "signal": "SELL",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -0.7810716038555132,
-        "maxdd252": 0.049226548485281935
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "NIU",
-      "score": 0.09375,
-      "rank": 3.0,
-      "predictedReturn": 0.6402491523723788,
-      "signal": "BUY",
+      "score": 0.8260869565217391,
+      "rank": 19.0,
+      "predictedReturn": 0.4473425798659033,
+      "signal": "SELL",
       "risk": {
-        "vol60": 0.2495045860621385,
-        "maxdd252": -0.4473179389933632
+        "vol60": -0.44092677371177397,
+        "maxdd252": -0.6381929632849361
       }
     },
     {
       "ticker": "NVDA",
-      "score": 0.1875,
-      "rank": 6.0,
-      "predictedReturn": 0.5982637486485819,
-      "signal": "BUY",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -0.6461565114361713,
-        "maxdd252": 0.6386192535648451
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "NVS",
-      "score": 0.6875,
-      "rank": 22.0,
-      "predictedReturn": 0.48740847090615647,
-      "signal": "SELL",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -1.100385987771314,
-        "maxdd252": 1.037809157826109
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "OKLO",
-      "score": 0.75,
-      "rank": 24.0,
-      "predictedReturn": 0.45610738540478,
+      "score": 0.9130434782608695,
+      "rank": 21.0,
+      "predictedReturn": 0.41590929892707285,
       "signal": "SELL",
       "risk": {
-        "vol60": 1.6866284142851733,
-        "maxdd252": -1.22418773474309
+        "vol60": 1.1150922104319265,
+        "maxdd252": -0.865240142136729
       }
     },
     {
       "ticker": "ONC",
-      "score": 0.65625,
-      "rank": 21.0,
-      "predictedReturn": 0.494098339395709,
+      "score": 0.9565217391304348,
+      "rank": 22.0,
+      "predictedReturn": 0.4138746611201529,
       "signal": "SELL",
       "risk": {
-        "vol60": -0.4700144642752103,
-        "maxdd252": 0.799306659573702
+        "vol60": -1.082587852392509,
+        "maxdd252": 0.3342915739736152
       }
     },
     {
       "ticker": "PLTR",
-      "score": 0.125,
-      "rank": 4.0,
-      "predictedReturn": 0.6009754327429278,
+      "score": 0.08695652173913043,
+      "rank": 2.0,
+      "predictedReturn": 0.5982216645284648,
       "signal": "BUY",
       "risk": {
-        "vol60": -0.08935079936408678,
-        "maxdd252": -0.2774294807303774
+        "vol60": -0.3190118646243836,
+        "maxdd252": 0.1342841976302792
       }
     },
     {
       "ticker": "QQQ",
-      "score": 0.71875,
-      "rank": 23.0,
-      "predictedReturn": 0.4821077681211465,
-      "signal": "SELL",
+      "score": 0.30434782608695654,
+      "rank": 7.0,
+      "predictedReturn": 0.531405082727406,
+      "signal": "BUY",
       "risk": {
-        "vol60": -1.2355791113995824,
-        "maxdd252": 0.8854748743288017
+        "vol60": -1.3983655904515047,
+        "maxdd252": 1.284661297207462
       }
     },
     {
       "ticker": "RKLB",
-      "score": 0.9375,
-      "rank": 30.0,
-      "predictedReturn": 0.39063573570037746,
+      "score": 0.5652173913043478,
+      "rank": 12.999999999999998,
+      "predictedReturn": 0.49994219803984763,
       "signal": "SELL",
       "risk": {
-        "vol60": 1.4595864816605155,
-        "maxdd252": 0.08587342910018307
+        "vol60": 1.5569250306700206,
+        "maxdd252": 0.3896659644850787
       }
     },
     {
       "ticker": "SMR",
-      "score": 0.375,
-      "rank": 12.0,
-      "predictedReturn": 0.5340035011049826,
-      "signal": "HOLD",
+      "score": 0.2608695652173913,
+      "rank": 6.0,
+      "predictedReturn": 0.5346006332004193,
+      "signal": "BUY",
       "risk": {
-        "vol60": 1.742139360436574,
-        "maxdd252": -1.5307759247741681
+        "vol60": 1.1327644342110301,
+        "maxdd252": -1.3615431076273135
       }
     },
     {
       "ticker": "SVIX",
-      "score": 0.96875,
-      "rank": 31.0,
-      "predictedReturn": 0.3741871887953266,
+      "score": 0.6086956521739131,
+      "rank": 14.0,
+      "predictedReturn": 0.4989896678306006,
       "signal": "SELL",
       "risk": {
-        "vol60": -0.06994305046227632,
-        "maxdd252": 0.3751857008118799
+        "vol60": -0.4401894864163361,
+        "maxdd252": 1.1118042487619666
       }
     },
     {
       "ticker": "TSLA",
-      "score": 0.53125,
-      "rank": 17.0,
-      "predictedReturn": 0.5213948600577666,
-      "signal": "SELL",
+      "score": null,
+      "rank": null,
+      "predictedReturn": null,
+      "signal": "RISK_ALERT",
       "risk": {
-        "vol60": -0.46601191901343275,
-        "maxdd252": 0.423119468588067
+        "vol60": null,
+        "maxdd252": null
       }
     },
     {
       "ticker": "TSM",
-      "score": 0.59375,
-      "rank": 19.0,
-      "predictedReturn": 0.5038960475769022,
-      "signal": "SELL",
+      "score": 0.391304347826087,
+      "rank": 9.0,
+      "predictedReturn": 0.5212713688164509,
+      "signal": "HOLD",
       "risk": {
-        "vol60": -0.7002128086855465,
-        "maxdd252": 1.037809157826109
+        "vol60": -0.7230428465569154,
+        "maxdd252": 1.2626624631851695
       }
     },
     {
       "ticker": "UVIX",
-      "score": 0.03125,
-      "rank": 1.0,
-      "predictedReturn": 0.7606263021147501,
+      "score": 0.17391304347826086,
+      "rank": 4.0,
+      "predictedReturn": 0.5466751288825227,
       "signal": "BUY",
       "risk": {
-        "vol60": 1.7305743540247776,
-        "maxdd252": -2.4840227216542203
+        "vol60": 1.2639906482836336,
+        "maxdd252": -1.6627083498788107
       }
     },
     {
       "ticker": "ZEPP",
-      "score": 0.90625,
-      "rank": 29.0,
-      "predictedReturn": 0.4024189558021121,
+      "score": 0.782608695652174,
+      "rank": 18.0,
+      "predictedReturn": 0.45307717911473266,
       "signal": "SELL",
       "risk": {
-        "vol60": 1.2924961041629501,
-        "maxdd252": -1.6812836445878647
+        "vol60": 1.901577824819632,
+        "maxdd252": -1.7301247772712374
       }
     }
   ]

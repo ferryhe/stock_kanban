@@ -6,6 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: stock-kanban-app
+    env_file:
+      - .env.production
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -17,6 +19,9 @@ services:
       - PGPOOL_IDLE_TIMEOUT_MS=${PGPOOL_IDLE_TIMEOUT_MS:-30000}
     expose:
       - 3000
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
       - caddy-net
     restart: unless-stopped

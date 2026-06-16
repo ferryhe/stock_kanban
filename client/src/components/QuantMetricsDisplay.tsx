@@ -33,9 +33,9 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
   const rankStyle =
     typeof metrics.rank === "number" ? getIndicatorClasses("rank", metrics.rank) : null;
   const scoreStyle = metrics.score !== undefined && metrics.score !== null ? getIndicatorClasses("score", metrics.score) : null;
-  const returnStyle = metrics.predictedReturn !== undefined ? getIndicatorClasses("predictedreturn", metrics.predictedReturn * 100) : null;
-  const volStyle = metrics.risk?.vol60 !== undefined ? getIndicatorClasses("vol60", metrics.risk.vol60) : null;
-  const maxddStyle = metrics.risk?.maxdd252 !== undefined ? getIndicatorClasses("maxdd252", metrics.risk.maxdd252) : null;
+  const returnStyle = metrics.predictedReturn != null ? getIndicatorClasses("predictedreturn", metrics.predictedReturn * 100) : null;
+  const volStyle = metrics.risk?.vol60 != null ? getIndicatorClasses("vol60", metrics.risk.vol60) : null;
+  const maxddStyle = metrics.risk?.maxdd252 != null ? getIndicatorClasses("maxdd252", metrics.risk.maxdd252) : null;
 
   if (compact) {
     // Compact layout for the detail modal.
@@ -86,7 +86,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
         )}
 
         <div className="grid grid-cols-2 gap-4">
-          {metrics.predictedReturn !== undefined && (
+          {metrics.predictedReturn != null && (
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
               <div className="bg-secondary/50 rounded-xl p-4 h-full">
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
@@ -102,7 +102,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             </IndicatorTooltip>
           )}
 
-          {metrics.risk?.vol60 !== undefined && (
+          {metrics.risk?.vol60 != null && (
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
               <div className="bg-secondary/50 rounded-xl p-4 h-full">
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
@@ -118,7 +118,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             </IndicatorTooltip>
           )}
 
-          {metrics.risk?.maxdd252 !== undefined && (
+          {metrics.risk?.maxdd252 != null && (
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
               <div className="bg-secondary/50 rounded-xl p-4 h-full">
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">
@@ -188,9 +188,9 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
       )}
 
       {/* Risk Metrics - 平行分布 */}
-      {(metrics.risk?.vol60 !== undefined || metrics.risk?.maxdd252 !== undefined || metrics.predictedReturn !== undefined) && (
+      {(metrics.risk?.vol60 != null || metrics.risk?.maxdd252 != null || metrics.predictedReturn != null) && (
         <div className="grid grid-cols-3 gap-4">
-          {metrics.risk?.vol60 !== undefined && (
+          {metrics.risk?.vol60 != null && (
             <IndicatorTooltip indicator="vol60" value={metrics.risk.vol60.toFixed(2)}>
               <div>
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("vol60Short")}</div>
@@ -201,7 +201,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             </IndicatorTooltip>
           )}
 
-          {metrics.risk?.maxdd252 !== undefined && (
+          {metrics.risk?.maxdd252 != null && (
             <IndicatorTooltip indicator="maxdd252" value={metrics.risk.maxdd252.toFixed(2)}>
               <div>
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("maxddShort")}</div>
@@ -212,7 +212,7 @@ export function QuantMetricsDisplay({ metrics, compact = false, macd, trendIndic
             </IndicatorTooltip>
           )}
 
-          {metrics.predictedReturn !== undefined && (
+          {metrics.predictedReturn != null && (
             <IndicatorTooltip indicator="predictedReturn" value={`${(metrics.predictedReturn * 100).toFixed(2)}%`}>
               <div>
                 <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider mb-1">{t("ret20Short")}</div>
